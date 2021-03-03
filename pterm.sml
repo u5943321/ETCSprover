@@ -5,37 +5,33 @@ open token pterm_dtype
 structure Env = 
 struct
 open Binarymap List
-type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * int
+type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * (string,psort)Binarymap.dict * int * int
 
-val empty : env = (Binarymap.mkDict String.compare, Binarymap.mkDict String.compare, 0)
+val empty : env = (Binarymap.mkDict String.compare, Binarymap.mkDict String.compare,Binarymap.mkDict String.compare,0, 0)
 
-fun insert_ps n s ((dpt,dps,i):env):env = (dpt,insert (dps,n,s),i)
+fun insert_ps n s ((dpt,dps,dv,i,j):env):env = (dpt,insert (dps,n,s),dv,i,j)
     
-fun insert_pt n t ((dpt,dps,i):env):env = (insert (dpt,n,t),dps,i)
+fun insert_pt n t ((dpt,dps,dv,i,j):env):env = (insert (dpt,n,t),dps,dv,i,j)
 
-fun dps_of ((dpt,dps,i):env) = dps
+fun dps_of ((dpt,dps,dv,i,j):env) = dps
 
-fun dpt_of ((dpt,dps,i):env) = dpt
+fun dpt_of ((dpt,dps,dv,i,j):env) = dpt
 
-fun fresh_var ((td,sd,i):env):string * env = (" " ^ Int.toString i,(td,sd, i + 1))
+fun fresh_var ((td,sd,dv,i,j):env):string * env = (" " ^ Int.toString i,(td,sd,dv, i + 1,j))
 
-fun fresh_psvar ((td,sd,i):env):string * env = ("  " ^ Int.toString i,(td,sd, i + 1))
+fun fresh_psvar ((td,sd,dv,i,j):env):string * env = (" " ^ Int.toString j,(td,sd,dv,i, j + 1))
 
-fun lookup_pt (dpt,_,_) n = peek (dpt,n)
+fun lookup_pt ((dpt,_,_,_,_):env) n = peek (dpt,n)
 
-fun lookup_ps (_,dps,_) n = peek (dps,n)
+fun lookup_ps ((_,dps,_,_,_):env) n = peek (dps,n)
+
+fun ps_of ((_,_,dv,_,_):env) n:psort option = peek (dv,n)
+
+fun record_ps n s ((dpt,dps,dv,i,j):env):env = (dpt,dps,insert (dv,n,s),i,j)
 
 end
 
 open Binarymap List Env
-(*
-fun occs_pt ptname (dpt:(string,pterm)dict) (pFun (f,l)) = exists (occs ptname dpt) l 
-  | occs_pt ptname dpt (ptUVar (name,ps)) = 
-    (ptname = name) orelse 
-    (occs_pt ptname dpt (Binarymap.peek (dpt,name)))
-  | occs_pt ptname dpt (pVar (name,ps)) = (ptname = name)
-*)
-
 
 fun occs_ps psname env ps = 
     case ps of
@@ -371,20 +367,20 @@ use pAnno for this type-infer?
 
 (*make ":" an infix*)
 
-(*add to master file*)
-
-
-
-
 fun parse_pt tl env = 
     case tl of
         (Id(a)::tl1) => 
         (case tl1 of
              (Key":"::tl2) => 
-             let val (n,env1) = fresh_psvar env
-                 val (ps,tl3,env2) = parse_par tl2 env1
-             in (pAnno (pVar(a,psvar n),ps),tl3,env2)
-             end
+             (case (ps_of env a) of 
+                 SOME ps => let val (pas,tl3,env1) = parse_par tl2 env
+                            in (pAnno (pVar(a,ps),pas),tl3,env1)
+                            end
+               | NONE => let val (n,env1) = fresh_psvar env
+                             val (ps,tl3,env2) = parse_par tl2 env1
+                             val env3 = record_ps a (psvar n) env2
+                         in (pAnno (pVar(a,psvar n),ps),tl3,env3)
+                         end)
            | (Key"("::tl2) => 
              let val (ptl,tl3,env1) = 
                      rightparen (parse_repeat1 (",",parse_pt) tl2 env)
@@ -395,9 +391,13 @@ fun parse_pt tl env =
                       end)
                    | _ => (pFun(a,ptl),tl3,env1))
              end
-           | _ => let val (n,env1) = fresh_psvar env
-                  in (pVar (a,psvar n),tl1,env1)
-                  end)
+           | _ => 
+             (case (ps_of env a) of 
+                  SOME ps => (pVar (a,ps),tl1,env)
+                | NONE => let val (n,env1) = fresh_psvar env
+                              val env2 = record_ps a (psvar n) env1
+                          in (pVar (a,psvar n),tl1,env2)
+                          end))
       | [] => raise ERROR "Syntax of preterm: unexpected end of file"
       | t::_ => raise ERROR ("Syntax of preterm: " ^ tokentoString t) 
 and parse_par tl env = 
@@ -410,7 +410,7 @@ and parse_pob tl env =
     in (pAnno (pt,pob),tl1,env1)
     end
 (*should we do unification here, get rid of pAnno?*)
- 
+ (*
 fun replace_pt (n,nt) pt:pterm =
     case pt of 
         pVar(name,ps) => if name = n then nt else pt
@@ -427,8 +427,8 @@ fun replace_pf (n,nt) pf =
         pPred(P,ptl) => pPred(P,List.map (replace_pt (n,nt)) ptl)
       | pConn(co,pfl) => pConn(co,List.map (replace_pf (n,nt)) pfl)
       | pQuant(q,n1,ps,b) => pQuant(q,n1,ps,replace_pf (n,nt) pf)
-
-fun mk_quant q n ps pf = pQuant (q,n,ps, replace_pf (n,(pVar (n,ps))) pf)
+*)
+fun mk_quant q n ps pf = pQuant (q,n,ps,pf)
 
 fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
 
@@ -449,12 +449,16 @@ fun parse_pf tl env =
         (Key"ALL"::Id(a)::tl) =>
         (case tl of 
              (Key"."::tl1) =>
-             let val (n,env1) = fresh_psvar env
-             in apfst (mk_quant "ALL" a (psvar n)) (parse_pf tl1 env1)
-             end
+             (case (ps_of env a) of 
+                 SOME ps => apfst (mk_quant "ALL" a ps) (parse_pf tl1 env)
+               | NONE => 
+                 let val (n,env1) = fresh_psvar env
+                     val env2 = record_ps a (psvar n) env1
+                 in apfst (mk_quant "ALL" a (psvar n)) (parse_pf tl1 env2)
+                 end)
            | (Key":"::tl1) => 
-             let val (n,env1) = fresh_psvar env
-                 val (ps,tl2,env2) = parse_par tl1 env1
+             let val (ps,tl2,env1) = parse_par tl1 env
+                 val env2 = record_ps a ps env1
              in (case tl2 of 
                      (Key"."::tl3) => 
                      apfst (mk_quant "ALL" a ps) (parse_pf tl3 env2)
@@ -496,9 +500,6 @@ and parse_atom tl env =
       | _ => raise ERROR "Syntax of formula"
 
 
-
-
-
 fun parse_end (x, l, env) =
     if l = [] then (x,env) 
     else raise ERROR "Extra characters in formula";
@@ -506,5 +507,97 @@ fun parse_end (x, l, env) =
 fun read_pt a = parse_end (parse_pt (lex a) empty);
 
 fun read_pf a = parse_end (parse_pf (lex a) empty);
+
+
+datatype sort = ob 
+               | ar of term * term 
+and term =
+    Var of string * sort
+    | Param of string * sort * (string * sort) list
+    | Bound of int
+    | Fun of string * sort * term list;
+
+datatype form =
+Pred of string * term list
+| Conn of string * form list
+| Quant of string * string * sort * form;     
+
+fun dest_Fun (Fun (f,s,t)) = (f,s,t)
+  | dest_Fun _ = raise ERROR "not a function" 
+
+fun l_from_pl pl env cf = 
+    case pl of 
+        [] => ([],env)
+      | h::t => let val (h1,env1) = cf h env
+                    val (t1,env2) = l_from_pl t env1 cf
+                in (h1 :: t1,env2) 
+                end
+
+fun term_from_pt pt env = 
+    case (chasevart pt env) of
+        pVar (n,ps) => 
+        let val (s,env1) = sort_from_ps ps env
+        in (Var (n, s),env1)
+        end
+     | pFun (f,l) => 
+        let val (n,env1) = fresh_psvar env 
+            val env2 = type_infer env1 pt (psvar n)
+            val ps = 
+                (case lookup_ps env2 n of 
+                     SOME ps1 => ps1
+                   | NONE => pob)
+            val (s,env3) = sort_from_ps ps env2
+            val (l1,env4) = l_from_pl l env3 term_from_pt
+        in (Fun (f,s,l1),env4)
+           (* (case l of 
+                 [] => (Fun (f,s,[]),env3)
+               | h::l1 => 
+                 let val (th,env4) = term_from_pt h env3
+                     val (tf,env5) = term_from_pt (pFun(f,l1)) env4
+                     val tl = #3 (dest_Fun tf)
+                 in
+                     (Fun (f,s,th :: tl),env5)
+                 end)*)
+        end
+      | ptUVar n => (Var (n,ob),env)
+      | pAnno (pt1,ps) => 
+        let val (n,env1) = fresh_psvar env
+            val env2 = type_infer env1 pt (psvar n)
+        in term_from_pt pt1 env2
+        end
+and sort_from_ps ps env = 
+    case ps of 
+        psvar n => 
+        (case (lookup_ps env n) of 
+             SOME ps1 => sort_from_ps ps1 env
+           | NONE => (ob,env))
+      | pob => (ob,env)
+      | par (A,B) => 
+        let val (d,env1) = term_from_pt A env
+            val (c,env2) = term_from_pt B env1
+        in (ar (d,c),env2)
+        end
+
+
+fun form_from_pf pf env =
+    case pf of
+        pQuant(q,name,ps,pb) =>
+        let val (s,env1) = sort_from_ps ps env
+            val (b,env2) = form_from_pf pb env1
+        in (Quant (q,name,s,b),env2)
+        end
+      | pConn(co,l) => 
+        let val (l1,env1) = l_from_pl l env form_from_pf
+        in (Conn(co,l1),env1)
+        end
+      | pPred(P,l) => 
+        let val (l1,env1) = l_from_pl l env term_from_pt
+        in (Pred(P,l1),env1)
+        end
+
+fun read_f f = 
+    let val (pf,env) = read_pf f
+    in form_from_pf pf env
+    end
 
 end
