@@ -154,6 +154,8 @@ and unify_pt env pt1 pt2: env=
                   end
                 | _ => raise (UNIFY "term list cannot be unified"))
         else raise (UNIFY "different functions")
+      | (pAnno(pt,ps),t) => unify_pt pt t
+      | (t,pAnno(pt,ps)) => unify_pt pt t
       | _ => raise (UNIFY "terms cannot be unified")
 
 
