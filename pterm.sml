@@ -154,8 +154,8 @@ and unify_pt env pt1 pt2: env=
                   end
                 | _ => raise (UNIFY "term list cannot be unified"))
         else raise (UNIFY "different functions")
-      | (pAnno(pt,ps),t) => unify_pt pt t
-      | (t,pAnno(pt,ps)) => unify_pt pt t
+      | (pAnno(pt,ps),t) => unify_pt env pt t
+      | (t,pAnno(pt,ps)) => unify_pt env pt t
       | _ => raise (UNIFY "terms cannot be unified")
 
 
@@ -344,8 +344,7 @@ fun type_infer_pform pf env pt =
                 val (Bv,env2) = fresh_var env1
                 val (n,env3) = fresh_var env2 
                 val env4 = type_infer env2 f (psvar n)
-            in unify_ps env4 (psvar n) 
-                        (par (ptUVar Av,ptUVar Bv))
+            in unify_ps env4 (par (ptUVar Av,ptUVar Bv)) (psvar n) 
         end
         else env
       | pPred("eq",[a,b]) =>
@@ -621,6 +620,26 @@ fun form_from_pf pf env =
         in (Pred(P,l),env1)
         end
 
+fun sort_correct_t env t = 
+    case t of 
+        Var (a,s) => (case ps_of env a of 
+                         SOME ps => let val (s1,_) = sort_from_ps ps env
+                                    in Var(a,s1)
+                                    end
+                       | NONE => t)
+      | Fun(a,s,l) => Fun(a,sort_correct_s env s,
+                          List.map (sort_correct_t env) l)
+      | _ => t
+and sort_correct_s env s =
+    case s of
+        ob => s
+      | ar(A,B) => ar(sort_correct_t env A,sort_correct_t env B)
+
+fun sort_correct_f env f = 
+    case f of 
+        Quant(q,n,s,b) => 
+        Quant(q,n,sort_correct_s env s,sort_correct_f env b)
+      | Conn(co,l) => Conn(co,sort_correct_f env f) 
 
 
 
