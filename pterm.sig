@@ -11,6 +11,7 @@ structure Env: sig
     val dps_of: env -> (string,psort)Binarymap.dict 
     val dpt_of: env -> (string,pterm)Binarymap.dict 
     val fresh_var: env -> string * env
+    val fresh_psvar: env -> string * env
     val lookup_pt: env -> string -> pterm option
     val lookup_ps: env -> string -> psort option
 end

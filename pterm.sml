@@ -31,9 +31,6 @@ fun ps_of ((_,_,dv,_):env) n:psort option = peek (dv,n)
 
 fun record_ps n s ((dpt,dps,dv,i):env):env = (dpt,dps,insert (dv,n,s),i)
 
-fun clear_ps n ((dpt,dps,dv,i):env):env = 
-    let val (dv1,_) = remove(dv, n) in (dpt,dps,dv1,i) end
-
 end
 
 open Binarymap List Env
@@ -464,10 +461,13 @@ fun parse_pf tl env =
         (Key"ALL"::Id(a)::tl) =>
         (case tl of 
              (Key"."::tl1) =>
+             (case (ps_of env a) of 
+                 SOME ps => apfst (mk_quant "ALL" a ps) (parse_pf tl1 env)
+               | NONE => 
                  let val (n,env1) = fresh_var env
                      val env2 = record_ps a (psvar n) env1
                  in apfst (mk_quant "ALL" a (psvar n)) (parse_pf tl1 env2)
-                 end
+                 end)
            | (Key":"::tl1) => 
              let val (ps,tl2,env1) = parse_par tl1 env
                  val env2 = record_ps a ps env1
@@ -480,16 +480,12 @@ fun parse_pf tl env =
       | (Key"EXISTS"::Id(a)::tl) =>
         (case tl of 
              (Key"."::tl1) =>
-             (case (ps_of env a) of 
-                 SOME ps => apfst (mk_quant "EXISTS" a ps) (parse_pf tl1 env)
-               | NONE => 
-                 let val (n,env1) = fresh_var env
-                     val env2 = record_ps a (psvar n) env1
-                 in apfst (mk_quant "ALL" a (psvar n)) (parse_pf tl1 env2)
-                 end)
+             let val (n,env1) = fresh_var env
+             in apfst (mk_quant "EXISTS" a (psvar n)) (parse_pf tl1 env1)
+             end
            | (Key":"::tl1) => 
-             let val (ps,tl2,env1) = parse_par tl1 env
-                 val env2 = record_ps a ps env1
+             let val (n,env1) = fresh_var env
+                 val (ps,tl2,env2) = parse_par tl1 env1
              in (case tl2 of 
                      (Key"."::tl3) => 
                      apfst (mk_quant "EXISTS" a ps) (parse_pf tl3 env2)
@@ -504,7 +500,7 @@ and parsefix prec (pf,tl,env) =
         else parsefix prec
                       (apfst (mk_pConn co pf)
                              (parsefix (prec_of co) 
-                                       (parse_pf tl1 env)))
+                                       (parse_atom tl1 env)))
       | _ => (pf,tl,env) 
 and parse_atom tl env =
     case tl of 
@@ -608,57 +604,21 @@ fun pl2l_in_pPred pf env l =
                   (t :: l, env5)
               end
 
-
-
-fun sort_correct_t env t = 
-    case t of 
-        Var (a,s) => (case ps_of env a of 
-                         SOME ps => let val (s1,_) = sort_from_ps ps env
-                                    in Var(a,s1)
-                                    end
-                       | NONE => t)
-      | Fun(a,s,l) => Fun(a,sort_correct_s env s,
-                          List.map (sort_correct_t env) l)
-      | _ => t
-and sort_correct_s env s =
-    case s of
-        ob => s
-      | ar(A,B) => ar(sort_correct_t env A,sort_correct_t env B)
-
-fun sort_correct_f env f = 
-    case f of 
-        Quant(q,n,s,b) => f
-      | Conn(co,l) => Conn(co,List.map (sort_correct_f env) l) 
-      | Pred(P,l) => Pred(P,List.map (sort_correct_t env) l)
-
-
-
 fun form_from_pf pf env =
     case pf of
         pQuant(q,name,ps,pb) =>
         let val (b,env1) = form_from_pf pb env
             val (s,env2) = sort_from_ps ps env1
-            val b1 = sort_correct_f env2 b
-            val s1 = sort_correct_s env2 s
-        in (Quant (q,name,s1,b1),env2)
+        in (Quant (q,name,s,b),env2)
         end
       | pConn(co,l) => 
         let val (l1,env1) = l_from_pl l env form_from_pf
-            val l2 = List.map (sort_correct_f env1) l1
-        in (Conn(co,l2),env1)
+        in (Conn(co,l1),env1)
         end
       | pPred(P,pl) => 
         let val (l,env1) = pl2l_in_pPred pf env pl
-            val l1 = List.map (sort_correct_t env1) l
         in (Pred(P,l),env1)
         end
-
-fun form_from_pf' pf env = 
-    let val (f,env) = form_from_pf pf env
-    in (f,pdict env)
-    end
-
-(*
 
 fun sort_correct_t env t = 
     case t of 
@@ -679,9 +639,8 @@ fun sort_correct_f env f =
     case f of 
         Quant(q,n,s,b) => 
         Quant(q,n,sort_correct_s env s,sort_correct_f env b)
-      | Conn(co,l) => Conn(co,List.map (sort_correct_f env) l) 
-      | Pred(P,l) => Pred(P,List.map (sort_correct_t env) l)
-*)
+      | Conn(co,l) => Conn(co,sort_correct_f env f) 
+
 
 
 fun read_t t = 
@@ -692,7 +651,7 @@ fun read_t t =
 fun read_f f = 
     let val (pf,env) = read_pf f
         val (f,env1) = form_from_pf pf env
-    in (sort_correct_f env1 f,pdict env1)
+    in (f,pdict env1)
     end
 
 end
