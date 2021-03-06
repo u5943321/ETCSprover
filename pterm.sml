@@ -31,6 +31,9 @@ fun ps_of ((_,_,dv,_):env) n:psort option = peek (dv,n)
 
 fun record_ps n s ((dpt,dps,dv,i):env):env = (dpt,dps,insert (dv,n,s),i)
 
+fun clear_ps n ((dpt,dps,dv,i):env):env = 
+    let val (dv1,_) = remove(dv, n) in (dpt,dps,dv1,i) end
+
 end
 
 open Binarymap List Env
@@ -481,14 +484,16 @@ fun parse_pf tl env =
         (case tl of 
              (Key"."::tl1) =>
              let val (n,env1) = fresh_var env
-             in apfst (mk_quant "EXISTS" a (psvar n)) (parse_pf tl1 env1)
+                 val env2 = record_ps a (psvar n) env1
+             in apfst (mk_quant "EXISTS" a (psvar n)) (parse_pf tl1 env2)
              end
            | (Key":"::tl1) => 
              let val (n,env1) = fresh_var env
                  val (ps,tl2,env2) = parse_par tl1 env1
+                 val env3 = record_ps a ps env2
              in (case tl2 of 
                      (Key"."::tl3) => 
-                     apfst (mk_quant "EXISTS" a ps) (parse_pf tl3 env2)
+                     apfst (mk_quant "EXISTS" a ps) (parse_pf tl3 env3)
                    | _ => raise ERROR "Expected dot")
              end
            | _ => raise ERROR "Syntax of pform")
@@ -500,7 +505,7 @@ and parsefix prec (pf,tl,env) =
         else parsefix prec
                       (apfst (mk_pConn co pf)
                              (parsefix (prec_of co) 
-                                       (parse_atom tl1 env)))
+                                       (parse_pf tl1 env)))
       | _ => (pf,tl,env) 
 and parse_atom tl env =
     case tl of 
@@ -556,6 +561,7 @@ fun l_from_pl pl env cf =
                 in (h1 :: t1,env2) 
                 end
 
+
 fun term_from_pt pt env = 
     case (chasevart pt env) of
         pVar (n,ps) => 
@@ -592,34 +598,6 @@ and sort_from_ps ps env =
         in (ar (d,c),env2)
         end
 
-fun pl2l_in_pPred pf env l = 
-    case l of [] => ([],env)
-            | h::t => 
-              let val (n,env1) = fresh_var env
-                  val env2 = type_infer env1 h (psvar n)
-                  val env3 = type_infer_pform pf env2 h
-                  val (l,env4) = (pl2l_in_pPred pf env3 t)
-                  val (t,env5) = (term_from_pt h env4)
-              in 
-                  (t :: l, env5)
-              end
-
-fun form_from_pf pf env =
-    case pf of
-        pQuant(q,name,ps,pb) =>
-        let val (b,env1) = form_from_pf pb env
-            val (s,env2) = sort_from_ps ps env1
-        in (Quant (q,name,s,b),env2)
-        end
-      | pConn(co,l) => 
-        let val (l1,env1) = l_from_pl l env form_from_pf
-        in (Conn(co,l1),env1)
-        end
-      | pPred(P,pl) => 
-        let val (l,env1) = pl2l_in_pPred pf env pl
-        in (Pred(P,l),env1)
-        end
-
 fun sort_correct_t env t = 
     case t of 
         Var (a,s) => (case ps_of env a of 
@@ -639,9 +617,55 @@ fun sort_correct_f env f =
     case f of 
         Quant(q,n,s,b) => 
         Quant(q,n,sort_correct_s env s,sort_correct_f env b)
-      | Conn(co,l) => Conn(co,sort_correct_f env f) 
+      | Conn(co,l) => Conn(co,List.map (sort_correct_f env) l) 
+      | Pred(P,l) => Pred(P,List.map (sort_correct_t env) l)
 
 
+
+
+fun pl2l_in_pPred pf env l = 
+    case l of [] => ([],env)
+            | h::t => 
+              let val (n,env1) = fresh_var env
+                  val env2 = type_infer env1 h (psvar n)
+                  val env3 = type_infer_pform pf env2 h
+                  val (l,env4) = (pl2l_in_pPred pf env3 t)
+                  val (t,env5) = (term_from_pt h env4)
+              in 
+                  (t :: l, env5)
+              end
+(*
+fun fl_from_pfl pfl env = 
+    case pfl of 
+        [] => ([],env)
+      | h::t => 
+        (case h of 
+             pQuant(q,n,ps,pb) => 
+             let val env1 = clear_ps n env
+                 val 
+             in (form_from_pf h env1) :: fl_from_pfl t env
+             end
+           | _ => (form_from_pf h env) :: fl_from_pfl t env)*)
+fun form_from_pf pf env =
+    case pf of
+        pQuant(q,name,ps,pb) =>
+        let val env1 = clear_ps name env
+            val (n,env2) = fresh_var env1
+            val env3 = record_ps name env2 (psvar n)
+            val (b,env4) = form_from_pf pb env3
+            val (s,env5) = sort_from_ps ps env4
+            val env6 = clear_ps name env5
+        in (Quant (q,name,sort_correct_s env1 s, sort_correct_f env1 b),
+            env5)
+        end
+      | pConn(co,l) => 
+        let val (l1,env1) = fl_from_pfl l env
+        in (Conn(co,l1),env1)
+        end
+      | pPred(P,pl) => 
+        let val (l,env1) = pl2l_in_pPred pf env pl
+        in (Pred(P,l),env1)
+        end
 
 fun read_t t = 
     let val (pt,env) = read_pt t
