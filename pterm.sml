@@ -32,9 +32,15 @@ fun ps_of ((_,_,dv,_):env) n:psort option = peek (dv,n)
 fun record_ps n s ((dpt,dps,dv,i):env):env = (dpt,dps,insert (dv,n,s),i)
 
 fun clear_ps n ((dpt,dps,dv,i):env):env = 
-    case lookup_ps (dpt,dps,dv,i) n of
+    case ps_of (dpt,dps,dv,i) n of
         SOME ps => 
         let val (dv1,_) = remove(dv, n) in (dpt,dps,dv1,i) end
+      | NONE => (dpt,dps,dv,i)
+
+fun clear_psn n ((dpt,dps,dv,i):env):env = 
+    case lookup_ps (dpt,dps,dv,i) n of 
+        SOME ps => 
+        let val (dps1,_) = remove(dps, n) in (dpt,dps1,dv,i) end
       | NONE => (dpt,dps,dv,i)
 end
 
@@ -618,31 +624,6 @@ fun pl2l_in_pPred pf env l =
 
 (*cannot do the clear on quantified variable because they may be annotated*)
 
-fun form_from_pf pf env =
-    case pf of
-        pQuant(q,name,ps,pb) =>
-        let val env1 = clear_ps name env
-            val (n,env2) = fresh_var env1
-            val env3 = record_ps name (psvar n) env2
-            val (b,env4) = form_from_pf pb env3
-            val (s,env5) = sort_from_ps ps env4
-        in (Quant (q,name, s, b),
-            env5)
-        end
-      | pConn(co,l) => 
-        let val (l1,env1) = l_from_pl l env form_from_pf
-        in (Conn(co,l1),env1)
-        end
-      | pPred(P,pl) => 
-        let val (l,env1) = pl2l_in_pPred pf env pl
-        in (Pred(P,l),env1)
-        end
-
-fun read_t t = 
-    let val (pt,env) = read_pt t
-    in term_from_pt pt env
-    end
-
 fun sort_correct_t env t = 
     case t of 
         Var (a,s) => (case ps_of env a of 
@@ -660,19 +641,48 @@ and sort_correct_s env s =
 
 fun sort_correct_f env f = 
     case f of 
-        Quant(q,n,s,b) => 
-        (let val env1 = clear_ps n env
-        in
-        Quant(q,n,sort_correct_s env1 s,sort_correct_f env1 b)
-        end)
+        Quant(q,n,s,b) => f
+       (* Quant(q,n,sort_correct_s env s, sort_correct_f env b) *)
       | Conn(co,l) => Conn(co,List.map (sort_correct_f env) l) 
       | Pred(P,l) => Pred(P,List.map (sort_correct_t env) l)
+
+fun form_from_pf pf env =
+    case pf of
+        pQuant(q,name,ps,pb) =>
+        let val psoq = ps_of env name
+            val env1 = clear_ps name env
+            val (n,env2) = fresh_var env1
+            val env3 = record_ps name (psvar n) env2
+            val (b,env4) = form_from_pf pb env3
+            val (s,env5) = sort_from_ps ps env4
+            val env6 = clear_ps name env5
+            val env7 = clear_psn n env6
+            val env8 = case psoq of SOME ps => record_ps name ps env7
+                                  | NONE => env7
+        in (Quant (q,name,sort_correct_s env5 s,sort_correct_f env5 b),
+            env8)
+        end
+      | pConn(co,l) => 
+        let val (l1,env1) = l_from_pl l env form_from_pf
+            val l2 = List.map (sort_correct_f env1) l1
+        in (Conn(co,l2),env1)
+        end
+      | pPred(P,pl) => 
+        let val (l,env1) = pl2l_in_pPred pf env pl
+            val l1 = List.map (sort_correct_t env1) l
+        in (Pred(P,l1),env1)
+        end
+
+fun read_t t = 
+    let val (pt,env) = read_pt t
+    in term_from_pt pt env
+    end
 
 
 fun read_f f = 
     let val (pf,env) = read_pf f
         val (f,env1) = form_from_pf pf env
-    in (sort_correct_f env1 f,pdict env1)
+    in (f,pdict env1)
     end
 
 end
