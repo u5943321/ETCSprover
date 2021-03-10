@@ -179,34 +179,6 @@ fun ps_of_pt pt =
       | pFun (n,ps,l) => ps
       | pAnno(pt,ps) => ps
 
-(*
-fun sort_infer_pt env pt = 
-    case pt of 
-        pFun("o",ps,[f,g]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = sort_infer env2 f
-            val env4 = unify_ps 
-                           env3 (ps_of_pt f) (par (ptUVar Av,ptUVar Bv)) 
-            val (Cv,env5) = fresh_var env4
-            val env6 = sort_infer env5 g
-            val env7 = unify_ps 
-                           env6 (ps_of_pt g) (par (ptUVar Bv,ptUVar Cv))
-        in unify_ps env7 ps (par (ptUVar Av,ptUVar Cv))
-        end
-      | pFun("id",ps,[A]) => 
-        let val env1 = sort_infer env A pob
-        in unify_ps (unify_ps env1 ps ty) ty (par (A,A))
-        end
-      | pAnno (pt,ps) => 
-        let val env1 = sort_infer env pt
-        in unify_ps env1 (sort_of pt) ps 
-        end
-      | pVar (name,ps) => unify_ps env ty ps 
-      | ptUVar name => unify_ps env ty pob
-      | _ => env 
-*)
-
 fun type_infer env t ty = 
     case t of 
         pFun("o",ps,[f,g]) =>
@@ -414,14 +386,6 @@ fun type_infer env t ty =
       | _ => env 
 
 
-(*
-fun env_from_pl func (e:env) pl =
-    case pl of 
-        [] => e
-      | h::t => func h (env_from_pl func e t)
-
-*)
-
 fun env_from_ptl env ptl = 
     case ptl of 
         [] => env
@@ -451,50 +415,6 @@ fun type_infer_pf env pf =
         in unify_ps env2 (ps_of_pt pt1) (ps_of_pt pt2)
         end
       | pPred(_,ptl) => env_from_ptl env ptl
-
-(*
-fun type_infer_pform pf env pt = 
-    case pf of
-        pPred("ismono",[f]) => 
-        if f = pt then
-            let val (Av,env1) = fresh_var env 
-                val (Bv,env2) = fresh_var env1
-                val (n,env3) = fresh_var env2 
-                val env4 = type_infer env2 f (psvar n)
-            in unify_ps env4 (par (ptUVar Av,ptUVar Bv)) (psvar n) 
-        end
-        else env
-      | pPred("eq",[a,b]) =>
-        if a = pt orelse b = pt then
-            let val (n1,env1) = fresh_var env
-                val (n2,env2) = fresh_var env1
-                val env3 = type_infer env2 a (psvar n1)
-                val env4 = type_infer env3 b (psvar n2)
-            in unify_ps env4 (psvar n1) (psvar n2)
-            end
-        else env
-      | pConn(co,[]) => env
-      | pConn(co,h::pfs) => 
-        let val env1 = type_infer_pform h env pt
-        in type_infer_pform (pConn(co,pfs)) env1 pt
-        end 
-      | _ => env *)
-(*
-fun l_from_pl pl env cf = 
-    case pl of 
-        [] => ([],env)
-      | h::t => let val (h1,env1) = cf h env
-                    val (t1,env2) = l_from_pl t env1 cf
-                in (h1 :: t1,env2) 
-                end
-
-fun type_infer' env pt ps = 
-
-fun sort_infer pf env = 
-    case pf of 
-     | pPred(P,ptl) => l_from_pl ptl 
-*) 
-
 
 fun apfst f (x,tl,env) = (f x, tl,env);
 
@@ -674,174 +594,6 @@ fun print_read_pf a =
     end
 
 
-(*sort inference*)
-  
-(*
-fun dest_Fun (Fun (f,s,t)) = (f,s,t)
-  | dest_Fun _ = raise ERROR "not a function" 
-
-fun l_from_pl pl env cf = 
-    case pl of 
-        [] => ([],env)
-      | h::t => let val (h1,env1) = cf h env
-                    val (t1,env2) = l_from_pl t env1 cf
-                in (h1 :: t1,env2) 
-                end
-
-
-fun sort_infer_pt pt env = 
-    case (chasevart pt env) of
-        pVar (n,ps) => sort_infer_ps ps env
-        in env1
-        end
-     | pFun (f,s,l) => 
-        let val (n,env1) = fresh_var env 
-            val env2 = type_infer env1 pt (psvar n)
-            val ps = 
-                (case lookup_ps env2 n of 
-                     SOME ps1 => ps1
-                   | NONE => pob)
-            val (s,env3) = sort_from_ps ps env2
-            val (l1,env4) = l_from_pl l env3 term_from_pt
-        in (Fun (f,s,l1),env4)
-        end
-      | ptUVar n => record_ps n pob env
-      | pAnno (pt,ps) => 
-        let val (n,env1) = fresh_var env 
-        in type_infer env1 pt (psvar n)
-        end
-and sort_infer_ps ps env = 
-    case (chasevars ps env) of 
-        psvar n => env
-      | pob => env
-      | par (A,B) => 
-        let env1 = type_infer env A pob
-        in type_infer env1 B pob
-        end
-
-fun env_from_pl func (e:env) pl =
-    case pl of 
-        [] => e
-      | h::t => func h (env_from_pl func e t)
-
-fun type_infer_pform' pf pt env = type_infer_pform pf env pt 
-
-fun sort_infer_pf pf env = 
-    case pf of 
-        pPred(P,l) => env_from_pl (type_infer_pform' pf) env l 
-      | pQuant(q,n,ps,pb) => sort_infer_pf pb env
-      | pConn(co,pfl) => env_from_pl sort_infer_pf env pfl
-*)
-
-(*
-fun term_from_pt pt env = 
-    case (chasevart pt env) of
-        pVar (n,ps) => 
-        let val (s,env1) = sort_from_ps ps env
-        in (Var (n, s),env1)
-        end
-     | pFun (f,l) => 
-        let val (n,env1) = fresh_var env 
-            val env2 = type_infer env1 pt (psvar n)
-            val ps = 
-                (case lookup_ps env2 n of 
-                     SOME ps1 => ps1
-                   | NONE => pob)
-            val (s,env3) = sort_from_ps ps env2
-            val (l1,env4) = l_from_pl l env3 term_from_pt
-        in (Fun (f,s,l1),env4)
-        end
-      | ptUVar n => (Var (n,ob),env)
-      | pAnno (pt1,ps) => 
-        let val (n,env1) = fresh_var env
-            val env2 = type_infer env1 pt (psvar n)
-        in term_from_pt pt1 env2
-        end
-and sort_from_ps ps env = 
-    case (chasevars ps env) of 
-        psvar n => 
-        (case (lookup_ps env n) of 
-             SOME ps1 => sort_from_ps ps1 env
-           | NONE => (ob,env))
-      | pob => (ob,env)
-      | par (A,B) => 
-        let val (d,env1) = term_from_pt A env
-            val (c,env2) = term_from_pt B env1
-        in (ar (d,c),env2)
-        end
-*)
-
-
-(*
-fun pl2l_in_pPred pf env l = 
-    case l of [] => ([],env)
-            | h::t => 
-              let val (n,env1) = fresh_var env
-                  val env2 = type_infer env1 h (psvar n)
-                  val env3 = type_infer_pform pf env2 h
-                  val (l,env4) = (pl2l_in_pPred pf env3 t)
-                  val (t,env5) = (term_from_pt h env4)
-              in 
-                  (t :: l, env5)
-              end
-
-*)
-(*cannot do the clear on quantified variable because they may be annotated*)
-(*
-fun sort_correct_t env t = 
-    case t of 
-        Var (a,s) => (case ps_of env a of 
-                         SOME ps => let val (s1,_) = sort_from_ps ps env
-                                    in Var(a,s1)
-                                    end
-                       | NONE => t)
-      | Fun(a,s,l) => Fun(a,sort_correct_s env s,
-                          List.map (sort_correct_t env) l)
-      | _ => t
-and sort_correct_s env s =
-    case s of
-        ob => s
-      | ar(A,B) => ar(sort_correct_t env A,sort_correct_t env B)
-
-fun sort_correct_f env f = 
-    case f of 
-        Quant(q,n,s,b) => f
-       (* Quant(q,n,sort_correct_s env s, sort_correct_f env b) *)
-      | Conn(co,l) => Conn(co,List.map (sort_correct_f env) l) 
-      | Pred(P,l) => Pred(P,List.map (sort_correct_t env) l)
-*)
-(*
-fun form_from_pf pf env =
-    case pf of
-        pQuant(q,name,ps,pb) =>
-        let val psoq = ps_of env name
-            val env1 = clear_ps name env
-            val (n,env2) = fresh_var env1
-            val env3 = record_ps name (psvar n) env2
-            val (b,env4) = form_from_pf pb env3
-            val (s,env5) = sort_from_ps ps env4
-            val env6 = clear_ps name env5
-            val env7 = clear_psn n env6
-            val env8 = case psoq of SOME ps => record_ps name ps env7
-                                  | NONE => env7
-        in (Quant (q,name,sort_correct_s env5 s,sort_correct_f env5 b),
-            env8)
-        end
-      | pConn(co,l) => 
-        let val (l1,env1) = l_from_pl l env form_from_pf
-            val l2 = List.map (sort_correct_f env1) l1
-        in (Conn(co,l2),env1)
-        end
-      | pPred(P,pl) => 
-        let val (l,env1) = pl2l_in_pPred pf env pl
-            val l1 = List.map (sort_correct_t env1) l
-        in (Pred(P,l1),env1)
-        end
-
-*)
-
-
-
 (*do we really need to change the env so it records ptUVars -> pob?*)
 
 fun term_from_pt env pt = 
@@ -868,18 +620,11 @@ fun form_from_pf env pf =
         Pred(P,List.map (term_from_pt env) ptl)
 
 
-(*
-
-fun read_t t = 
-    let val (pt,env) = read_pt t
-    in term_from_pt pt env
-    end
-*)
 
 fun read_f f = 
     let val (pf,env) = read_pf f
         val env1 = type_infer_pf env pf
-    in form_from_pf env1 pf
+    in (form_from_pf env1 pf,pdict env1)
     end
 
 end
