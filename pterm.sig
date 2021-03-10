@@ -16,4 +16,5 @@ structure Env: sig
 end
 val read_pt : string -> pterm * Env.env
 val read_pf : string -> pform * Env.env
+val read_f : string -> form.form * (string list * string list * string list * int)
 end

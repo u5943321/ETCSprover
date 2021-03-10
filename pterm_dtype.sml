@@ -6,7 +6,7 @@ datatype psort = pob
 and pterm =
           ptUVar of string 
          | pVar of string * psort
-         | pFun of string * pterm list
+         | pFun of string * psort * pterm list
          | pAnno of pterm * psort
 datatype pform =
          pPred of string * pterm list

@@ -2,26 +2,36 @@ datatype sort = ob
                | ar of term * term 
 and term =
     Var of string * sort
-    | Param of (string * sort) * (string * sort) list
+    | Param of string * sort * (string * sort) list
     | Bound of int
-    | Fun of (string * sort) * term list;
+    | Fun of string * sort * term list;
 
+datatype form =
+Pred of string * term list
+| Conn of string * form list
+| Quant of string * string * sort * form;     
 
+fun dest_arrow (ar (S,T)) = (S,T)
+  | dest_arrow _  = raise Fail "dest_arrow : Error"
 
+fun dom a = #1 (dest_arrow a)
 
-val one = Fun ("one",[])
-val zero = Fun ("zero",[])        
-val N = Fun ("N",[])              
-val z = Fun ("z",[])           
-val s = Fun ("s",[])                        
+fun cod a = #2 (dest_arrow a)
+
+val one = Fun ("one",ob,[])
+val zero = Fun ("zero",ob,[])        
+val N = Fun ("N",ob,[])              
+val z = Fun ("z",ar (one,N),[])           
+val s = Fun ("s",ar (N,N),[])                        
 
 exception no_sort 
 
-fun po_i A B = Fun ("po",[A,B]) 
+(*
+fun po_i A B = Fun ("po",ar(A,B),[A,B]) 
 
-fun pa_i f g = Fun ("pa",[f,g])
+fun pa_i f g = Fun ("pa",ar(dom f,po_i (cod f) (cod g)),[f,g])
 
-fun copo_i A B = Fun ("copo",[A,B]) 
+fun copo_i A B = Fun ("copo",ob,[A,B]) 
 
 fun copa_i f g = Fun ("copa",[f,g])
 
@@ -33,24 +43,25 @@ fun coeqo_i f g = Fun ("coeqo",[f,g])
 
 fun coeqa_i f g = Fun ("coeqa",[f,g])
 
-fun exp_i A B = Fun ("exp",[A,B])
+fun exp_i A B = Fun ("exp",ob,[A,B])
 
 fun tp_i f = Fun ("tp",[f])
 
 fun N_ind_i X x0 t = Fun ("N_ind",[X,x0,t])
-
-fun dest_arrow (ar (S,T)) = (S,T)
-  | dest_arrow _  = raise Fail "dest_arrow : Error"
-
-fun source a = #1 (dest_arrow a)
-
-fun target a = #2 (dest_arrow a)
+*)
 
 (*more of these functions*)
 
 fun dest_pair (Fun ("po",[A,B])) = (A,B)
   | dest_pair _ =  raise Fail "dest_pair : Error"
 
+fun sort_of t = 
+    case t of Var (_,s) = s
+            | Param (_,s,_) => s
+            | Fun (_,s,_) => s 
+            | _ => ob 
+
+(*
 fun sort_of t =  
     case t of Fun ("one",[]) => ob
             | Fun ("to1",[X]) => ar (X,one)
@@ -89,69 +100,78 @@ fun sort_of t =
             | Fun ("s",[]) => ar (N,N)
             | Fun ("N_ind",[X,x0,t]) => ar (N,X) 
             | _ => ob
+*)
 (*do sort check within fun , rewrite everything about sort check as let in *)
 
-fun to1 X = if sort_of X = ob then Fun ("to1",[X]) else raise no_sort
+fun id A = if sort_of A = ob then Fun("id",ar(A,A),[A])
+           else raise no_sort
 
-fun from0 X = if sort_of X = ob then Fun ("form0",[X]) else raise no_sort
+fun to1 X = if sort_of X = ob then Fun ("to1",ar(X, one), [X]) 
+            else raise no_sort
 
-fun po A B = if sort_of A = ob andalso sort_of B = ob then po_i A B
+fun from0 X = if sort_of X = ob then Fun ("form0",ar(zero, X),[X])
+              else raise no_sort
+
+fun po A B = if sort_of A = ob andalso sort_of B = ob then Fun ("po",ob,[A,B]) 
              else raise no_sort 
 
 fun pa f g = (case (sort_of f, sort_of g) of 
-                       (ar (C1,A), ar (C2,B)) => if C1 = C2 then pa_i f g
-                                                 else raise no_sort
+                       (ar (C1,A), ar (C2,B)) => 
+                       if C1 = C2 then Fun ("pa",ar(C1, po A B),[f,g])
+                       else raise no_sort
                      | _ => raise no_sort)
 
-fun p1 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p1",[A,B])
+fun p1 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p1",ar(po A B,A),[A,B])
              else raise no_sort 
 
-fun p2 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p2",[A,B])
+fun p2 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p2",ar(po A B,B),[A,B])
              else raise no_sort 
 
-fun copo A B = if sort_of A = ob andalso sort_of B = ob then copo_i A B
+fun copo A B = if sort_of A = ob andalso sort_of B = ob then Fun ("po",ar(A,B),[A,B]) 
              else raise no_sort 
 
 fun copa f g = (case (sort_of f, sort_of g) of 
-                       (ar (A,C1), ar (B,C2)) => if C1 = C2 then copa_i f g
+                       (ar (A,C1), ar (B,C2)) => if C1 = C2 then Fun ("copo",ar(copo A B,C1),[A,B]) 
                                                  else raise no_sort
                      | _ => raise no_sort)
 
-fun i1 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("i1",[A,B])
+fun i1 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("i1",ar(A,copo A B),[A,B])
              else raise no_sort 
 
-fun i2 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("i2",[A,B])
+fun i2 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("i2",ar(B,copo A B),[A,B])
              else raise no_sort 
 
 fun eqo f g = (case (sort_of f, sort_of g) of 
                        (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then eqo_i f g
+                                                   then Fun("eqo",ob,[f,g])
                                                  else raise no_sort
                      | _ => raise no_sort)
 
 fun eqa f g = (case (sort_of f, sort_of g) of 
                        (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then eqa_i f g
+                                                   then Fun("eqa",ar(eqo f g,A2),[f,g])
                                                  else raise no_sort
                      | _ => raise no_sort)
 
 
 fun coeqo f g = (case (sort_of f, sort_of g) of 
                        (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then coeqo_i f g
+                                                   then Fun("coeqo",ob,[f,g])
                                                  else raise no_sort
                      | _ => raise no_sort)
 
 fun coeqa f g = (case (sort_of f, sort_of g) of 
                        (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then coeqa_i f g
+                                                   then Fun("coeqa",ar(B2,coeqo f g),[f,g])
                                                  else raise no_sort
                      | _ => raise no_sort)
 
+fun exp A B = Fun("exp",ob,[A,B])
+
 fun tp f =  (case sort_of f of 
                  (ar (P,C)) =>
-                 (case P of (Fun ("po",[A,B])) => 
-                            tp_i f
+                 (case P of (Fun ("po",ob,[A,B])) => 
+                            Fun ("tp",ar(B, exp B C),[f])
                           | _ => raise no_sort) 
                | _ => raise no_sort) 
 
@@ -159,31 +179,18 @@ fun N_ind X x0 t = (case (sort_of X, sort_of x0, sort_of t) of
                        (ob, ar (A,B), ar (C,D)) => if (A = one andalso B = X
                                                                andalso C = X
                                                                andalso D = X)
-                                                   then N_ind_i X x0 t
+                                                   then Fun("N_ind",ar(N,X),[X,x0,t])
                                                  else raise no_sort
                      | _ => raise no_sort)
 
 infix O
+(*
 fun O_i f g = Fun ("o",[f,g])
-fun op O (f,g) = (case (sort_of g, sort_of f) of 
-                       (ar (B2,C), ar (A,B1)) => if B1 = B2 then O_i f g
+*)
+fun op O (f,g) = (case (sort_of f,sort_of g) of 
+                       (ar (A,B1),ar (B2,C)) => if B1 = B2 then Fun("o",ar(A,C),[f,g])
                                                  else raise no_sort
                                      | _ => raise no_sort)
-
-
-datatype form =
-Pred of string * term list
-| Conn of string * form list
-| Quant of string * string * sort * form;     
-
-
-(**fill the mk of Conn**)
-
-fun mk_conj f1 f2 = Conn ("and",[f1,f2])
-
-fun mk_or f1 f2 = Conn ("or",[f1,f2])
-
-fun mk_conj f1 f2 = Conn ("or",[f1,f2])
 
 
 
@@ -216,29 +223,29 @@ fun accumulate f ([], y) = y
 fun lookup ((X,s), []) = []
   | lookup ((X,s), ((Y,s1),(Z,s2))::env) = if X = (Y:string) then [(Z,s2)] else lookup((X,s),env);
 *)
-exception ERROR of string;
+exception ERROR of string; 
 
 (*Operationson terms and formulae*)
 
-fun replace_term (u,new) t = 
-    if t = u then new else
-    case t of Fun (a,ts) => Fun(a, map (replace_term(u,new)) ts)
-            | _ => t; 
+fun replace_term (u,new) t =
+    if t = u then new else 
+    case t of Fun (a,s,ts) => Fun(a,s,List.map (replace_term (u,new)) ts)
+            | _ => t
 
 (*abstraction*)
 fun abstract t =
-let fun abs i (Pred(a,ts)) = Pred(a, map (replace_term (t, Bound i)) ts)
-| abs i (Conn(b,As)) = Conn(b, map (abs i) As)
-| abs i (Quant(q,b,s,A)) = Quant(q, b,s, abs (i+1) A)
-in abs 0 end;
+    let fun abs i (Pred(a,ts)) = Pred(a, List.map (replace_term (t, Bound i)) ts)
+          | abs i (Conn(b,As)) = Conn(b, List.map (abs i) As)
+          | abs i (Quant(q,b,s,A)) = Quant(q, b,s, abs (i+1) A)
+    in abs 0 end;
 
 
 (*Replace (Bound 0) in formula with t (containing no bound vars).*)
 fun subst_bound t =
-let fun subst i (Pred(a,ts)) = Pred(a, map (replace_term (Bound i, t)) ts)
-| subst i (Conn(b,As)) = Conn(b, map (subst i) As)
-| subst i (Quant(q,b,s,A)) = Quant(q, b,s, subst (i+1) A)
-in subst 0 end;
+    let fun subst i (Pred(a,ts)) = Pred(a, List.map (replace_term (Bound i, t)) ts)
+          | subst i (Conn(b,As)) = Conn(b, List.map (subst i) As)
+          | subst i (Quant(q,b,s,A)) = Quant(q, b,s, subst (i+1) A)
+    in subst 0 end;
 
 (*SYNTAX: SCANNING, PARSING, AND DISPLAY*)
 (*Scanning a list of characters into a list of tokens*)
@@ -247,10 +254,10 @@ fun is_char(l,c,u) = ord l <= ord c andalso ord c <= ord u;
 
 
 fun is_letter_or_digit c =
-is_char(#"A",c,#"Z") orelse is_char(#"a",c,#"z") orelse is_char(#"0",c,#"9");
+    is_char(#"A",c,#"Z") orelse is_char(#"a",c,#"z") orelse is_char(#"0",c,#"9");
 
 (*Scanning of identifiers and keywords*)
-fun token_of a = if a mem ["ALL","EXISTS"] then Key(a) else Id(a);
+fun token_of a = if mem a ["ALL","EXISTS","ar","ob"] then (Key a) else (Id a);
 
 
 
@@ -264,8 +271,9 @@ fun scan_ident (front, c::cs) =
 (*Scanning, recognizing --> and <->, skipping blanks, etc.*)
 fun scan (front_toks, []) = rev front_toks (*end of char list*)
   (*long infix operators*)
-  | scan (front_toks, (#"-")::(#"-")::(#">")::cs) = scan (Key"-->" ::front_toks, cs)
-  | scan (front_toks, (#"<")::(#"-")::(#">")::cs) = scan (Key"<->" ::front_toks, cs)
+  | scan (front_toks, (#"=")::(#"=")::(#">")::cs) = scan (Key"==>" ::front_toks, cs)
+  | scan (front_toks, (#"<")::(#"=")::(#">")::cs) = scan (Key"<=>" ::front_toks, cs)
+  | scan (front_toks, (#"-")::(#">")::cs) = scan (Key"->" ::front_toks, cs)
   (*blanks, tabs, newlines*)
   | scan (front_toks, (#" ")::cs) = scan (front_toks, cs)
   | scan (front_toks, (#"\t")::cs) = scan (front_toks, cs)
@@ -279,11 +287,27 @@ and scannext (front_toks, (tok, cs)) = scan (tok::front_toks, cs);
 fun apfst f (x,toks) = (f x, toks);
 (*Functions for constructing results*)
 fun cons x xs = x::xs;
+(*
 fun makeFun fu ts = Fun(fu,ts);
 fun makePred id ts = Pred(id,ts);
 fun makeNeg A = Conn("~", [A]);
 fun makeConn a A B= Conn(a, [A,B]);
 fun makeQuant q b s A = Quant(q, b,s, abstract (Fun(b,[])) A);
+*)
+(*
+fun mk_conj f1 f2 = Conn ("&",[f1,f2])
+
+fun mk_or f1 f2 = Conn ("|",[f1,f2])
+*)
+fun mk_conn co f1 f2 = Conn (co, [f1,f2])
+
+fun mk_neg f1 f2 = Conn ("~",[f1,f2])
+
+fun mk_fun f s ts = Fun(f,s,ts) 
+
+fun mk_pred P ts = Pred(P,ts)
+
+fun mk_quant q b s A = Quant(q,b,s,abstract (Fun(b,s,[])) A)
 
 (*Repeated parsing, returning the list of results *)
 fun parse_repeat (a,parsefn) (Key(b)::toks) = (* a<phrase>...a<phrase> *)
@@ -296,21 +320,38 @@ and parse_repeat1 (a,parsefn) toks = (* <phrase>a...a<phrase> *)
 
 fun rightparen (x, Key")"::toks) = (x, toks)
   | rightparen _ = raise ERROR "Symbol ) expected";
-
+(*
 (a,ob) (a, ar (A,B))
 
 a: ob  a: A -> B
-
+*)
 
 (*modifty the prec table*)
 (**)
+f(a,b,c): ob
+
+fun parse_term (Id(a)::Key":"::Key"ob"::toks)  = (Fun(a,ob,[]), toks)
+    | parse_term _ =  (Fun("a",ob,[]), [])
+
+fun parse_term (Id(a)::Key":"::Key"ob"::toks)  = (Fun(a,ob,[]), toks)
+  | parse_term (Id(a)::Key":"::Id(A)::Key"->"::Id(B)::toks) = 
+    (Fun(a,ar(Fun(A,ob,[]),Fun(B,ob,[])),[]), toks)
+  | parse_term (Key"?"::Id(a)::Key":"::Key"ob"::toks) = (Var (a,ob), toks) 
+  | parse_term (Key"?"::Id(a)::Key":"::Id(A)::Key"->"::Id(B)::toks) = 
+    (Var (a,ar(Fun(A,ob,[]), Fun(B,ob,[]))), toks)
+  | parse_term (Id(a)::Key"("::toks) =
+    (mk_fun a (#2 rightparen (parse_repeat1 (",", parse_term) toks)) 
+              (#1 rightparen (parse_repeat1 (",", parse_term) toks)))
+    apfst (mk_fun a ob) (rightparen (parse_repeat1 (",", parse_term) toks))
+  | parse_term _ =  (Fun("a",ob,[]), [])
+
 
 fun parse_term (Id(a)::Key"("::toks) =
-    apfst (makeFun a) (rightparen (parse_repeat1 (",", parse_term) toks))
-  | parse_term (Id(a)::toks) = (Fun(a,[]), toks)
+    apfst (mk_fun a) (rightparen (parse_repeat1 (",", parse_term) toks))
+  | parse_term (Id(a)::Key":"::Key"ob" ::toks) = (Fun(a,ob[]), toks)
   | parse_term (Key"?"::Key"("::Id(a)::Key","::Key"ob"::Key")"::toks) = 
     (Var (a,ob), toks)
-  | parse_term (Key"?"::Key"("::Id(a)::Key","::Key"ar"::Key"("::Id(A)::Key","::Id(B)::Key")"::Key")"::toks) = 
+  | parse_term (Key"?"::Id(a)::Key":"::Key"ar"::Key":"::Id(A)::Key"->"::Id(B)::toks) = 
     (Var (a,ar(Fun(A,[]), Fun(B,[]))), toks)
   | parse_term _ = raise ERROR "Syntax of term";
 
@@ -320,29 +361,47 @@ fun parse_term (Id(a)::Key"("::toks) =
 fun prec_of "~" = 4
   | prec_of "&" = 3
   | prec_of "|" = 2
-  | prec_of "<->" = 1
-  | prec_of "-->" = 1
+  | prec_of "<=>" = 1
+  | prec_of "==>" = 1
+  | prec_of ":" = 1
+  | prec_of "->" = 1
   | prec_of _ = ~1 (*means not an infix*);
 
 
+fun parse (Key"ALL" ::Id(a)::Key":"::Key"ob"::Key"."::toks) =
+    apfst (mk_quant "ALL" a ob) (parse toks)
+  | parse _ =  apfst (mk_quant "ALL" "a" ob) (parse [])
+
+and parsefix n (A,Key(co) :: toks) = 
+    if prec_of co < n then (A,Key(co) :: toks)
+    else parsefix n
+                  (apfst (mk_conn co A)
+                         (parsefix (pred_of co) (parse_atom toks)))
+  | parsefix n (A,toks) = (A,toks)
+
+and parse_atom (Key"~"::toks) = apfst mk_neg (parse_atom toks)
+  | parse_atom  = 
+
 (*Parsing of formulae; prec is the precedence of the operator to the left;
 parsing stops at an operator with lower precedence*)
-fun parse (Key"ALL" ::Key"("::Id(a)::Key","::Key"ob"::Key")"::Key"."::toks) =
-    apfst (makeQuant "ALL" a ob) (parse toks)
-  | parse (Key"EXISTS"::Key"("::Id(a)::Key","::Key"ob"::Key")"::Key"."::toks) =
-    apfst (makeQuant "EXISTS" a ob) (parse toks)
+fun parse (Key"ALL" ::Id(a)::Key":"::Key"ob"::Key"."::toks) =
+    apfst (mk_quant "ALL" a ob) (parse toks)
+  | parse (Key"ALL" ::Id(a)::Key":"::Id(A)::Key"->"::Id(B)::Key"."::toks) = 
+    apfst (mk_quant "ALL" a ob) (parse toks)
+  | parse (Key"EXISTS"::Id(a)::Key":"::Id(A)::Key"->"::Id(B)::Key"."::toks) =
+    apfst (mk_quant "EXISTS" a (ar (parse_term [Id A],parse_term [Id B]) ) (parse toks)
   | parse toks = parsefix 0 (parse_atom toks)
 and parsefix prec (A, Key(co)::toks) =
     if prec_of co < prec then (A, Key(co)::toks)
     else parsefix prec
-                  (apfst (makeConn co A)
+                  (apfst (mk_conn co A)
                          (parsefix (prec_of co) (parse_atom toks)))
   | parsefix prec (A, toks) = (A, toks)
-and parse_atom (Key"~"::toks) = apfst makeNeg (parse_atom toks)
+and parse_atom (Key"~"::toks) = apfst mk_neg (parse_atom toks)
   | parse_atom (Key"("::toks) = rightparen (parse toks)
-  | parse_atom (Id(pr)::Key"("::toks) =
-    apfst (makePred pr) (rightparen (parse_repeat1 (",", parse_term) toks))
-  | parse_atom (Id(pr)::toks) = (Pred(pr,[]), toks)
+  | parse_atom (Id(P)::Key"("::toks) =
+    apfst (mk_pred P) (rightparen (parse_repeat1 (",", parse_term) toks))
+  | parse_atom (Id(P)::toks) = (Pred(P,[]), toks)
   | parse_atom _ = raise ERROR "Syntax of formula";
 
 
@@ -360,14 +419,11 @@ fun conc_list sep [] = ""
 fun conc_list1 sep (b::bs)=b^ (conc_list sep bs);
 (*why it is okay?*)
 
-a: ob 
 
-a: A ==> B
-
-fun stringof_term (Param(a,_)) = a
+fun stringof_term (Param(a,s,_)) = a ^ ":" ^ stringof_sort s
   | stringof_term (Var (a,s)) = "?"  ^ a ^ ":" ^ stringof_sort s
   | stringof_term (Bound i) = "B." ^ str #"i"
-  | stringof_term (Fun (a,ts)) = a ^ stringof_args ts
+  | stringof_term (Fun (a,s,ts)) = a ^ stringof_args ts ^ ":" ^ stringof_sort s
 and stringof_args [] = ""
   | stringof_args ts = enclose (conc_list1 "," (map stringof_term ts))
 and stringof_sort ob = "ob"
@@ -399,17 +455,21 @@ exception UNIFY;
 (*Naive unification of terms containing no bound variables*)
 
 
-(*Look for a pair (X,z) in environment, return [z] if found, else [] *)
+(*Look for a pair (X,z) in environment, return [z] if found, else [] *)(*
 fun lookup ((X,(s:sort)), []) = []
   | lookup ((X,s), ((Y,(s1:sort)),(z:term))::env) = if X = (Y:string) then [z] else lookup((X,s),env);
+*)
+fun lookup (X, []) = NONE
+  | lookup (X, (Y,z)::env) = if X = Y then SOME z else lookup(X,env);
+
 (*
 fun lookup (X, []) = []
 | lookup (X, (Y,z)::env) = if X = (Y:string) then [z] else lookup(X,env); *)
 
 fun chasevar (Var (a,s)) env = (*Chase variable assignments*)
-    (case lookup((a,s),env) of
-         u ::_ => chasevar u env
-       | [] => Var (a,s))
+    (case lookup(a,env) of
+         SOME u => chasevar u env
+       | NONE => Var (a,s))
   | chasevar t env = t;
 
 (*what if an arrow and an object has the same name*)
@@ -418,35 +478,83 @@ fun chasevar (Var (a,s)) env = (*Chase variable assignments*)
 
 datatype uwli = us of sort * sort 
               | ut of term * term
-              | uv of (string * sort) * term
 
 open Binarymap
-              
+
+fun optexists P NONE = false 
+  | optexists P (SOME n) = P n  
+
+fun occs s env (Fun(_,_,ts)) = List.exists (occs s env) ts
+  | occs s env (Param(_,_,bs)) = List.exists (occs s env) (map Var bs)
+  | occs s env (Var (b,_)) = s=b orelse optexists (occs s env)(lookup(b,env))
+  | occs s env _ = false
+
+
+exception UNIFY
+
 fun unify_w (wl,env) = 
     case wl of 
         [] => env
-      | us (s1,s2) :: rest => unify_sorts s1 s2 rest env
+      | us (s1,s2) :: rest => unify_sort s1 s2 rest env
       | ut (t1,t2) :: rest => unify_term t1 t2 rest env
 and unify_term t1 t2 rest env = 
-    case (chasevar t1,chasevar t2) of
-        (Param(a,_), Param(b,_)) =>
-        if a=b then unify_w (rest,env) else raise UNIFY
-      | (Fun((a,s1),ts), Fun((b,s2),us)) =>
-        if a = b andalso length ts = length us then 
-            unify_w (us (s1,s2) ::  ListPair.map ut (ts,us) @ rest,env)
+    case (chasevar t1 env,chasevar t2 env) of
+        (Param(a,s1,_), Param(b,s2,_)) =>
+        if a=b then unify_w (us(s1,s2)::rest,env) else raise UNIFY
+      | (Fun(a,s1,ts1), Fun(b,s2,ts2)) =>
+        if a = b andalso length ts1 = length ts2 then 
+            unify_w (us (s1,s2) ::  ListPair.map ut (ts1,ts2) @ rest,env)
         else raise UNIFY
-      | (Var v, t)  => unify_w (uv (v,t) ::rest,env)
-      | (t, Var v) => unify_w (uv (v,t) ::rest,env)
-and chasevar (Var (a,s)) env = (*Chase variable assignments*)
-    (case Binarymap.peek(env,a) of
-         SOME u => chasevar u env
-       | NONE => Var (a,s))
-  | chasevar t env = t
-and unify_sorts s1 s2 rest env = 
+      | (Var (v1,s1), Var (v2,s2))  => 
+        if v1 = v2 then unify_w (us (s1,s2) :: rest,env) 
+        else let val env' = (v1,Var (v2,s2)):: env 
+             in unify_w (us (s1,s2) :: rest,env')
+             end
+      | (Var (v1,s1), t) => 
+        if occs v1 env t then raise UNIFY
+        else unify_w (us (s1,sort_of t) :: rest,(v1,t)::env)
+      | (t, Var (v1,s1)) => 
+        if occs v1 env t then raise UNIFY
+        else unify_w (us (s1,sort_of t) :: rest,(v1,t)::env)
+      | _ => raise UNIFY 
+and unify_sort s1 s2 rest env = 
     case (s1,s2) of
          (ob,ob) => unify_w (rest,env)
       | (ar (A,B), ar (C,D)) => unify_w (ut (A,C) :: ut (B,D) :: rest,env)
       | _ => raise UNIFY 
+
+fun unify (Pred(a,ts1), Pred(b,ts2), env) =
+    if a=b andalso length ts1 = length ts2 then 
+        unify_w (ListPair.map ut (ts1,ts2),env)
+    else raise UNIFY
+  | unify _ = raise UNIFY
+
+datatype theorem = thm of form list * form 
+
+fun assume f = thm ([f],f)
+
+fun conjI (thm (G1,C1)) (thm (G2,C2)) = thm ((G1 @ G2),Conn ("And",[C1,C2]))
+
+fun disjI1 (thm (G1,C1)) f = thm (G1,Conn ("Or",[C1,f]))
+
+fun disjI2 f (thm (G,C)) = thm (G,Conn ("Or",[f,C]))
+(*
+fun refl t = thm ([],(Pred(eq,[t,t])))
+
+fun subst (*???????*)
+
+fun disch f1 (thm(Γ,f2)) = thm (Γ,Conn ("Imp",[f1,f2]))
+
+(*which is the function removing an item*)
+
+fun mp (thm (G1,f1)) (thm (G2,f2)) = 
+    case f1 of 
+        Conn ("Imp",[f1,f2]) => (thm (G1 @ G2,f2))
+      | _ => raise ERROR "no match" *)
+
+(*
+ unify_terms(ts,us,env) else raise UNIFY
+  | unify _ = raise UNIFY;
 
 fun unify_terms ([],[], env) = env
   | unify_terms (t::ts, u::us, env) =
@@ -488,7 +596,7 @@ fun unify (Pred(a,ts), Pred(b,us), env) =
     if a=b then unify_terms(ts,us,env) else raise UNIFY
   | unify _ = raise UNIFY;
 
-
+*)
 (*Accumulate all Vars in the term (not Vars attached to a Param).*)
 fun vars_in_term (Var a, bs) = a ins bs
   | vars_in_term (Fun(_,ts), bs) = accumulate vars_in_term (ts,bs)
