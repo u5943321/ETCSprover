@@ -436,6 +436,21 @@ exception ERROR of string
 fun rightparen (x, Key")"::toks,env) = (x, toks,env)
   | rightparen _ = raise ERROR "Symbol ) expected";
 
+(*
+fun parse_until (al,parsefn) tl env = 
+    case tl of 
+        (Key(b)::tl1) => if mem b al then 
+                             parse_until1 (al,parsefn) tl1 env
+                         else ([],tl,env)
+      | _ => ([],tl,env)
+and parse_until1 (al,parsefn) tl env =
+    let val (u,tl1,env1) = parsefn tl env
+    in (parse_until (al,parsefn) tl1 env1)
+    end
+*)
+
+fun parse_until pfn tl env = rightparen (pfn tl env)
+
 (*really parse pob/par because they are actually doing type-infer. ?*)
 
 (*type inference during parsing : 
@@ -512,6 +527,7 @@ fun prec_of "~" = 4
   | prec_of "==>" = 1
   | prec_of _ = ~1;
 
+
 fun parse_pf tl env = 
     case tl of 
         (Key"ALL"::Id(a)::tl) =>
@@ -554,6 +570,11 @@ fun parse_pf tl env =
                   | _ => raise ERROR "Expected dot"
              end
            | _ => raise ERROR "Syntax of pform")
+     (* | (Key"("::tl) => 
+        case (parse_pf tl env) of 
+            (_,Key")"::tl1,_) => parse_pf (rightparen (parse_pf tl env))
+          | _ => 
+rightparen (parse_pf tl env)*)
       | _ => parsefix 0 (parse_atom tl env)
 and parsefix prec (pf,tl,env) =
     case tl of 
@@ -567,7 +588,7 @@ and parsefix prec (pf,tl,env) =
 and parse_atom tl env =
     case tl of 
         (Key"~"::tl1) => apfst mk_neg (parse_atom tl1 env)
-      | (Key"("::tl1) => rightparen (parse_atom tl1 env)
+      | (Key"("::tl1) => rightparen (parse_pf tl1 env)
       | (Id(P)::Key"("::tl1) => 
         apfst (mk_pPred P) (rightparen 
                                 (parse_repeat1 (",",parse_pt) tl1 env))
