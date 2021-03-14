@@ -460,8 +460,6 @@ use pAnno for this type-infer?
 *)
 
 
-(*make ":" an infix*)
-
 fun parse_pt tl env = 
     case tl of
         (Id(a)::tl1) => 
@@ -527,6 +525,20 @@ fun prec_of "~" = 4
   | prec_of "==>" = 1
   | prec_of _ = ~1;
 
+val fsdict:(string,psort list) dict = insert (Binarymap.mkDict String.compare,"=",[])
+
+val psdict:(string,psort list) dict = insert (Binarymap.mkDict String.compare,"P",[])
+
+fun is_fun sr = 
+    case (peek (fsdict,sr)) of 
+        SOME _ => true
+      | _ => false
+
+fun is_pred sr =
+    case (peek (psdict,sr)) of
+        SOME _ => true
+      | _ => false 
+
 
 fun parse_pf tl env = 
     case tl of 
@@ -570,11 +582,6 @@ fun parse_pf tl env =
                   | _ => raise ERROR "Expected dot"
              end
            | _ => raise ERROR "Syntax of pform")
-     (* | (Key"("::tl) => 
-        case (parse_pf tl env) of 
-            (_,Key")"::tl1,_) => parse_pf (rightparen (parse_pf tl env))
-          | _ => 
-rightparen (parse_pf tl env)*)
       | _ => parsefix 0 (parse_atom tl env)
 and parsefix prec (pf,tl,env) =
     case tl of 
@@ -589,10 +596,26 @@ and parse_atom tl env =
     case tl of 
         (Key"~"::tl1) => apfst mk_neg (parse_atom tl1 env)
       | (Key"("::tl1) => rightparen (parse_pf tl1 env)
-      | (Id(P)::Key"("::tl1) => 
-        apfst (mk_pPred P) (rightparen 
-                                (parse_repeat1 (",",parse_pt) tl1 env))
+      | (Id(a)::tl1) => 
+        if is_pred a then
+            (case tl1 of 
+                (Key"("::tl2) =>
+                (apfst (mk_pPred a) 
+                       (rightparen 
+                            (parse_repeat1 (",",parse_pt) tl2 env)))
+              | _ => raise ERROR "bracket expected")
+        else let val (pt1,tl1,env1) = parse_pt tl env 
+             in (case tl1 of 
+                     (Key(p)::tl2) => 
+                     (*check p is a pred sy here and perhaps an error message?*)
+                     let val (pt2,tl2,env2) = parse_pt tl2 env1
+                     in (pPred(p,[pt1,pt2]),tl2,env2)
+                     end
+                   | _ => raise ERROR "Pred expected")
+             end
       | _ => raise ERROR "Syntax of formula"
+
+
 
 
 fun parse_end (x, l, env) =
