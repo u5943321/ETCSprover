@@ -379,7 +379,8 @@ fun type_infer env t ty =
         end
       | pAnno (pt,ps) => 
         let val env1 = type_infer env pt ps
-        in unify_ps env1 ty ps
+            val env2 = type_infer env1 pt (ps_of_pt pt)
+        in unify_ps env2 ty ps
         end
       | pVar (name,ps) => unify_ps env ty ps 
       | ptUVar name => unify_ps env ty pob
@@ -409,7 +410,7 @@ fun type_infer_pf env pf =
             val (Bv,env3) = fresh_var env2
         in unify_ps env3 (ps_of_pt f) (par (ptUVar Av,ptUVar Bv))
         end
-      | pPred("eq",[pt1,pt2]) => 
+      | pPred("=",[pt1,pt2]) => 
         let val env1 = type_infer env pt1 (ps_of_pt pt1)
             val env2 = type_infer env1 pt2 (ps_of_pt pt2)
         in unify_ps env2 (ps_of_pt pt1) (ps_of_pt pt2)
@@ -449,8 +450,6 @@ and parse_until1 (al,parsefn) tl env =
     end
 *)
 
-fun parse_until pfn tl env = rightparen (pfn tl env)
-
 (*really parse pob/par because they are actually doing type-infer. ?*)
 
 (*type inference during parsing : 
@@ -470,8 +469,8 @@ fun mk_pt_conn env co s1 s2 =
     end
 
 
-fun parse_pt' tl env = parse_pt_fix 0 (parse_pt tl env)
-and parse_pt tl env = 
+fun parse_pt tl env = parse_pt_fix 0 (parse_pt_atom tl env)
+and parse_pt_atom tl env = 
     case tl of
         (Id(a)::tl1) => 
         (case tl1 of
@@ -487,7 +486,7 @@ and parse_pt tl env =
                           end)
            | (Key"("::tl2) => 
              let val (ptl,tl3,env1) = 
-                     rightparen (parse_repeat1 (",",parse_pt) tl2 env)
+                     rightparen (parse_repeat1 (",",parse_pt_atom) tl2 env)
              in (case tl3 of 
                      (Key":"::tl4) => 
                      (let val (ps,tl5,env2) = parse_par tl4 env1
@@ -512,22 +511,23 @@ and parse_pt tl env =
 and parse_pt_fix prec (pt,tl,env) = 
     case tl of
         Key(co)::tl => 
-        if fprec_of co < prec then (pt, Key(co)::tl)
+        if fprec_of co < prec then (pt, Key(co)::tl,env)
         else
-            let val (pt1,tl1,env1) = parse_pt tl env
+            let val (pt1,tl1,env1) = parse_pt_atom tl env
                 val (pt2,tl2,env2) = parse_pt_fix (fprec_of co) (pt1,tl1,env1)
             in parse_pt_fix prec (mk_pt_conn env co pt pt2,tl2,env2)
             end
+      | _ => (pt,tl,env)
 and parse_par tl env = 
     (case (parse_pob tl env) of 
          (A,Key"->"::tl1,env1) => 
          apfst (fn B => par(A,B)) (parse_pob tl1 env1)
        | _ => raise ERROR "Expected arrow")  
 and parse_pob tl env = 
-    let val (pt,tl1,env1) = parse_pt' tl env
+    let val (pt,tl1,env1) = parse_pt tl env
     in (pAnno (pt,pob),tl1,env1)
     end
-
+(*
 fun parse_pt tl env = 
     case tl of
         (Id(a)::tl1) => 
@@ -575,8 +575,8 @@ and parse_pob tl env =
     let val (pt,tl1,env1) = parse_pt tl env
     in (pAnno (pt,pob),tl1,env1)
     end
-
-
+*)
+ 
 fun mk_quant q n ps pf = pQuant (q,n,ps,pf)
 
 fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
@@ -595,7 +595,7 @@ fun prec_of "~" = 4
 
 val fsdict:(string,psort list) dict = insert (Binarymap.mkDict String.compare,"=",[])
 
-val psdict:(string,psort list) dict = insert (Binarymap.mkDict String.compare,"P",[])
+val psdict:(string,psort list) dict = insert(insert (Binarymap.mkDict String.compare,"P",[]),"=",[])
 
 fun is_fun sr = 
     case (peek (fsdict,sr)) of 
