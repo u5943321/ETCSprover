@@ -459,12 +459,80 @@ from f: A -> B, know that f is an arrow and A and B are objects
 use pAnno for this type-infer?
 *)
 
+fun fprec_of "*" = 2
+  | fprec_of "+" = 1
+  | fprec_of _ = ~1 
+
+
+fun mk_pt_conn env co s1 s2 =
+    let val (n,env) = fresh_var env in 
+        pFun (co,psvar n,[s1,s2])
+    end
+
+
+fun parse_pt' tl env = parse_pt_fix 0 (parse_pt tl env)
+and parse_pt tl env = 
+    case tl of
+        (Id(a)::tl1) => 
+        (case tl1 of
+             (Key":"::tl2) =>      
+             (case (ps_of env a) of 
+                  SOME ps => let val (pas,tl3,env1) = parse_par tl2 env
+                             in (pAnno (pVar(a,ps),pas),tl3,env1)
+                             end
+                | NONE => let val (n,env1) = fresh_var env
+                              val (ps,tl3,env2) = parse_par tl2 env1
+                              val env3 = record_ps a (psvar n) env2
+                          in (pAnno (pVar(a,psvar n),ps),tl3,env3)
+                          end)
+           | (Key"("::tl2) => 
+             let val (ptl,tl3,env1) = 
+                     rightparen (parse_repeat1 (",",parse_pt) tl2 env)
+             in (case tl3 of 
+                     (Key":"::tl4) => 
+                     (let val (ps,tl5,env2) = parse_par tl4 env1
+                          val (n,env3) = fresh_var env2
+                      in (pAnno(pFun(a,psvar n,ptl),ps),tl5,env3)
+                             (*pAnno or pVar with ps?*)
+                      end)
+                   | _ =>
+                     let val (n,env2) = fresh_var env1
+                     in (pFun(a,psvar n,ptl),tl3,env2)
+                     end)
+             end
+           | _ => 
+             (case (ps_of env a) of 
+                  SOME ps => (pVar (a,ps),tl1,env)
+                | NONE => let val (n,env1) = fresh_var env
+                              val env2 = record_ps a (psvar n) env1
+                          in (pVar (a,psvar n),tl1,env2)
+                          end))
+      | [] => raise ERROR "Syntax of preterm: unexpected end of file"
+      | t::_ => raise ERROR ("Syntax of preterm: " ^ tokentoString t) 
+and parse_pt_fix prec (pt,tl,env) = 
+    case tl of
+        Key(co)::tl => 
+        if fprec_of co < prec then (pt, Key(co)::tl)
+        else
+            let val (pt1,tl1,env1) = parse_pt tl env
+                val (pt2,tl2,env2) = parse_pt_fix (fprec_of co) (pt1,tl1,env1)
+            in parse_pt_fix prec (mk_pt_conn env co pt pt2,tl2,env2)
+            end
+and parse_par tl env = 
+    (case (parse_pob tl env) of 
+         (A,Key"->"::tl1,env1) => 
+         apfst (fn B => par(A,B)) (parse_pob tl1 env1)
+       | _ => raise ERROR "Expected arrow")  
+and parse_pob tl env = 
+    let val (pt,tl1,env1) = parse_pt' tl env
+    in (pAnno (pt,pob),tl1,env1)
+    end
 
 fun parse_pt tl env = 
     case tl of
         (Id(a)::tl1) => 
         (case tl1 of
-             (Key":"::tl2) => 
+             (Key":"::tl2) =>      
              (case (ps_of env a) of 
                  SOME ps => let val (pas,tl3,env1) = parse_par tl2 env
                             in (pAnno (pVar(a,ps),pas),tl3,env1)
