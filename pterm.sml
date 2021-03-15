@@ -177,7 +177,7 @@ fun ps_of_pt pt =
         ptUVar n => pob
       | pVar (n,ps) => ps
       | pFun (n,ps,l) => ps
-      | pAnno(pt,ps) => ps
+      | pAnno(pt,ps) => ps_of_pt pt
 
 fun type_infer env t ty = 
     case t of 
@@ -606,7 +606,7 @@ fun is_pred sr =
     case (peek (psdict,sr)) of
         SOME _ => true
       | _ => false 
-
+datatype ForP = fsym | psym
 
 fun parse_pf tl env = 
     case tl of 
@@ -732,6 +732,12 @@ fun form_from_pf env pf =
         Pred(P,List.map (term_from_pt env) ptl)
 
 
+
+fun read_f0 f = 
+    let val (pf,env) = read_pf f
+        val env1 = type_infer_pf env pf
+    in (form_from_pf env1 pf,env1)
+    end
 
 fun read_f f = 
     let val (pf,env) = read_pf f
