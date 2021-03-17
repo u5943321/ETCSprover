@@ -11,6 +11,11 @@ and term =
 datatype form =
 Pred of string * term list
 | Conn of string * form list
-| Quant of string * string * sort * form;   
+| Quant of string * string * sort * form;
+
+val eq_form : form * form -> bool
+val substt: (string * sort) * term -> term -> term
+val substs: (string * sort) * term -> sort -> sort
+val substf: (string * sort) * term -> form -> form
 end
 
