@@ -684,12 +684,13 @@ use pAnno for this type-infer?
 
 fun fprec_of "*" = 2
   | fprec_of "+" = 1
+  | fprec_of "o" = 3
   | fprec_of _ = ~1 
 
 
 fun mk_pt_conn env co s1 s2 =
-    let val (n,env) = fresh_var env in 
-        pFun (co,psvar n,[s1,s2])
+    let val (n,env1) = fresh_var env in 
+        (pFun (co,psvar n,[s1,s2]),env1)
     end
 
 
@@ -734,12 +735,13 @@ and parse_pt_atom tl env =
       | t::_ => raise ERROR ("Syntax of preterm: " ^ tokentoString t) 
 and parse_pt_fix prec (pt,tl,env) = 
     case tl of
-        Key(co)::tl => 
-        if fprec_of co < prec then (pt, Key(co)::tl,env)
+        Key(co)::tl1 => 
+        if fprec_of co < prec then (pt, Key(co)::tl1,env)
         else
             let val (pt1,tl1,env1) = parse_pt_atom tl env
                 val (pt2,tl2,env2) = parse_pt_fix (fprec_of co) (pt1,tl1,env1)
-            in parse_pt_fix prec (mk_pt_conn env co pt pt2,tl2,env2)
+                val (cpt, env3) = mk_pt_conn env2 co pt pt2
+            in parse_pt_fix prec (cpt,tl2,env3)
             end
       | _ => (pt,tl,env)
 and parse_par tl env = 
@@ -819,7 +821,7 @@ fun prec_of "~" = 4
 
 datatype ForP = fsym | psym
 
-val fpdict0:(string,ForP) dict = insert(insert (Binarymap.mkDict String.compare,"=",fsym),"P",psym)
+val fpdict0:(string,ForP) dict = insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym)
 
 val fpdict = ref fpdict0
 
@@ -835,6 +837,7 @@ fun is_pred sr =
 
 fun insert_fsym s = fpdict:= insert(!fpdict,s,fsym) 
 fun insert_psym s = fpdict:= insert(!fpdict,s,psym)
+
 
 fun parse_pf tl env = 
     case tl of 
@@ -959,7 +962,7 @@ and substs (V,t2) s =
         ob => s
       | ar(d,c) => ar(substt (V,t2) d,substt (V,t2) c)
 
-(*
+
 fun substf (V,t2) f = 
     case f of 
         Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
@@ -968,14 +971,12 @@ fun substf (V,t2) f =
 
 
 
-fun replacet (t,)
-*)
 
 fun abstract t = 
     let fun abs i (Pred(a,ts)) = Pred(a, map (substt (t, Bound i)) ts) 
           | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
           | abs i (Quant(q,b,s,A)) = 
-            Quant(q, b, substs (t, Bound i) s, abs (i+1) A)
+            Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
     in abs 0 end;
 
 
