@@ -422,7 +422,7 @@ fun type_infer env t ty =
            | ("z",[]) => 
              unify_ps (unify_ps env ps ty) 
                       ty (par (pFun("1",pob,[]),pFun("N",pob,[])))
-           | ("N_ind",[x0,t]) => 
+           | ("Nind",[x0,t]) => 
              let val (Av,env1) = fresh_var env
                  val env2 = type_infer env1 x0 (par (pFun("1",pob,[]),ptUVar Av))
                  val env3 = type_infer env2 t (par (ptUVar Av,ptUVar Av))
@@ -442,11 +442,11 @@ fun type_infer env t ty =
              end
            | ("from0",[X]) => 
              let val env1 = type_infer env X pob
-                 val env2 = unify_ps env1 ty (par (pFun ("1",pob,[]),X))
+                 val env2 = unify_ps env1 ty (par (pFun ("0",pob,[]),X))
              in 
                  unify_ps env2 ps ty
              end
-           | ("po",[A,B]) =>
+           | ("*",[A,B]) =>
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
                  val env3 = unify_ps env2 ty pob
@@ -494,7 +494,7 @@ fun type_infer env t ty =
                  val (Xv,env3) = fresh_var env2
                  val env4 = type_infer env3 f (par (ptUVar Xv, ptUVar Av))
                  val env5 = type_infer env4 g (par (ptUVar Xv, ptUVar Bv))
-                 val env6 = unify_ps env ty (par (ptUVar Xv, 
+                 val env6 = unify_ps env5 ty (par (ptUVar Xv, 
                                                   pFun ("po",pob,[ptUVar Av,ptUVar Bv])))
              in
                  unify_ps env6 ps ty
@@ -581,7 +581,7 @@ fun type_infer env t ty =
              let val (Av,env1) = fresh_var env
                  val (Bv,env2) = fresh_var env1
                  val (Cv,env3) = fresh_var env2
-                 val env4 = type_infer env2 f 
+                 val env4 = type_infer env3 f 
                                        (par (pFun("po",pob,[ptUVar Av,ptUVar Bv]),
                                              ptUVar Cv))
                  val env5 = unify_ps env4 ty 
@@ -591,8 +591,8 @@ fun type_infer env t ty =
            | ("ev",[A,B]) => 
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
-                 val env3 = unify_ps env ty 
-                                     (par (pFun("po",pob,[B,pFun("exp",pob,[A,B])]),A))
+                 val env3 = unify_ps env2 ty 
+                                     (par (pFun("po",pob,[A,pFun("exp",pob,[A,B])]),A))
              in
                  unify_ps env3 ps ty
              end
@@ -711,7 +711,7 @@ and parse_pt_atom tl env =
                           end)
            | (Key"("::tl2) => 
              let val (ptl,tl3,env1) = 
-                     rightparen (parse_repeat1 (",",parse_pt_atom) tl2 env)
+                     rightparen (parse_repeat1 (",",parse_pt) tl2 env)
              in (case tl3 of 
                      (Key":"::tl4) => 
                      (let val (ps,tl5,env2) = parse_par tl4 env1
@@ -731,12 +731,13 @@ and parse_pt_atom tl env =
                               val env2 = record_ps a (psvar n) env1
                           in (pVar (a,psvar n),tl1,env2)
                           end))
+      | (Key"("::tl1) => rightparen (parse_pt tl1 env) 
       | [] => raise ERROR "Syntax of preterm: unexpected end of file"
       | t::_ => raise ERROR ("Syntax of preterm: " ^ tokentoString t) 
 and parse_pt_fix prec (pt,tl,env) = 
     case tl of
-        Key(co)::tl1 => 
-        if fprec_of co < prec then (pt, Key(co)::tl1,env)
+        Key(co)::tl => 
+        if fprec_of co < prec then (pt, Key(co)::tl,env)
         else
             let val (pt1,tl1,env1) = parse_pt_atom tl env
                 val (pt2,tl2,env2) = parse_pt_fix (fprec_of co) (pt1,tl1,env1)
@@ -821,7 +822,7 @@ fun prec_of "~" = 4
 
 datatype ForP = fsym | psym
 
-val fpdict0:(string,ForP) dict = insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym)
+val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym)
 
 val fpdict = ref fpdict0
 
@@ -874,7 +875,7 @@ fun parse_pf tl env =
              in case tl2 of 
                     (Key"."::tl3) => 
                     let  val env2 = record_ps a ps env1
-                         val (pb,tl3,env3) = parse_pf tl2 env2
+                         val (pb,tl3,env3) = parse_pf tl3 env2
                     in
                         (mk_quant "EXISTS" a ps pb,tl3,clear_ps a env3) 
                     end
@@ -894,7 +895,18 @@ and parsefix prec (pf,tl,env) =
 and parse_atom tl env =
     case tl of 
         (Key"~"::tl1) => apfst mk_neg (parse_atom tl1 env)
-      | (Key"("::tl1) => rightparen (parse_pf tl1 env)
+      | (Key"("::tl1) =>
+        (rightparen (parse_pf tl1 env)
+         handle ERROR _ => 
+                let val (pt1,tl1,env1) = parse_pt tl env 
+                in (case tl1 of 
+                        (Key(p)::tl2) => 
+                        (*check p is a pred sy here and perhaps an error message?*)
+                        let val (pt2,tl2,env2) = parse_pt tl2 env1
+                        in (pPred(p,[pt1,pt2]),tl2,env2)
+                        end
+                      | _ => raise ERROR "Pred expected")
+                end)
       | (Id(a)::tl1) => 
         if is_pred a then
             (case tl1 of 
@@ -990,6 +1002,11 @@ fun form_from_pf env pf =
       | pPred(P,ptl) => 
         Pred(P,List.map (term_from_pt env) ptl)
 
+fun read_t t = 
+    let val (pt,env) = read_pt t
+        val pd = type_infer env pt (ps_of_pt pt)
+    in (term_from_pt pd pt,pdict pd)
+    end
 
 
 fun read_f0 f = 
