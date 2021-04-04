@@ -1,6 +1,6 @@
 structure pterm :> pterm = 
 struct
-open token pterm_dtype form
+open token pterm_dtype term form
 
 structure Env = 
 struct
@@ -178,226 +178,6 @@ fun ps_of_pt pt =
       | pVar (n,ps) => ps
       | pFun (n,ps,l) => ps
       | pAnno(pt,ps) => ps_of_pt pt
-(*
-fun type_infer env t ty = 
-    case t of 
-        pFun("o",ps,[f,g]) =>
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val (Cv,env4) = fresh_var env3
-            val env5 = type_infer env4 g (par (ptUVar Bv, ptUVar Cv))
-            val env6 = unify_ps env5 ty (par(ptUVar Av, ptUVar Cv))
-        in
-            unify_ps env6 ps ty
-        end
-      | pFun ("N",ps,[]) =>
-        unify_ps (unify_ps env ps ty) ty pob
-      | pFun ("s",ps,[]) => 
-        unify_ps (unify_ps env ps ty) 
-                 ty (par (pFun("N",pob,[]),pFun("N",pob,[]))) 
-      | pFun ("z",ps,[]) => 
-        unify_ps (unify_ps env ps ty) 
-                 ty (par (pFun("1",pob,[]),pFun("N",pob,[])))
-      | pFun ("N_ind",ps,[x0,t]) => 
-        let val (Av,env1) = fresh_var env
-            val env2 = type_infer env1 x0 (par (pFun("1",pob,[]),ptUVar Av))
-            val env3 = type_infer env2 t (par (ptUVar Av,ptUVar Av))
-            val env4 = unify_ps env3 ps ty
-        in 
-            unify_ps env4 ty (par (pFun("N",pob,[]),ptUVar Av))
-        end
-      | pFun ("1",ps,[]) => 
-        unify_ps (unify_ps env ps ty) ty pob
-      | pFun ("0",ps,[]) => 
-        unify_ps (unify_ps env ps ty) ty pob
-      | pFun ("to1",ps,[X]) => 
-        let val env1 = type_infer env X pob
-            val env2 = unify_ps env1 ty (par (X,pFun ("1",pob,[])))
-        in 
-            unify_ps env2 ps ty
-        end
-      | pFun ("from0",ps,[X]) => 
-        let val env1 = type_infer env X pob
-            val env2 = unify_ps env1 ty (par (pFun ("1",pob,[]),X))
-        in 
-            unify_ps env2 ps ty
-        end
-      | pFun ("po",ps,[A,B]) =>
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty pob
-        in 
-            unify_ps env3 ps ty
-        end
-      | pFun ("copo",ps,[A,B]) =>
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty pob
-        in 
-            unify_ps env2 ps ty
-        end
-      | pFun ("p1",ps,[A,B]) => 
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty (par(pFun("po",pob,[A,B]), A))
-        in
-            unify_ps env3 ps ty
-        end
-      | pFun ("i1",ps,[A,B]) => 
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty (par(A,pFun("copo",pob,[A,B])))
-        in
-            unify_ps env3 ps ty
-        end
-      | pFun ("p2",ps,[A,B]) => 
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty (par(pFun("po",pob,[A,B]), B))
-        in
-            unify_ps env3 ps ty
-        end
-      | pFun ("i2",ps,[A,B]) => 
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty (par(B,pFun("copo",pob,[A,B])))
-        in
-            unify_ps env3 ps ty
-        end
-      | pFun ("pa",ps,[f,g]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val (Xv,env3) = fresh_var env2
-            val env4 = type_infer env3 f (par (ptUVar Xv, ptUVar Av))
-            val env5 = type_infer env4 g (par (ptUVar Xv, ptUVar Bv))
-            val env6 = unify_ps env ty (par (ptUVar Xv, 
-                                  pFun ("po",pob,[ptUVar Av,ptUVar Bv])))
-        in
-            unify_ps env6 ps ty
-        end
-      | pFun ("copa",ps,[f,g]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val (Xv,env3) = fresh_var env2
-            val env4 = type_infer env3 f (par (ptUVar Av, ptUVar Xv))
-            val env5 = type_infer env4 g (par (ptUVar Bv, ptUVar Xv))
-            val env6 = unify_ps env ty
-                       (par (pFun ("copo",pob,[ptUVar Av,ptUVar Bv]),
-                             ptUVar Xv))
-        in
-            unify_ps env6 ps ty
-        end
-      | pFun ("eqo",ps,[f,g]) =>
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val env5 = unify_ps env4 ty pob
-        in
-            unify_ps env5 ps ty
-        end
-      | pFun ("coeqo",ps,[f,g]) =>
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val env5 = unify_ps env4 ty pob
-        in
-            unify_ps env5 ps ty
-        end
-      | pFun ("eqa",ps,[f,g]) =>
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val env5 = unify_ps env4 ty (par (pFun ("coeqo",pob,[f,g]),
-                                              ptUVar Av))
-        in
-            unify_ps env5 ps ty
-        end
-      | pFun ("coeqa",ps,[f,g]) =>
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val env5 = unify_ps env4 ty (par (ptUVar Bv,pFun ("coeqo",pob,[f,g])))
-        in
-            unify_ps env5 ps ty
-        end
-      | pFun ("eq_induce",ps,[f,g,h]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val (Xv,env4) = fresh_var env4
-            val env5 = type_infer env4 h (par (ptUVar Xv, ptUVar Av))
-            val env6 = unify_ps env5 ty (par(ptUVar Xv, pFun ("eqo",pob,[f,g])))
-        in
-           unify_ps env6 ps ty
-        end
-      | pFun ("coeq_induce",ps,[f,g,h]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
-            val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-            val (Xv,env4) = fresh_var env4
-            val env5 = type_infer env4 h (par (ptUVar Bv, ptUVar Xv))
-            val env6 = unify_ps env5 ty (par(pFun ("coeqo",pob,[f,g]),ptUVar Xv))
-        in
-            unify_ps env6 ps ty
-        end
-      | pFun ("exp",ps,[A,B]) =>  
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env2 ty pob
-        in 
-           unify_ps env3 ps ty
-        end
-      | pFun ("tp",ps,[f]) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val (Cv,env3) = fresh_var env2
-            val env4 = type_infer env2 f 
-                                  (par (pFun("po",pob,[ptUVar Av,ptUVar Bv]),
-                                       ptUVar Cv))
-            val env5 = unify_ps env4 ty 
-                  (par(ptUVar Bv, pFun ("exp",pob,[ptUVar Av,ptUVar Cv])))
-        in unify_ps env5 ps ty 
-        end 
-      | pFun ("ev",ps,[A,B]) => 
-        let val env1 = type_infer env A pob
-            val env2 = type_infer env1 B pob
-            val env3 = unify_ps env ty 
-                                (par (pFun("po",pob,[B,pFun("exp",pob,[A,B])]),A))
-        in
-            unify_ps env3 ps ty
-        end
-      | pFun("id",ps,[A]) => 
-        let val env1 = type_infer env A pob
-        in unify_ps (unify_ps env1 ps ty) ty (par (A,A))
-        end
-      | pAnno (pt,ps) => 
-        let val env1 = type_infer env pt ps
-            val env2 = type_infer env1 pt (ps_of_pt pt)
-        in unify_ps env2 ty ps
-        end
-      | pFun(f,ps,ptl) => 
-        let val env1 = env_from_ptl env ptl
-        in unify_ps env1 ty ps
-        end
-      | pVar (name,ps) => unify_ps env ty ps 
-      | ptUVar name => unify_ps env ty pob
-      | _ => env 
-and env_from_ptl env ptl = 
-    case ptl of 
-        [] => env
-      | h::t => 
-        let val env1 = type_infer env h (ps_of_pt h)
-        in env_from_ptl env1 t
-        end
-*)
-
 
 
 fun type_infer env t ty = 
@@ -463,28 +243,28 @@ fun type_infer env t ty =
            | ("p1",[A,B]) => 
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
-                 val env3 = unify_ps env2 ty (par(pFun("po",pob,[A,B]), A))
+                 val env3 = unify_ps env2 ty (par(pFun("*",pob,[A,B]), A))
              in
                  unify_ps env3 ps ty
              end
            | ("i1",[A,B]) => 
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
-                 val env3 = unify_ps env2 ty (par(A,pFun("copo",pob,[A,B])))
+                 val env3 = unify_ps env2 ty (par(A,pFun("+",pob,[A,B])))
              in
                  unify_ps env3 ps ty
              end
            | ("p2",[A,B]) => 
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
-                 val env3 = unify_ps env2 ty (par(pFun("po",pob,[A,B]), B))
+                 val env3 = unify_ps env2 ty (par(pFun("*",pob,[A,B]), B))
              in
                  unify_ps env3 ps ty
              end
            | ("i2",[A,B]) => 
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
-                 val env3 = unify_ps env2 ty (par(B,pFun("copo",pob,[A,B])))
+                 val env3 = unify_ps env2 ty (par(B,pFun("+",pob,[A,B])))
              in
                  unify_ps env3 ps ty
              end
@@ -495,7 +275,7 @@ fun type_infer env t ty =
                  val env4 = type_infer env3 f (par (ptUVar Xv, ptUVar Av))
                  val env5 = type_infer env4 g (par (ptUVar Xv, ptUVar Bv))
                  val env6 = unify_ps env5 ty (par (ptUVar Xv, 
-                                                  pFun ("po",pob,[ptUVar Av,ptUVar Bv])))
+                                                  pFun ("*",pob,[ptUVar Av,ptUVar Bv])))
              in
                  unify_ps env6 ps ty
              end
@@ -506,7 +286,7 @@ fun type_infer env t ty =
                  val env4 = type_infer env3 f (par (ptUVar Av, ptUVar Xv))
                  val env5 = type_infer env4 g (par (ptUVar Bv, ptUVar Xv))
                  val env6 = unify_ps env ty
-                                     (par (pFun ("copo",pob,[ptUVar Av,ptUVar Bv]),
+                                     (par (pFun ("+",pob,[ptUVar Av,ptUVar Bv]),
                                            ptUVar Xv))
              in
                  unify_ps env6 ps ty
@@ -534,7 +314,7 @@ fun type_infer env t ty =
                  val (Bv,env2) = fresh_var env1
                  val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
                  val env4 = type_infer env3 g (par (ptUVar Av, ptUVar Bv))
-                 val env5 = unify_ps env4 ty (par (pFun ("coeqo",pob,[f,g]),
+                 val env5 = unify_ps env4 ty (par (pFun ("eqo",pob,[f,g]),
                                                    ptUVar Av))
              in
                  unify_ps env5 ps ty
@@ -548,7 +328,7 @@ fun type_infer env t ty =
              in
                  unify_ps env5 ps ty
              end
-           | ("eq_induce",[f,g,h]) => 
+           | ("eqinduce",[f,g,h]) => 
              let val (Av,env1) = fresh_var env
                  val (Bv,env2) = fresh_var env1
                  val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
@@ -559,7 +339,7 @@ fun type_infer env t ty =
              in
                  unify_ps env6 ps ty
              end
-           | ("coeq_induce",[f,g,h]) => 
+           | ("coeqinduce",[f,g,h]) => 
              let val (Av,env1) = fresh_var env
                  val (Bv,env2) = fresh_var env1
                  val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
@@ -582,7 +362,7 @@ fun type_infer env t ty =
                  val (Bv,env2) = fresh_var env1
                  val (Cv,env3) = fresh_var env2
                  val env4 = type_infer env3 f 
-                                       (par (pFun("po",pob,[ptUVar Av,ptUVar Bv]),
+                                       (par (pFun("*",pob,[ptUVar Av,ptUVar Bv]),
                                              ptUVar Cv))
                  val env5 = unify_ps env4 ty 
                                      (par(ptUVar Bv, pFun ("exp",pob,[ptUVar Av,ptUVar Cv])))
@@ -592,7 +372,7 @@ fun type_infer env t ty =
              let val env1 = type_infer env A pob
                  val env2 = type_infer env1 B pob
                  val env3 = unify_ps env2 ty 
-                                     (par (pFun("po",pob,[A,pFun("exp",pob,[A,B])]),A))
+                                     (par (pFun("*",pob,[A,pFun("exp",pob,[A,B])]),B))
              in
                  unify_ps env3 ps ty
              end
@@ -694,6 +474,22 @@ fun mk_pt_conn env co s1 s2 =
     end
 
 
+val cdict0:(string,psort) dict = insert(insert(insert(insert(Binarymap.mkDict String.compare,"N",pob),"z",par(pFun("1",pob,[]),pFun("N",pob,[]))),"s",par(pFun("N",pob,[]),pFun("N",pob,[]))),"1",pob)
+
+val cdict = ref cdict0
+
+fun is_const sr = 
+    case (peek (!cdict,sr)) of 
+        SOME _ => true
+      | _ => false
+
+fun ps_of_const c = 
+    case (peek (!cdict,c)) of 
+        SOME ps => ps 
+      | _ => raise ERROR "not a constant"
+
+
+
 fun parse_pt tl env = parse_pt_fix 0 (parse_pt_atom tl env)
 and parse_pt_atom tl env = 
     case tl of
@@ -725,7 +521,8 @@ and parse_pt_atom tl env =
                      end)
              end
            | _ => 
-             (case (ps_of env a) of 
+             (if (is_const a) then (pFun (a,ps_of_const a,[]),tl1,env) else
+               case (ps_of env a) of 
                   SOME ps => (pVar (a,ps),tl1,env)
                 | NONE => let val (n,env1) = fresh_var env
                               val env2 = record_ps a (psvar n) env1
@@ -822,7 +619,9 @@ fun prec_of "~" = 4
 
 datatype ForP = fsym | psym
 
-val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym)
+val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym),"ismono",psym)
+
+(*change to fold*)
 
 val fpdict = ref fpdict0
 
