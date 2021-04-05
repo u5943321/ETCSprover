@@ -4,9 +4,6 @@ open token pterm_dtype form pterm term
 
 datatype thm = thm of form list * form 
 
-type goal = form list * form
-type validation = thm list -> thm
-type tactic = goal -> goal list * validation
 
 
 fun ant (thm(G,C)) = G
@@ -98,10 +95,7 @@ fun mp (thm (G1,f1)) (thm (G2,f2)) =
       | _ => raise ERR "no match" 
 
 
-fun dest_imp f = 
-    case f of 
-        Conn("==>",[f1,f2]) => (f1,f2)
-      | _ => raise ERR "not an implication"
+
 
 (*
 fun strip_all_from_thm (thm(G,C)) = 
@@ -162,6 +156,40 @@ fun allE (thm(G,C)) t =
       | _ => raise ERR "not an ALL"
 
 
+fun specl th l = 
+    if is_all (concl th) then 
+        (case l of [] => th
+                 | h :: t => allE (specl th t) h)
+    else raise ERR "conclusion not universally quantified"
+
+
+
+fun spec_all th = 
+    let val fv = fvfl (ant th)
+        val v2bs = snd (strip_ALL (concl th))
+        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
+    in 
+        specl th (rev v2bs')
+    end
+
+(*find the sort of a variable with name n in a name-sort list*)
+
+fun find_sort n nsl = 
+    case nsl of [] => raise ERR "not found"
+              | (n0,s) :: t => if n = n0 then s else find_sort n t
+
+
+fun abstl th l = 
+    case l of 
+        [] => th
+      | n :: t => 
+        (let val fv = fvf (concl th)
+             val s = find_sort n fv
+         in
+             allI (n,s) (abstl th t)
+         end)
+
+
 fun existsE (thm(G,C)) (n,s) = 
     case C of 
         Quant("EXISTS",n1,s1,b) => 
@@ -193,6 +221,37 @@ fun trans th1 th2 =
          end
     else raise ERR "not an equality"
 
+
+fun sym th = 
+    if is_eqn (concl th)
+    then let val (l,r) = dest_eq (concl th)
+         in thm(ant th,Pred("=",[r,l]))
+         end
+    else raise ERR "not an equality"
+
+(*
+fun thl_from_th th = 
+    let val th1 = spec_all th
+    in case (concl th1) of 
+           Conn("&",[f1,f2]) => 
+           (thl_from_th thm(ant th1,f1)) @
+           (thl_from_th thm(ant th1,f2))
+         | Conn("~",[f]) => [iffF_intro th1]
+         | _ => [th1]
+    end
+*)
+
+fun dict2l dict = Binarymap.foldl (fn (k:string,v:term,A) => (k,v) :: A) [] dict
+
+
+
+fun part_tmatch partfn A t = 
+    let val env = dict2l (match_term0 (partfn A) t (Binarymap.mkDict String.compare))
+        val A' = abstl A (List.map (fn (a,b) => a) env)
+    in specl A' (List.map (fn (a,b) => b) env)
+    end
+
+val rewr_conv = part_tmatch (snd o dest_eq o concl o spec_all)
 
 
 (*
@@ -355,7 +414,7 @@ val idL = thm([], #1 (read_f "ALL f. id (A) o f = f"))
 
 val idR = thm([], #1 (read_f "ALL f. f o id(A) = f"))
 
-val o_assoc = thm([], #1 (read_f "ALL f. ALL g. ALL h. (f o g) o h = f o g o h"))
+val o_assoc = thm([], #1 (read_f "(f o g) o h = f o g o h"))
 
 val ax1_1 = thm([],#1 (read_f "ALL X. ALL tx. tx = to1(X)"))
 

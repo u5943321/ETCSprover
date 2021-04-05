@@ -2,6 +2,11 @@ structure tactic :> tactic =
 struct
 open term form thm
 
+type goal = form list * form
+type validation = thm list -> thm
+type tactic = goal -> goal list * validation
+
+
 fun conj_tac ((fl,f):goal):goal list * validation = 
     case f of 
         (Conn("&",[f1,f2])) =>

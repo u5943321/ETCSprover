@@ -1,3 +1,5 @@
+structure conv :> conv = 
+struct
 open term form thm 
 
 exception unchanged
@@ -37,8 +39,9 @@ fun depth_conv c t =
     ((sub_conv (depth_conv c)) thenc (repeatc c)) t
 
 fun rewr_conv th t = 
-    let val (lhs,rhs) = dest_eq (strip_all (concl th))
+    let val (lhs,rhs) = dest_eq (concl th)
         val env = match_term0 lhs t (Binarymap.mkDict String.compare)
     in thm(ant th, Pred("=",[t,inst_term env rhs]))
     end
 
+end

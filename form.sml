@@ -20,6 +20,7 @@ val FALSE = Pred("F",[])
 
 exception ERR of string 
 
+(*destructor functions*)
 
 fun dest_eq f = 
     case f of
@@ -31,9 +32,21 @@ fun dest_iff f =
         Conn("<=>",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not an iff"
 
+fun dest_imp f = 
+    case f of 
+        Conn("==>",[f1,f2]) => (f1,f2)
+      | _ => raise ERR "not an implication"
+
+(*predicate functions*)
+
 fun is_eqn f = 
     case f of Pred("=",[t1,t2]) => true
             | _ => false
+
+fun is_all f = 
+    case f of 
+        Quant("ALL",_,_,_) => true
+      | _ => false
 
 
 fun eq_form fp = 
@@ -198,17 +211,7 @@ fun strip_all f =
       | _ => f
 (*very naive, trying to do the spec stuff*)
 
-fun is_all f = 
-    case f of 
-        Quant("ALL",_,_,_) => true
-      | _ => false
 
-
-fun specl th l = 
-    if is_all (concl th) then 
-        (case l of [] => th
-                 | h :: t => allE (specl th t) h)
-    else raise ERR "conclusion not universally quantified"
 
 
 fun strip_ALL f = 
@@ -237,19 +240,14 @@ and pvariants vl s =
 
 (*Variables To Be Specialized*)
 
-fun spec_all th = 
-    let val fv = fvfl (ant th)
-        val v2bs = snd (strip_ALL (concl th))
-        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
-    in 
-        specl th (rev v2bs')
-    end
+
 
 fun part_tmatch pfn th t = 
     let
         val env = match_term0 (pfn th) t (Binarymap.mkDict String.compare)
     in
-        inst_form 
+        (List.map (inst_form env) (ant th), inst_form env (concl th))
+    end
 
 
 end

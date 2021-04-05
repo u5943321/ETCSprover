@@ -8,6 +8,7 @@ val assume: form -> thm
 val refl: term -> thm
 val concl: thm -> form
 val trans: thm -> thm -> thm
+val sym: thm -> thm
 val ant: thm -> form list
 val conjI: thm  -> thm -> thm
 val disjI1: thm -> form -> thm
@@ -16,7 +17,11 @@ val EQ_fsym: string -> sort -> thm list -> thm
 val EQ_psym: string -> thm list -> thm
 val conjE1: thm -> thm
 val conjE2: thm -> thm
-val disjE : form -> form -> form -> thm -> thm -> thm -> thm
+val disjE: form -> form -> form -> thm -> thm -> thm -> thm
+val existsE: thm -> (string * sort) -> thm
+val existsI: thm -> (string * sort) -> term -> form -> thm
+val allI: (string * sort) -> thm -> thm
+val allE: thm -> term -> thm
 val idL: thm
 val idR: thm
 val o_assoc: thm
