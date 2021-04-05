@@ -198,6 +198,58 @@ fun strip_all f =
       | _ => f
 (*very naive, trying to do the spec stuff*)
 
+fun is_all f = 
+    case f of 
+        Quant("ALL",_,_,_) => true
+      | _ => false
+
+
+fun specl th l = 
+    if is_all (concl th) then 
+        (case l of [] => th
+                 | h :: t => allE (specl th t) h)
+    else raise ERR "conclusion not universally quantified"
+
+
+fun strip_ALL f = 
+    let fun strip_all0 f = 
+            case f of 
+                Quant("ALL",n,s,b) => 
+                let val (b1,l) = strip_all0 (subst_bound (Var(n,s)) b) in
+                    (b1,(n,s) :: l) end
+              | _ => (f,[])
+    in strip_all0 f
+    end
+
+
+fun pvariantt vl t = 
+    case t of 
+        Var(n,s) => 
+        if mem n (List.map (fn (a,b) => a) vl) 
+        then Var (n ^ "'",pvariants vl s)
+        else Var (n, pvariants vl s)
+      | Fun(f,s,l) => Fun(f,pvariants vl s,List.map (pvariantt vl) l)
+      | _ => t
+and pvariants vl s = 
+    case s of  
+        ob => ob
+      | ar(t1,t2) => ar(pvariantt vl t1,pvariantt vl t2)
+
+(*Variables To Be Specialized*)
+
+fun spec_all th = 
+    let val fv = fvfl (ant th)
+        val v2bs = snd (strip_ALL (concl th))
+        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
+    in 
+        specl th (rev v2bs')
+    end
+
+fun part_tmatch pfn th t = 
+    let
+        val env = match_term0 (pfn th) t (Binarymap.mkDict String.compare)
+    in
+        inst_form 
 
 
 end
