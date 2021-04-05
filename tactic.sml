@@ -32,6 +32,10 @@ fun disj2_tac (fl,f) =
       | _ => raise ERR "not a disjunction"
 
  
+fun cases_on c (fl,f) =
+    ([(c::fl,f),((mk_neg c)::fl,f)], 
+     fn [th1,th2] => disjE c (mk_neg c) (concl th1) (tautI c) th1 th2
+     | _ => raise ERR "incorrect length of list") 
 
 fun contra_tac (fl,f) = 
     case f of
@@ -76,6 +80,15 @@ fun wexists_tac t (fl,f) =
         else raise ERR "inconsist sorts"
       | _ => raise ERR "not an EXISTS"
 
+fun gen_all_tac (fl,f) = 
+    case f of
+        Quant("ALL",n,s,b) =>
+        let val f' = subst_bound (Var(n,s)) b in
+        ([(fl,f')], fn [th] => allI (n,s) th
+                   | _ => raise ERR "incorrect length of list")
+        end
+        | _ => raise ERR "goal is not universally quantified"
+
 
 fun h1_of l = 
     case l of 
@@ -100,7 +113,7 @@ infix >> then_tac
 
 val op >> = then_tac
 
-fun then1_tac (tac1:tactic) (tac2:tactic) (fl,f) = 
+fun then1_tac ((tac1:tactic),(tac2:tactic)) (fl,f) = 
     let val (gl,func) = tac1 (fl,f)
         val (gl1,func1) = tac2 (hd gl)
         val gl' = gl1 @ (tl gl)
@@ -112,6 +125,9 @@ fun then1_tac (tac1:tactic) (tac2:tactic) (fl,f) =
     in (gl',func')
     end
 
+infix >- then1_tac 
+
+val op >- = then1_tac
 
 fun Orelse0 (tac1:goal -> goal list * validation) 
             (tac2:goal -> goal list * validation) (g as (fl,f)) = 

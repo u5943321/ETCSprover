@@ -16,7 +16,11 @@ Pred of string * term list
 | Quant of string * string * sort * form;
 val TRUE: form
 val FALSE: form
+val mk_neg: form -> form
 val dest_eq: form -> term * term
+val dest_imp: form -> form * form
+val dest_iff: form -> form * form
+val is_all: form -> bool
 val is_eqn: form -> bool
 val eq_form: form * form -> bool
 val substt: (string * sort) * term -> term -> term
@@ -35,5 +39,7 @@ exception ERR of string
 val inst_term: (string,term) Binarymap.dict -> term -> term
 val inst_sort: (string,term) Binarymap.dict -> sort -> sort
 val inst_form: (string,term) Binarymap.dict -> form -> form
+val strip_ALL: form -> form * (string * sort) list
+val pvariantt: (string * sort) list -> term -> term
 end
 

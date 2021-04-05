@@ -17,6 +17,7 @@ Pred of string * term list
 val TRUE = Pred("T",[])
 val FALSE = Pred("F",[])
 
+fun mk_neg f = Conn("~",[f])
 
 exception ERR of string 
 
@@ -241,13 +242,13 @@ and pvariants vl s =
 (*Variables To Be Specialized*)
 
 
-
+(*
 fun part_tmatch pfn th t = 
     let
         val env = match_term0 (pfn th) t (Binarymap.mkDict String.compare)
     in
         (List.map (inst_form env) (ant th), inst_form env (concl th))
     end
-
+*)
 
 end

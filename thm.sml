@@ -66,16 +66,8 @@ fun disjE A B C (thm (G1,AorB)) (thm (G2,C1)) (thm (G3,C2)) =
 
 (*fun imp_conj *)
 
-fun mk_neg f = Conn("~",[f])
 
 fun tautI f = thm([],Conn("|",[f,mk_neg f]))
-
-fun cases_on c (fl,f) =
-    ([(c::fl,f),((mk_neg c)::fl,f)], 
-     fn [th1,th2] => disjE c (mk_neg c) (concl th1) (tautI c) th1 th2
-     | _ => raise ERR "incorrect length of list") 
-
-
 
 fun negI (thm (G,C)) f = 
     if C = FALSE andalso mem f G then 
@@ -87,6 +79,8 @@ fun negE (thm (G1,A1)) (thm (G2,A2)) =
     then (thm (assum_U G1 G2,FALSE))
     else raise ERR "not a contradiction"
 
+(*derived rules*)
+
 fun disch f1 (thm(G,f2)) = thm (ril f1 G,Conn ("==>",[f1,f2]))
 
 fun mp (thm (G1,f1)) (thm (G2,f2)) = 
@@ -96,18 +90,6 @@ fun mp (thm (G1,f1)) (thm (G2,f2)) =
 
 
 
-
-(*
-fun strip_all_from_thm (thm(G,C)) = 
-    let val fvs = fvfl G
-        val  
-
-
-
-fun irule th (fl,f) = 
-*)
-
-(*derived rules*)
 
 fun undisch th = mp th (assume (#1(dest_imp (concl th))))
 

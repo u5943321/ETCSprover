@@ -8,5 +8,8 @@ use "form.sml";
 use "pterm.sig";
 use "pterm.sml";
 use "thm.sig";
-use "thm.sml"
-
+use "thm.sml";
+use "conv.sig"; 
+use "conv.sml";
+use "tactic.sig";
+use "tactic.sml"
