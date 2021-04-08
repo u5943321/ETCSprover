@@ -79,41 +79,46 @@ fun negE (thm (G1,A1)) (thm (G2,A2)) =
     then (thm (assum_U G1 G2,FALSE))
     else raise ERR "not a contradiction"
 
-(*derived rules*)
 
-fun disch f1 (thm(G,f2)) = thm (ril f1 G,Conn ("==>",[f1,f2]))
+(*
+fun conj_subst1 (thm(G1,pq)) (thm(G2,pp')) = 
+    let val p2p' = dimpl2r (thm(G,pp'))
+    in trans (cj_imp1 pq) p2p'
 
-fun mp (thm (G1,f1)) (thm (G2,f2)) = 
-    case f1 of 
-        Conn ("==>",[A,B]) => if f2 = A then (thm (assum_U G1 G2,B)) else raise ERR "no match" 
-      | _ => raise ERR "no match" 
-
-
-
-
-fun undisch th = mp th (assume (#1(dest_imp (concl th))))
-
-fun add_assum f th = mp (disch f th) (assume f)
-
-fun imp_trans th1 th2 = 
-    let val (ant,cl) = dest_imp (concl th1)
-    in disch ant (mp th2 (mp th1 (assume ant)))
-    end
-
-fun prove_hyp th1 th2 = mp (disch (concl th1) th2) th1
-
+fun conj_subst (thm(G1,pq)) (thm(G2,pp')) (thm(G3,qq' = 
+    let val p2p' = 
+    dimpI 
+        (disch pq (conjI (imp_trans ) 
+                         ()))
+*)
 (* have a \/ b iff ~a ==> b as a derived rule? not in manual.*)
 
 fun falseE f = thm([FALSE],f)
 
-fun truthI G = thm (G,TRUE)
-
+fun trueI G = thm (G,TRUE)
+(*
 fun dimpI (thm (G1,A1)) (thm (G2,A2)) = 
     if mem A1 G2 andalso mem A2 G1 then 
         (thm(assum_U G1 G2, Conn("<=>",[A1,A2])))
     else raise ERR "not sufficient for an iff"
 
+*)
+fun dimpI (thm (G1,I1)) (thm (G2,I2)) = 
+    case (I1,I2) of 
+        (Conn("==>",[f1,f2]),Conn("==>",[f3,f4])) =>
+        if f1 = f4 andalso f2 = f3 
+        then (thm (assum_U G1 G2,Conn("<=>",[f1,f2])))
+        else raise ERR "implications are not inverse of each other"
+      | _ => raise ERR "not a pair of implications"
+
 (*modify above?*)
+
+fun dimpE (thm(G,A)) = 
+    case A of
+        Conn("<=>",[f1,f2]) => 
+        thm(G,Conn("&", 
+             [Conn("==>",[f1,f2]),Conn("==>",[f2,f1])]))
+      | _ => raise ERR "not an iff"
 
 fun dimpE1 (thm (G,A)) B = 
     if mem (Conn("<=>",[A,B])) G then (thm (G,B))
@@ -176,6 +181,74 @@ fun sym th =
          in thm(ant th,Pred("=",[r,l]))
          end
     else raise ERR "not an equality"
+
+
+(*derived rules*)
+
+fun disch f1 (thm(G,f2)) = thm (ril f1 G,Conn ("==>",[f1,f2]))
+
+fun mp (thm (G1,f1)) (thm (G2,f2)) = 
+    case f1 of 
+        Conn ("==>",[A,B]) => if f2 = A then (thm (assum_U G1 G2,B)) else raise ERR "no match" 
+      | _ => raise ERR "no match" 
+
+
+
+
+fun undisch th = mp th (assume (#1(dest_imp (concl th))))
+
+fun add_assum f th = mp (disch f th) (assume f)
+
+fun imp_trans th1 th2 = 
+    let val (ant,cl) = dest_imp (concl th1)
+    in disch ant (mp th2 (mp th1 (assume ant)))
+    end
+
+fun prove_hyp th1 th2 = mp (disch (concl th1) th2) th1
+
+fun equivT (thm(G,C)) = dimpI (disch C (trueI (C :: G))) 
+                              (disch TRUE (add_assum TRUE (thm(G,C))))
+
+fun frefl f = dimpI (disch f (assume f)) (disch f (assume f))
+
+fun dimpl2r th = conjE1 (dimpE th)
+
+fun dimpr2l th = conjE2 (dimpE th)
+
+fun cj_imp1 pq = disch pq (conjE1 (assume pq))
+
+fun cj_imp2 pq = disch pq (conjE2 (assume pq))
+
+
+val conj_T = equivT (conjI (trueI []) (trueI []))
+
+fun T_conj1 f = dimpI (disch (Conn("&",[TRUE,f])) (conjE2 (assume (Conn("&",[TRUE,f])))))
+                      (disch f (conjI (trueI []) (assume f)))
+
+fun T_conj2 f = dimpI (disch (Conn("&",[f,TRUE])) (conjE1 (assume (Conn("&",[f,TRUE])))))
+                      (disch f (conjI (assume f) (trueI [])))
+
+fun F_conj1 f = dimpI (disch (Conn("&",[FALSE,f])) (conjE1 (assume (Conn("&",[FALSE,f])))))
+                      (disch FALSE (falseE (Conn("&",[FALSE,f]))))
+
+fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,FALSE])))))
+                      (disch FALSE (falseE (Conn("&",[f,FALSE]))))
+
+fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
+    case (C1,C2) of 
+        (Conn("<=>",[f1,f2]), Conn("<=>",[f3,f4])) => 
+        if f2 = f3 then 
+            let val f1f2 = conjE1 (dimpE (thm(G1,C1)))
+                val f2f1 = conjE2 (dimpE (thm(G1,C1)))
+                val f2f4 = conjE1 (dimpE (thm(G2,C2)))
+                val f4f2 = conjE2 (dimpE (thm(G2,C2)))
+                val f1f4 = imp_trans f1f2 f2f4
+                val f4f1 = imp_trans f4f2 f2f1
+            in dimpI f1f4 f4f1
+            end
+        else raise ERR "two iffs do not match"
+      | _ => raise ERR "not a pair of iffs"
+
 
 (*
 fun thl_from_th th = 
