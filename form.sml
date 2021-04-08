@@ -23,6 +23,11 @@ exception ERR of string
 
 (*destructor functions*)
 
+fun dest_fun t = 
+    case t of
+        Fun(f,s,l) => (f,s,l)
+      | _ => raise ERR "not a function term"
+
 fun dest_eq f = 
     case f of
         Pred("=",[t1,t2]) => (t1,t2)
@@ -76,36 +81,71 @@ fun substf (V,t2) f =
       | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
       | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) f)
 
+fun pair_compare ac bc ((a1,b1),(a2,b2)) = 
+    case (ac (a1,a2)) of 
+        EQUAL => bc (b1,b2)
+      | x => x
+
+
+fun inv_image_compare f c (x,y) = 
+    c (f x, f y)
+
+fun list_compare c (l1,l2) = 
+    case (l1,l2) of
+        ([],[]) => EQUAL
+      | (h1 :: t1, h2 :: t2) => pair_compare c (list_compare c)
+                                             ((h1,t1),(h2,t2))
+      | ([],_) => LESS
+      | (_,[]) => GREATER
+
+fun sort_compare (s1,s2) = 
+    case (s1,s2) of 
+        (ob,ob) => EQUAL
+      | (ob,_) => LESS
+      | (_,ob) => GREATER
+      | (ar dc1,ar dc2) => pair_compare term_compare term_compare (dc1,dc2)
+and term_compare (t1,t2) = 
+    case (t1,t2) of 
+        (Var ns1,Var ns2) => pair_compare String.compare sort_compare (ns1,ns2)
+     | (Var _ , _) => LESS
+     | (_,Var _) => GREATER
+     | (Bound i1, Bound i2) => Int.compare (i1,i2)
+     | (Bound _ , _) => LESS
+     | (_, Bound _) => GREATER
+     | (Fun fsl1, Fun fsl2) => 
+       inv_image_compare (fn (a,b,c) => (a,(b,c))) 
+                         (pair_compare String.compare 
+                                       (pair_compare sort_compare 
+                                                     (list_compare term_compare))) 
+                         (fsl1,fsl2)  
+
+
 
 fun fvt t = 
     case t of 
-        Var(n,s) => (n,s) :: (fvs s)
-      | Bound i => []
+        Var(n,s) => HOLset.add (fvs s,(n,s)) 
+      | Bound i => HOLset.empty (pair_compare String.compare sort_compare)
       | Fun(f,s,tl) => 
-        (case tl of [] => []
-                  | h :: t => (fvt h) @ (fvs s) @ fvt (Fun(f,s,tl)))
+        (case tl of [] => HOLset.empty (pair_compare String.compare sort_compare)
+                  | h :: t => HOLset.union (HOLset.union ((fvt h),(fvs s)), fvtl t))
 and fvs s = 
     case s of 
-        ob => []
-      | ar(t1,t2) => (fvt t1) @ (fvt t2)
-
-fun fvtl tl = 
+        ob => HOLset.empty (pair_compare String.compare sort_compare)
+      | ar(t1,t2) => HOLset.union (fvt t1,fvt t2)
+and fvtl tl = 
     case tl of 
-        [] => []
-      | h :: t => (fvt h) @ (fvtl t)
+        [] => HOLset.empty (pair_compare String.compare sort_compare)
+      | h :: t => HOLset.union (fvt h,fvtl t)
+
 
 fun fvf f = 
     case f of 
         Pred(P,tl) => fvtl tl
-      | Conn(co,fl) => 
-        (case fl of 
-            [] => []
-          | h :: t => (fvf h) @ (fvf (Conn(co,t))))
-      | Quant(q,n,s,b) => (fvs s) @ (fvf f)
-
-fun fvfl G = 
-    case G of [] => []
-            | h :: t => (fvf h) @ (fvfl t)
+      | Conn(co,fl) => fvfl fl
+      | Quant(q,n,s,b) => HOLset.union (fvs s,fvf b)
+and fvfl G = 
+    case G of [] => HOLset.empty (pair_compare String.compare sort_compare)
+            | h :: t => HOLset.union (fvf h,fvfl t)
 
 fun replacet (u,new) t = 
     if t=u then new else 
@@ -142,11 +182,11 @@ fun match_term0 pat ct env =
         if f1 <> f2 then raise ERR "different function names"
         else match_sort0 s1 s2 (match_tl l1 l2 env)  
       | (Var(n1,s1),_) => 
-        (case (lookup_t env n1) of
+        (case (lookup_t env (n1,s1)) of
             SOME t => if t = ct then env else
                       raise ERR "double bind"
           | _ => 
-            Binarymap.insert (match_sort0 s1 (sort_of ct) env,n1,ct))
+            Binarymap.insert (match_sort0 s1 (sort_of ct) env,(n1,s1),ct))
       | (Bound i1,Bound i2) => 
         if i1 <> i2 then 
             raise ERR "bounded variable cannot be unified"
@@ -188,7 +228,7 @@ and match_fl l1 l2 env =
 fun inst_term env t = 
     case t of
         Var(n,s) => 
-        (case (lookup_t env n) of  
+        (case (lookup_t env (n,s)) of  
             SOME tm => tm
           | _ => t)
       | Fun(f,s,l) => 
@@ -226,13 +266,13 @@ fun strip_ALL f =
     end
 
 
-fun pvariantt vl t = 
+fun pvariantt vd t = 
     case t of 
         Var(n,s) => 
-        if mem n (List.map (fn (a,b) => a) vl) 
-        then Var (n ^ "'",pvariants vl s)
-        else Var (n, pvariants vl s)
-      | Fun(f,s,l) => Fun(f,pvariants vl s,List.map (pvariantt vl) l)
+        if HOLset.member (vd,(n,s))
+        then Var (n ^ "'",pvariants vd s)
+        else Var (n, pvariants vd s)
+      | Fun(f,s,l) => Fun(f,pvariants vd s,List.map (pvariantt vd) l)
       | _ => t
 and pvariants vl s = 
     case s of  

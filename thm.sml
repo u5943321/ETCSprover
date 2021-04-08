@@ -126,7 +126,7 @@ fun dimpE2 (thm (G,A)) B =
 
 
 fun allI (n,s) (thm(G,C)) = 
-    if mem (n,s) (fvfl G) then raise ERR "term occurs free on assumption"
+    if HOLset.member (fvfl G,(n,s)) then raise ERR "term occurs free on assumption"
     else thm(G,Quant("ALL",n,s,abstract (n,s) C))
 
 
@@ -138,44 +138,10 @@ fun allE (thm(G,C)) t =
       | _ => raise ERR "not an ALL"
 
 
-fun specl th l = 
-    if is_all (concl th) then 
-        (case l of [] => th
-                 | h :: t => allE (specl th t) h)
-    else raise ERR "conclusion not universally quantified"
-
-
-
-fun spec_all th = 
-    let val fv = fvfl (ant th)
-        val v2bs = snd (strip_ALL (concl th))
-        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
-    in 
-        specl th (rev v2bs')
-    end
-
-(*find the sort of a variable with name n in a name-sort list*)
-
-fun find_sort n nsl = 
-    case nsl of [] => raise ERR "not found"
-              | (n0,s) :: t => if n = n0 then s else find_sort n t
-
-
-fun abstl th l = 
-    case l of 
-        [] => th
-      | n :: t => 
-        (let val fv = fvf (concl th)
-             val s = find_sort n fv
-         in
-             allI (n,s) (abstl th t)
-         end)
-
-
 fun existsE (thm(G,C)) (n,s) = 
     case C of 
         Quant("EXISTS",n1,s1,b) => 
-        if mem (n,s) (fvfl G) then raise ERR "term occurs free in assumption"
+        if HOLset.member(fvfl G,(n,s)) then raise ERR "term occurs free in assumption"
         else if s = s1 
         then thm(G,subst_bound (Var (n,s)) b)
         else raise ERR "inconsist sorts"
@@ -222,19 +188,6 @@ fun thl_from_th th =
          | _ => [th1]
     end
 *)
-
-fun dict2l dict = Binarymap.foldl (fn (k:string,v:term,A) => (k,v) :: A) [] dict
-
-
-
-fun part_tmatch partfn A t = 
-    let val env = dict2l (match_term0 (partfn A) t (Binarymap.mkDict String.compare))
-        val A' = abstl A (List.map (fn (a,b) => a) env)
-    in specl A' (List.map (fn (a,b) => b) env)
-    end
-
-val rewr_conv = part_tmatch (snd o dest_eq o concl o spec_all)
-
 
 (*
 (*for rewr_conv*)
@@ -402,22 +355,22 @@ val ax1_1 = thm([],#1 (read_f "ALL X. ALL tx. tx = to1(X)"))
 
 val ax1_2 = thm([],#1 (read_f "ALL X. ALL ix. ix = from0(X)"))
 
-val ax1_3 = thm([],#1 (read_f "ALL fg. fg o p1(A,B) = f & fg o p2(A,B) = g <=> fg = pa(f,g)"))
+val ax1_3 = thm([],#1 (read_f "ALL fg. p1(A,B) o fg = f &  p2(A,B) o fg = g <=> fg = pa(f,g)"))
 
 
-val ax1_4 = thm([],#1 (read_f "ALL fg. i1(A,B) o fg = f & i2(A,B) o fg = g <=> fg = copa(f,g)"))
+val ax1_4 = thm([],#1 (read_f "ALL fg. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"))
 
-val ax1_5 = thm([],#1 (read_f "eqa(f,g) o g = eqa(f,g) o f & (h o f = h o g ==> (x0 o eqa(f,g) = h <=> x0 = eqinduce(f,g,h)))"))
-
-
-val ax1_6 = thm([],#1 (read_f "f o coeqa(f,g)= g o coeqa(f,g) & (f o h = g o h ==> (coeqa(f,g) o x0 = h <=> x0 = coeqinduce(f,g,h)))"))
+val ax1_5 = thm([],#1 (read_f "g o eqa(f,g) = f o eqa(f,g) & (f o h = g o h ==> (eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"))
 
 
-val ax2 = thm([],#1 (read_f "pa(p1(A,X), p2(A,X) o h) o ev(A,B) = f <=> h = tp(f)"))
+val ax1_6 = thm([],#1 (read_f "coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"))
 
-val ax3 = thm([],#1 (read_f "z o x = x0 & s o x = x o t <=> x = Nind(x0,t)"))
 
-val ax4 = thm([], #1 (read_f "~(f = g) ==> EXISTS a: 1 -> A. ~(a o f = a o g)")) 
+val ax2 = thm([],#1 (read_f "ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"))
+
+val ax3 = thm([],#1 (read_f "x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"))
+
+val ax4 = thm([], #1 (read_f "~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)")) 
 
 val ax5 = thm([],#1 (read_f "ALL f: A -> B. ALL a: 1 -> A. EXISTS g : B -> A. f o g o f = f"))
 

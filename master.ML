@@ -11,5 +11,9 @@ use "thm.sig";
 use "thm.sml";
 use "conv.sig"; 
 use "conv.sml";
+(*
 use "tactic.sig";
 use "tactic.sml"
+*)
+open thm form term;
+val vs = fvf (concl o_assoc);

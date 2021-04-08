@@ -180,6 +180,19 @@ fun ps_of_pt pt =
       | pAnno(pt,ps) => ps_of_pt pt
 
 
+(*
+fun type_infer env t ty = 
+case t of 
+pFun(f,ps,ptl) =>
+let 
+val (psl, ps0) = lookup(f,fsymdict)
+val env1 = foldr env (fn env0 pt => type_infer env0 pt (ps_of pt))  ptl
+val env2 = foldr env1 (fn env0 (pt,ps) => unify_ps env0 (ps_of pt) ps) (zip(ptl,psl))
+in unify env2 ps ps0
+
+
+*)
+
 fun type_infer env t ty = 
     case t of 
         pFun(f,ps,ptl) =>
@@ -187,9 +200,9 @@ fun type_infer env t ty =
              ("o",[f,g]) => 
              let val (Av,env1) = fresh_var env
                  val (Bv,env2) = fresh_var env1
-                 val env3 = type_infer env2 f (par (ptUVar Av, ptUVar Bv))
+                 val env3 = type_infer env2 g (par (ptUVar Av, ptUVar Bv))
                  val (Cv,env4) = fresh_var env3
-                 val env5 = type_infer env4 g (par (ptUVar Bv, ptUVar Cv))
+                 val env5 = type_infer env4 f (par (ptUVar Bv, ptUVar Cv))
                  val env6 = unify_ps env5 ty (par(ptUVar Av, ptUVar Cv))
              in
                  unify_ps env6 ps ty
@@ -476,6 +489,13 @@ fun mk_pt_conn env co s1 s2 =
 
 val cdict0:(string,psort) dict = insert(insert(insert(insert(Binarymap.mkDict String.compare,"N",pob),"z",par(pFun("1",pob,[]),pFun("N",pob,[]))),"s",par(pFun("N",pob,[]),pFun("N",pob,[]))),"1",pob)
 
+
+
+(*
+
+val cdict0 = foldr 
+
+*)
 val cdict = ref cdict0
 
 fun is_const sr = 

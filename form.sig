@@ -26,20 +26,23 @@ val eq_form: form * form -> bool
 val substt: (string * sort) * term -> term -> term
 val substs: (string * sort) * term -> sort -> sort
 val substf: (string * sort) * term -> form -> form
-val fvf: form -> (string * sort) list
-val fvfl: form list -> (string * sort) list
+val fvf: form -> (string * sort) set
+val fvfl: form list -> (string * sort) set
 val subst_bound: term -> form -> form
 val abstract: string * sort -> form -> form
-val match_term0: term -> term -> (string,term) Binarymap.dict -> (string,term) Binarymap.dict
-val match_sort0: sort -> sort -> (string,term) Binarymap.dict -> (string,term) Binarymap.dict
-val match_tl: term list -> term list -> (string,term) Binarymap.dict -> (string,term) Binarymap.dict
-val match_form: form -> form -> (string,term) Binarymap.dict -> (string,term) Binarymap.dict
+val pair_compare: ('a * 'b -> order) -> ('c * 'd -> order) -> ('a * 'c) * ('b * 'd) -> order
+val sort_compare: sort * sort -> order
+val term_compare: term * term -> order
+val match_term0: term -> term -> ((string * sort),term) Binarymap.dict -> ((string * sort),term) Binarymap.dict 
+val match_sort0: sort -> sort -> ((string * sort),term) Binarymap.dict -> ((string * sort),term) Binarymap.dict
+val match_tl: term list -> term list -> ((string * sort),term) Binarymap.dict -> ((string * sort),term) Binarymap.dict
+val match_form: form -> form -> ((string * sort),term) Binarymap.dict -> ((string * sort),term) Binarymap.dict
 val strip_all: form -> form
 exception ERR of string
-val inst_term: (string,term) Binarymap.dict -> term -> term
-val inst_sort: (string,term) Binarymap.dict -> sort -> sort
-val inst_form: (string,term) Binarymap.dict -> form -> form
+val inst_term: ((string * sort),term) Binarymap.dict -> term -> term
+val inst_sort: ((string * sort),term) Binarymap.dict -> sort -> sort
+val inst_form: ((string * sort),term) Binarymap.dict -> form -> form
 val strip_ALL: form -> form * (string * sort) list
-val pvariantt: (string * sort) list -> term -> term
+val pvariantt: (string * sort) set -> term -> term
 end
 
