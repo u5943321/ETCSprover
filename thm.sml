@@ -316,6 +316,78 @@ fun neg_iff (thm(G,C)) =
     end
 
 
+(*will be used in chained implication tactic*)
+
+(*A /\ B ==> C <=> A ==> B ==> C*)
+
+fun conj_imp_equiv A B C = 
+    let val ab = Conn("&",[A,B])
+        val ab2c = Conn("==>",[ab,C])
+        val a2b2c = Conn("==>",[A,Conn("==>",[B,C])])
+        val conjabonc = mp (assume ab2c) (conjI (assume A) (assume B))
+        val conj2imp = disch ab2c (disch A (disch B conjabonc))
+        val abona = conjE1 (assume ab)
+        val abonb = conjE2 (assume ab)
+        val imp2conj = disch a2b2c (disch ab (mp (mp (assume a2b2c) abona) abonb))
+    in dimpI conj2imp imp2conj
+    end
+
+(*A , A <=> B gives B. A <=> B , B gives A*)
+
+fun dimp_mp_l2r A B =  mp (dimpl2r B) A
+
+fun dimp_mp_r2l B A =  mp (dimpr2l B) A
+
+(*A /\ ¬A ==> B*)
+
+fun contra2any A B = 
+    let val na = Conn("~",[A])
+        val a_na = negE (assume A) (assume na)
+        val F2b = disch FALSE (falseE B)
+        val anaonb = mp F2b a_na
+        val a2na2b = disch A (disch na anaonb)
+    in dimp_mp_r2l (conj_imp_equiv A na B) a2na2b
+    end
+
+
+(*A \/ B <=> ¬A ==> B*)
+fun disj_imp_equiv A B = 
+    let val na = Conn("~",[A])
+        val imp = Conn("==>",[na,B])
+        val ana2b = contra2any A B
+        val anaonb = undisch (undisch (dimp_mp_l2r ana2b (conj_imp_equiv A na B)))
+        (*not sure if correct way to do it*)
+        val aorbnaonb = disjE A B B (assume (Conn("|",[A,B]))) anaonb (assume B)
+        val disj2imp = disch (Conn("|",[A,B])) (disch na aorbnaonb)
+        val t = tautI A 
+        val aonaorb = disjI1 (assume A) B
+        val impnaonaorb = disjI2 A (mp (assume imp) (assume na))
+        val imp2disj = disch imp (disjE A na (Conn("|",[A,B])) t aonaorb impnaonaorb)
+    in
+        dimpI disj2imp imp2disj
+    end
+
+
+fun disj_swap A B = 
+    let val dj = Conn("|",[A,B])
+        val aonbora = disjI2 B (assume A)
+        val bonbora = disjI1 (assume B) A
+    in disch dj (disjE A B (Conn("|",[B,A])) (assume dj) aonbora bonbora)
+    end
+
+fun disj_comm A B = dimpI (disj_swap A B) (disj_swap B A)
+
+fun double_neg f = 
+    let val nf = Conn("~",[f])
+        val nnf = Conn("~",[nf])
+        val fnfonF = negE (assume f) (assume nf)
+        val f2nnf = disch f (negI fnfonF nf)
+        val nforf = dimp_mp_l2r (tautI f) (disj_comm f nf)
+        val nnf2f = dimp_mp_l2r nforf (disj_imp_equiv nf f)
+    in
+        dimpI nnf2f f2nnf
+    end
+
 
 
 val conj_T = equivT (conjI (trueI []) (trueI []))
