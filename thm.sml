@@ -59,9 +59,10 @@ fun conjE2 (thm (G1,Conn("&",[C1,C2]))) = thm (G1,C2)
 
 fun disjE A B C (thm (G1,AorB)) (thm (G2,C1)) (thm (G3,C2)) = 
     if AorB = (Conn("|",[A,B])) andalso C1 = C andalso C2 = C 
-       andalso mem A G1 andalso mem B G2 then 
-        (thm (assum_U (ril A G1) (assum_U (ril B G2) G3),C))
+       andalso mem A G2 andalso mem B G3 then 
+        (thm (assum_U (ril A G2) (assum_U (ril B G3) G1),C))
     else raise ERR "not sufficient for elimination"
+
 
 
 (*fun imp_conj *)
@@ -73,6 +74,9 @@ fun negI (thm (G,C)) f =
     if C = FALSE andalso mem f G then 
         (thm (ril f G, (Conn("~",[f]))))
     else raise ERR "conclusion is not a FALSE"
+
+
+(*should I have the orelse?*)
 
 fun negE (thm (G1,A1)) (thm (G2,A2)) = 
     if A2 = (Conn("~",[A1])) orelse A1 = (Conn("~",[A2]))
@@ -219,6 +223,100 @@ fun cj_imp1 pq = disch pq (conjE1 (assume pq))
 
 fun cj_imp2 pq = disch pq (conjE2 (assume pq))
 
+(*given |- A1 <=> A2 , |- B1 <=> B2, return |- A1 /\ B1 <=> A2 /\ B2*)
+
+fun conj_iff (thm(G1,C1)) (thm(G2,C2)) = 
+    let val (A1,A2) = dest_iff C1
+        val (B1,B2) = dest_iff C2
+        val A12A2 = dimpl2r (thm(G1,C1))
+        val A22A1 = dimpr2l (thm(G1,C1))
+        val B12B2 = dimpl2r (thm(G2,C2))
+        val B22B1 = dimpr2l (thm(G2,C2))
+        val cj1 = Conn("&",[A1,B1])
+        val cj2 = Conn("&",[A2,B2])
+    in dimpI
+            (disch cj1
+                   (conjI 
+                        (mp A12A2 (conjE1 (assume cj1)))
+                        (mp B12B2 (conjE2 (assume cj1))))
+            )
+            (disch cj2
+                   (conjI
+                        (mp A22A1 (conjE1 (assume cj2)))
+                        (mp B22B1 (conjE2 (assume cj2))))
+            )
+    end
+
+
+fun disj_iff (thm(G1,C1)) (thm(G2,C2)) = 
+    let val (A1,A2) = dest_iff C1
+        val (B1,B2) = dest_iff C2
+        val A1onA2 = undisch (dimpl2r (thm(G1,C1)))
+        val A2onA1 = undisch (dimpr2l (thm(G1,C1)))
+        val B1onB2 = undisch (dimpl2r (thm(G2,C2)))
+        val B2onB1 = undisch (dimpr2l (thm(G2,C2)))
+        val dj1 = Conn("|",[A1,B1])
+        val dj2 = Conn("|",[A2,B2])
+        val A1ondj2 = disjI1 A1onA2 B2
+        val B1ondj2 = disjI2 A2 B1onB2
+        val dj12dj2 = disch dj1 
+                            (disjE A1 B1 dj2 
+                                   (assume dj1) A1ondj2 B1ondj2)
+        val A2ondj1 = disjI1 A2onA1 B1
+        val B2ondj1 = disjI2 A1 B2onB1
+        val dj22dj1 = disch dj2
+                            (disjE A2 B2 dj1
+                                   (assume dj2) A2ondj1 B2ondj1) 
+    in 
+        dimpI dj12dj2 dj22dj1
+    end
+
+
+fun imp_iff (thm(G1,C1)) (thm(G2,C2)) =  
+    let val (A1,A2) = dest_iff C1
+        val (B1,B2) = dest_iff C2
+        val A12A2 = dimpl2r (thm(G1,C1))
+        val A22A1 = dimpr2l (thm(G1,C1))
+        val B12B2 = dimpl2r (thm(G2,C2))
+        val B22B1 = dimpr2l (thm(G2,C2))
+        val imp1 = Conn("==>",[A1,B1])
+        val imp2 = Conn("==>",[A2,B2])
+        val imp12imp2 = disch imp1 (imp_trans A22A1 (imp_trans (assume imp1) B12B2))
+        val imp22imp1 = disch imp2 (imp_trans A12A2 (imp_trans (assume imp2) B22B1))
+    in 
+        dimpI imp12imp2 imp22imp1
+    end
+
+
+fun negI (thm (G,C)) f = 
+    if C = FALSE andalso mem f G then 
+        (thm (ril f G, (Conn("~",[f]))))
+    else raise ERR "conclusion is not a FALSE"
+
+
+(*should I have the orelse?*)
+
+fun negE (thm (G1,A1)) (thm (G2,A2)) = 
+    if A2 = (Conn("~",[A1])) orelse A1 = (Conn("~",[A2]))
+    then (thm (assum_U G1 G2,FALSE))
+    else raise ERR "not a contradiction"
+
+fun neg_iff (thm(G,C)) = 
+    let val (A1,A2) = dest_iff C
+        val A1onA2 = undisch (dimpl2r (thm(G,C)))
+        val A2onA1 = undisch (dimpr2l (thm(G,C)))
+        val neg1 = Conn("~",[A1])
+        val neg2 = Conn("~",[A2])
+        val neg1A22F = negE (assume neg1) A2onA1
+        val neg2A12F = negE (assume neg2) A1onA2
+        val neg12neg2 = disch neg1 (negI neg1A22F A2)
+        val neg22neg1 = disch neg2 (negI neg2A12F A1)
+    in 
+        dimpI neg12neg2 neg22neg1
+    end
+
+
+
 
 val conj_T = equivT (conjI (trueI []) (trueI []))
 
@@ -233,6 +331,22 @@ fun F_conj1 f = dimpI (disch (Conn("&",[FALSE,f])) (conjE1 (assume (Conn("&",[FA
 
 fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,FALSE])))))
                       (disch FALSE (falseE (Conn("&",[f,FALSE]))))
+
+fun all_true (n,s) = dimpI (disch (Quant("ALL",n,s,TRUE)) (trueI []))
+                           (disch TRUE (allI (n,s) (trueI [])))
+
+val all_true_ar = all_true ("a",ar(Var("A",ob),Var("B",ob)))
+val all_true_ob = all_true ("A",ob)
+
+fun all_false (n,s) = dimpI (disch (Quant("ALL",n,s,FALSE)) 
+                                   (allE (assume (Quant("ALL",n,s,FALSE))) (Var (n,s))))
+                            (disch FALSE (allI (n,s) (assume FALSE)))
+
+val all_false_ar = all_false ("a",ar(Var("A",ob),Var("B",ob)))
+val all_false_ob = all_false ("A",ob)
+
+
+
 
 fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
     case (C1,C2) of 

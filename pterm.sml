@@ -639,7 +639,7 @@ fun prec_of "~" = 4
 
 datatype ForP = fsym | psym
 
-val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym),"ismono",psym)
+val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym),"ismono",psym),"T",psym)
 
 (*change to fold*)
 
