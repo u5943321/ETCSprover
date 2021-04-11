@@ -424,6 +424,103 @@ fun T_imp1 f =
         dimpI Timpf2f f2Timpf
     end
 
+fun T_imp2 f = 
+    let val f2T2T = disch (Conn("==>",[f,TRUE])) (trueI [Conn("==>",[f,TRUE])])
+        val T2f2T = disch TRUE (disch f (trueI [f,TRUE]))
+    in dimpI f2T2T T2f2T
+    end
+
+fun F_imp1 f = 
+    let val F2f2T = disch (Conn("==>",[FALSE,f])) (trueI [Conn("==>",[FALSE,f])])
+        val T2F2f = disch TRUE (disch FALSE (falseE f))
+    in dimpI F2f2T T2F2f
+    end
+
+fun F_imp2 f = 
+    let val nf2f2F = disch (mk_neg f) (disch f (negE (assume f) (assume (mk_neg f)))) 
+        val f2F2nf = disch (Conn("==>",[f,FALSE])) (negI (mp (assume (Conn("==>",[f,FALSE]))) (assume f)) f)
+    in dimpI f2F2nf nf2f2F
+    end
+
+fun T_disj1 f = 
+    let val Torf = Conn("|",[TRUE,f])
+        val Torf2T = disch Torf (trueI [Torf]) 
+        val T2Torf = disch TRUE (disjI1 (assume TRUE) f)
+    in dimpI Torf2T T2Torf
+    end
+
+fun T_disj2 f = 
+    let val forT = Conn("|",[f,TRUE])
+        val forT2T = disch forT (trueI [forT]) 
+        val T2forT = disch TRUE (disjI2 f (assume TRUE))
+    in dimpI forT2T T2forT
+    end
+
+fun F_disj1 f = 
+    let val Forf = Conn("|",[FALSE,f])
+        val Forf2f = disch Forf (disjE FALSE f f (assume Forf) (falseE f) (assume f))
+        val f2Forf = disch f (disjI2 FALSE (assume f))
+    in dimpI Forf2f f2Forf
+    end
+
+
+fun F_disj2 f = 
+    let val forF = Conn("|",[f,FALSE])
+        val forF2f = disch forF (disjE f FALSE f (assume forF) (assume f) (falseE f))
+        val f2forF = disch f (disjI1 (assume f) FALSE)
+    in dimpI forF2f f2forF
+    end
+
+fun tautT f = 
+    let val t = concl (tautI f)
+        val t2T = disch t (trueI [t])
+        val T2t = disch TRUE (add_assum TRUE (tautI f))
+    in dimpI t2T T2t
+    end
+
+fun contraF f = 
+    let val fnf = Conn("&",[f,mk_neg f])
+        val fnf2F = disch fnf (negE (conjE1 (assume fnf)) (conjE2 (assume fnf)))
+        val F2fnf = disch FALSE (falseE fnf)
+    in dimpI fnf2F F2fnf
+    end
+
+
+fun T_dimp1 f = 
+    let val Teqf = Conn("<=>",[TRUE,f])
+        val Teqf2f = disch Teqf (dimp_mp_l2r (trueI []) (assume Teqf))
+        val f2Teqf = disch f (dimpI (disch TRUE (add_assum TRUE (assume f)))
+                                    (add_assum f (disch f (trueI [f]))))
+    in dimpI Teqf2f f2Teqf
+    end
+
+fun T_dimp2 f = 
+    let val feqT = Conn("<=>",[f,TRUE])
+        val feqT2f = disch feqT (dimp_mp_r2l (assume feqT) (trueI []))
+        val f2feqT = disch f (dimpI (add_assum f (disch f (trueI [f])))
+                                    (disch TRUE (add_assum TRUE (assume f))))
+    in dimpI feqT2f f2feqT
+    end
+
+fun F_dimp1 f = 
+    let val Feqf = Conn("<=>",[FALSE,f])
+        val Feqf2nf = disch Feqf (negI (dimp_mp_r2l (assume Feqf) (assume f)) f)
+        val nf2Feqf = disch (mk_neg f) (dimpI (disch FALSE (add_assum (mk_neg f) (falseE f)))
+                                     (disch f (negE (assume f) (assume (mk_neg f)))))
+    in dimpI Feqf2nf nf2Feqf
+    end
+
+fun F_dimp2 f = 
+    let val feqF = Conn("<=>",[f,FALSE])
+        val feqF2nf = disch feqF (negI (dimp_mp_l2r (assume f) (assume feqF)) f)
+        val nf2feqF = disch (mk_neg f) (dimpI (disch f (negE (assume f) (assume (mk_neg f))))
+                                              (disch FALSE (add_assum (mk_neg f) (falseE f))))
+    in dimpI feqF2nf nf2feqF
+    end
+
+
+
+
 
 fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
     case (C1,C2) of 
@@ -472,22 +569,6 @@ fun all_iff (th as thm(G,C)) (n,s) =
         end
       | _ => raise ERR "conclusion of theorem is not an iff"
 
-
-fun existsE (thm(G,C)) (n,s) = 
-    case C of 
-        Quant("EXISTS",n1,s1,b) => 
-        if HOLset.member(fvfl G,(n,s)) then raise ERR "term occurs free in assumption"
-        else if s = s1 
-        then thm(G,subst_bound (Var (n,s)) b)
-        else raise ERR "inconsist sorts"
-      | _ => raise ERR "not an EXISTS"
-
-fun existsI (thm(G,C)) (n,s) t f = 
-    if C = substf ((n,s),t) f then 
-        thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
-    else raise ERR "formula has the wrong form"
-
-fun simple_exists (v as (n,s)) th = existsI th v (Var v) (concl th) 
 
 fun exists_iff (th as thm(G,C)) (n,s) = 
     case C of 

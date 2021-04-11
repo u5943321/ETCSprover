@@ -12,7 +12,8 @@ and term =
 datatype form =
 Pred of string * term list
 | Conn of string * form list
-| Quant of string * string * sort * form;   
+| Quant of string * string * sort * form
+| fVar of string;   
 
 val TRUE = Pred("T",[])
 val FALSE = Pred("F",[])
@@ -42,6 +43,11 @@ fun dest_imp f =
     case f of 
         Conn("==>",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not an implication"
+
+fun dest_conj f = 
+    case f of
+        Conn("&",[f1,f2]) => (f1,f2)
+      | _ => raise ERR "not a conjunction"
 
 (*predicate functions*)
 

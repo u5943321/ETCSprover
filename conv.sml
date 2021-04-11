@@ -236,9 +236,34 @@ fun depth_fconv c fc f =
         f
 
 fun redepth_fconv c fc f =
-    (try_fconv (sub_fconv c (redepth_fconv c fc)) thenfc
+    (sub_fconv c (redepth_fconv c fc) thenfc
               ((fc thenfc (redepth_fconv c fc)) orelsefc all_fconv))
         f
+
+
+fun taut_conj_fconv f = 
+    case f of
+        Conn("&",[c1,c2]) => 
+        if c1 = TRUE then T_conj1 c2
+        else if c1 = FALSE then F_conj1 c2
+        else if c2 = TRUE then T_conj2 c1
+        else if c2 = FALSE then F_conj2 c1
+        else raise ERR "not a conjunction with T or F"
+      | _ => raise ERR "not a conjunction"
+
+fun taut_conj_fconv f = 
+    case f of
+        Conn("&",[c1,c2]) => 
+        if c1 = TRUE then T_conj1 c2
+        else if c1 = FALSE then F_conj1 c2
+        else if c2 = TRUE then T_conj2 c1
+        else if c2 = FALSE then F_conj2 c1
+        else raise ERR "not a conjunction with T or F"
+      | _ => raise ERR "not a conjunction"
+
+(*fun taut_disj_fconv f = *)
+
+(*above wrong should all be matching*)
 
 val oc = rewr_conv o_assoc
 
