@@ -74,9 +74,10 @@ fun try_conv c = c orelsec all_conv
 fun repeatc c t =
     ((c thenc (repeatc c)) orelsec all_conv) t
 
+fun no_conv f = raise ERR "no_conv" 
 
 fun first_conv cl = 
-    case cl of [] => all_conv
+    case cl of [] => no_conv
              | h :: t => h orelsec (first_conv t)
 
 
@@ -160,72 +161,67 @@ fun orelsefc (fc1,fc2) f = fc1 f handle ERR _ => fc2 f
 
 fun try_fconv fc = fc orelsefc all_fconv
 
-fun pred_conv c f = 
+
+fun pred_fconv c f = 
     case f of 
         Pred (P,tl) => 
-        (EQ_psym P (List.map c tl))
+        (EQ_psym P (List.map (try_conv c) tl))
       | _ => raise ERR "not a predicate"
 
+(*pred_fconv use try_conv or not?*)
 
-fun disj_conv fc f = 
+fun disj_fconv fc f = 
     case f of 
-        Conn ("|",[p,q]) => 
-        let val p' = snd (dest_iff (concl (fc p)))
-            val q' = snd (dest_iff (concl (fc q)))
-            val p2p' = dimpl2r (fc p)
-            val q2q' = dimpl2r (fc q) 
-            val p'2p = dimpr2l (fc p)
-            val q'2q = dimpr2l (fc q)
-            val disj' = Conn ("|",[p',q'])
-            val p2disj' = disjI1 p2p' q'
-            val q2disj' = disjI2 p' q2q'
-            val f2disj' = disch f 
-                                (disjE p q disj' 
-                                       (assume f) p2disj' q2disj')
-            val p'2f = disjI1 p'2p q
-            val q'2f = disjI2 p q'2q
-            val disj'2f = disch disj' 
-                                (disjE p' q' f
-                                       (assume disj') p'2f q'2f) 
-        in 
-        dimpI f2disj' disj'2f
-        end
+        Conn("|",[p,q]) => disj_iff (fc p) (fc q)
       | _ => raise ERR "not a disjunction"
 
-
-fun conj_conv fc f = 
+fun conj_fconv fc f = 
     case f of 
-        Conn ("&",[p,q]) => 
-        let val p' = snd (dest_iff (concl (fc p)))
-            val q' = snd (dest_iff (concl (fc q)))
-            val p2p' = dimpl2r (fc p)
-            val q2q' = dimpl2r (fc q) 
-            val p'2p = dimpr2l (fc p)
-            val q'2q = dimpr2l (fc q)
-            val conj' = Conn ("&",[p',q'])
-        in 
-        dimpI
-            (disch f 
-                   (conjI 
-                        (mp p2p' (conjE1 (assume f)))
-                        (mp q2q' (conjE2 (assume f))))
-            )
-            (disch conj'
-                   (conjI
-                        (mp p'2p (conjE1 (assume conj')))
-                        (mp q'2q (conjE2 (assume conj'))))
-            )
-        end
+        Conn("&",[p,q]) => conj_iff (fc p) (fc q)
       | _ => raise ERR "not a conjunction"
 
-(*raw sub_fconv which only deal with conjunctive subformula of predicates*)
+fun imp_fconv fc f = 
+    case f of
+        Conn("==>",[p,q]) => imp_iff (fc p) (fc q)
+      | _ => raise ERR "not an implication"
+
+fun dimp_fconv fc f = 
+    case f of
+        Conn("<=>",[p,q]) => dimp_iff (fc p) (fc q)
+      | _ => raise ERR "not an iff"
+
+fun qall_fconv fc f = 
+    case f of 
+        Quant("ALL",n,s,b) => all_iff (fc b) (n,s)
+      | _ => raise ERR "not a forall"
+
+fun qexists_fconv fc f = 
+    case f of 
+        Quant("EXISTS",n,s,b) => exists_iff (fc b) (n,s)
+      | _ => raise ERR "not an exists"
+
+fun no_fconv f = raise ERR "no_fconv"
 
 fun first_fconv fcl = 
-    case fcl of [] => all_fconv
+    case fcl of [] => no_fconv
              | h :: t => h orelsefc (first_fconv t)
 
 fun sub_fconv c fc = 
-first_fconv [pred_conv c,conj_conv fc]
+    first_fconv [conj_fconv fc,
+                 disj_fconv fc,
+                 imp_fconv fc,
+                 dimp_fconv fc,
+                 qall_fconv fc,
+                 qexists_fconv fc,
+                 pred_fconv c]
+
+val reflTob = equivT (refl (Var("a",ob)))
+
+val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
+
+val refl_fconv = 
+    first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
+     
 
 fun repeatfc fc f = 
     ((fc thenfc (repeatfc fc)) orelsefc all_fconv) f
@@ -262,6 +258,21 @@ val rtht = equivT rth
 
 val refl_fconv = rewr_fconv rtht 
 
+val readf = fst o read_f
+
+(*
+
+fun imp_chain_tac tac (fl,f) = 
+    case f of 
+        Conn("==>",[A,B]) => 
+        if tac (fl,A) = (_,TRUE) then
+            let val (B',func) = imp_chain_tac tac (fl,B)
+            in
+            ((fl,B'),
+             fn [th] => dimp_mp_r2l (T_imp1 (concl th)) th)
+            end
+*)
+(*currently wrong *)
 
 
 (*

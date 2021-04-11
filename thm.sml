@@ -417,7 +417,12 @@ fun all_false (n,s) = dimpI (disch (Quant("ALL",n,s,FALSE))
 val all_false_ar = all_false ("a",ar(Var("A",ob),Var("B",ob)))
 val all_false_ob = all_false ("A",ob)
 
-
+fun T_imp1 f =
+    let val Timpf2f = disch (Conn("==>",[TRUE,f])) (mp (assume (Conn("==>",[TRUE,f]))) (trueI []))
+        val f2Timpf = disch f (disch TRUE (add_assum TRUE (assume f)))
+    in
+        dimpI Timpf2f f2Timpf
+    end
 
 
 fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
@@ -435,6 +440,66 @@ fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
         else raise ERR "two iffs do not match"
       | _ => raise ERR "not a pair of iffs"
 
+fun iff_swap (thm(G,C)) = 
+    let val Q2P = conjE2 (dimpE (thm(G,C)))
+        val P2Q = conjE1 (dimpE (thm(G,C)))
+    in dimpI Q2P P2Q
+    end
+
+(*P <=> P', Q <=> Q', gives (P <=> Q) <=> (P' <=> Q')*)
+
+fun dimp_iff (th1 as thm(G1,C1)) (th2 as thm(G2,C2)) = 
+     case (C1,C2) of 
+        (Conn("<=>",[P1,P2]), Conn("<=>",[Q1,Q2])) => 
+        let val P1iffQ1 = Conn("<=>",[P1,Q1])
+            val P2iffQ2 = Conn("<=>",[P2,Q2])
+            val P1iffQ12P2iffQ2 = disch P1iffQ1 (iff_trans (iff_swap th1) (iff_trans (assume P1iffQ1) th2))
+            val P2iffQ22P1iffQ1 = disch P2iffQ2 (iff_trans (iff_trans th1 (assume P2iffQ2)) (iff_swap th2))
+        in dimpI P1iffQ12P2iffQ2 P2iffQ22P1iffQ1
+        end
+      | _ => raise ERR "not a pair of iff"
+
+
+fun all_iff (th as thm(G,C)) (n,s) = 
+    case C of 
+        Conn("<=>",[P,Q]) => 
+        let val allP = Quant("ALL", n, s, P)
+            val allQ = Quant("ALL", n, s, Q)
+            val allP2allQ = disch allP (allI (n,s) (dimp_mp_l2r (allE (assume allP) (Var(n,s))) th))
+            val allQ2allP = disch allQ (allI (n,s) (dimp_mp_r2l th (allE (assume allQ) (Var(n,s)))))
+        in
+            dimpI allP2allQ allQ2allP
+        end
+      | _ => raise ERR "conclusion of theorem is not an iff"
+
+
+fun existsE (thm(G,C)) (n,s) = 
+    case C of 
+        Quant("EXISTS",n1,s1,b) => 
+        if HOLset.member(fvfl G,(n,s)) then raise ERR "term occurs free in assumption"
+        else if s = s1 
+        then thm(G,subst_bound (Var (n,s)) b)
+        else raise ERR "inconsist sorts"
+      | _ => raise ERR "not an EXISTS"
+
+fun existsI (thm(G,C)) (n,s) t f = 
+    if C = substf ((n,s),t) f then 
+        thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
+    else raise ERR "formula has the wrong form"
+
+fun simple_exists (v as (n,s)) th = existsI th v (Var v) (concl th) 
+
+fun exists_iff (th as thm(G,C)) (n,s) = 
+    case C of 
+        Conn("<=>",[P,Q]) => 
+        let val eP = Quant("EXISTS", n, s, P)
+            val eQ = Quant("EXISTS", n, s, Q)
+            val eP2eQ = disch eP (simple_exists (n,s) (dimp_mp_l2r (existsE (assume eP) (n,s)) th))
+            val eQ2eP = disch eQ (simple_exists (n,s) (dimp_mp_r2l th (existsE (assume eQ) (n,s))))
+        in
+            dimpI eP2eQ eQ2eP
+        end
+      | _ => raise ERR "conclusion of theorem is not an iff"
 
 (*
 fun thl_from_th th = 
