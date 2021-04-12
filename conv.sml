@@ -40,7 +40,7 @@ fun abstl th l =
 
 
 fun part_tmatch partfn A t = 
-    let val env = Binarymap.listItems (match_term0 (partfn A) t (Binarymap.mkDict (pair_compare String.compare sort_compare)))
+    let val env = Binarymap.listItems (match_term (partfn A) t (Binarymap.mkDict (pair_compare String.compare sort_compare)))
         val A' = abstl A (List.map (fn (a,b) => a) env)
     in specl A' (List.map (fn (a,b) => b) env)
     end
@@ -172,32 +172,38 @@ fun pred_fconv c f =
 
 fun disj_fconv fc f = 
     case f of 
-        Conn("|",[p,q]) => disj_iff (fc p) (fc q)
+        Conn("|",[p,q]) => 
+        disj_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not a disjunction"
 
 fun conj_fconv fc f = 
     case f of 
-        Conn("&",[p,q]) => conj_iff (fc p) (fc q)
+        Conn("&",[p,q]) => 
+        conj_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not a conjunction"
 
 fun imp_fconv fc f = 
     case f of
-        Conn("==>",[p,q]) => imp_iff (fc p) (fc q)
+        Conn("==>",[p,q]) => 
+        imp_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not an implication"
 
 fun dimp_fconv fc f = 
     case f of
-        Conn("<=>",[p,q]) => dimp_iff (fc p) (fc q)
+        Conn("<=>",[p,q]) => 
+        dimp_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not an iff"
 
 fun qall_fconv fc f = 
     case f of 
-        Quant("ALL",n,s,b) => all_iff (fc b) (n,s)
+        Quant("ALL",n,s,b) => 
+        all_iff (try_fconv fc b) (n,s)
       | _ => raise ERR "not a forall"
 
 fun qexists_fconv fc f = 
     case f of 
-        Quant("EXISTS",n,s,b) => exists_iff (fc b) (n,s)
+        Quant("EXISTS",n,s,b) => 
+        exists_iff (try_fconv fc b) (n,s)
       | _ => raise ERR "not an exists"
 
 fun no_fconv f = raise ERR "no_fconv"
@@ -251,19 +257,87 @@ fun taut_conj_fconv f =
         else raise ERR "not a conjunction with T or F"
       | _ => raise ERR "not a conjunction"
 
-fun taut_conj_fconv f = 
+fun taut_disj_fconv f = 
     case f of
-        Conn("&",[c1,c2]) => 
-        if c1 = TRUE then T_conj1 c2
-        else if c1 = FALSE then F_conj1 c2
-        else if c2 = TRUE then T_conj2 c1
-        else if c2 = FALSE then F_conj2 c1
-        else raise ERR "not a conjunction with T or F"
-      | _ => raise ERR "not a conjunction"
+        Conn("|",[c1,c2]) => 
+        if c1 = TRUE then T_disj1 c2
+        else if c1 = FALSE then F_disj1 c2
+        else if c2 = TRUE then T_disj2 c1
+        else if c2 = FALSE then F_disj2 c1
+        else raise ERR "not a disj with T or F"
+      | _ => raise ERR "not a disj"
 
+
+fun taut_imp_fconv f = 
+    case f of
+        Conn("|",[c1,c2]) => 
+        if c1 = TRUE then T_imp1 c2
+        else if c1 = FALSE then F_imp1 c2
+        else if c2 = TRUE then T_imp2 c1
+        else if c2 = FALSE then F_imp2 c1
+        else raise ERR "not a disj with T or F"
+      | _ => raise ERR "not a disj"
+
+
+fun taut_imp_fconv f = 
+    case f of
+        Conn("|",[c1,c2]) => 
+        if c1 = TRUE then T_imp1 c2
+        else if c1 = FALSE then F_imp1 c2
+        else if c2 = TRUE then T_imp2 c1
+        else if c2 = FALSE then F_imp2 c1
+        else raise ERR "not a disj with T or F"
+      | _ => raise ERR "not a disj"
+
+
+
+fun taut_dimp_fconv f = 
+    case f of
+        Conn("<=>",[c1,c2]) => 
+        if c1 = TRUE then T_dimp1 c2
+        else if c1 = FALSE then F_dimp1 c2
+        else if c2 = TRUE then T_dimp2 c1
+        else if c2 = FALSE then F_dimp2 c1
+        else raise ERR "not a dimp with T or F"
+      | _ => raise ERR "not a dimp"
+    
+(*               
+fun tautT_fconv f = 
+    case f of
+        Conn("|",[c1,c2]) =>
+        if c2 = mk_neg c1 then tautT f 
+        else if c1 = mk_neg c2 then disj
+
+ orelse c2 = mk_neg c1 then
+*)
 (*fun taut_disj_fconv f = *)
 
 (*above wrong should all be matching*)
+
+val basic_taut_fconv = 
+    first_fconv [taut_conj_fconv,
+                 taut_disj_fconv,
+                 taut_imp_fconv,
+                 taut_dimp_fconv]
+
+fun top_depth_conv c t =
+    (repeatc c thenc
+             (sub_conv (top_depth_conv c)) thenc
+             ((c thenc (top_depth_conv c)) 
+                  orelsec all_conv))
+             t
+
+fun top_depth_fconv c fc f =
+    (repeatfc fc thenfc
+             (sub_fconv (top_depth_conv c) fc) thenfc
+             ((fc thenfc (top_depth_fconv c fc)) 
+                  orelsefc all_fconv))
+        f
+
+
+fun basic_fconv c fc =
+    top_depth_fconv (top_depth_conv c) 
+                    (fc orelsefc basic_taut_fconv)
 
 val oc = rewr_conv o_assoc
 

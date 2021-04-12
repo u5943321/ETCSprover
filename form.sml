@@ -12,8 +12,7 @@ and term =
 datatype form =
 Pred of string * term list
 | Conn of string * form list
-| Quant of string * string * sort * form
-| fVar of string;   
+| Quant of string * string * sort * form;   
 
 val TRUE = Pred("T",[])
 val FALSE = Pred("F",[])
@@ -48,7 +47,6 @@ fun dest_conj f =
     case f of
         Conn("&",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not a conjunction"
-
 (*predicate functions*)
 
 fun is_eqn f = 
@@ -85,9 +83,7 @@ fun substf (V,t2) f =
     case f of 
         Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
       | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
-      | Quant(q,n,s,b) => 
-        Quant(q,n,substs (V,t2) s,substf (V,t2) f)
-      | _ => f
+      | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) f)
 
 fun pair_compare ac bc ((a1,b1),(a2,b2)) = 
     case (ac (a1,a2)) of 
@@ -151,7 +147,6 @@ fun fvf f =
         Pred(P,tl) => fvtl tl
       | Conn(co,fl) => fvfl fl
       | Quant(q,n,s,b) => HOLset.union (fvs s,fvf b)
-      | _ => HOLset.empty (pair_compare String.compare sort_compare)
 and fvfl G = 
     case G of [] => HOLset.empty (pair_compare String.compare sort_compare)
             | h :: t => HOLset.union (fvf h,fvfl t)
@@ -170,7 +165,6 @@ fun abstract t =
           | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
           | abs i (Quant(q,b,s,A)) = 
             Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
-          | abs i (fVar fm) = fVar fm
     in abs 0 end;
 
 
@@ -178,65 +172,61 @@ fun subst_bound t =
     let fun subst i (Pred(a,ts)) = Pred(a, List.map (replacet (Bound i, t)) ts) 
           | subst i (Conn(b,As)) = Conn(b, List.map (subst i) As) 
           | subst i (Quant(q,n,s,b)) = Quant(q, n, replaces (Bound (i + 1),t) s, subst (i+1) b)
-          | subst i (fVar fm) = fVar fm 
     in subst 0 end
 
 
 
 fun lookup_t env n = Binarymap.peek(env,n)
 
-fun lookup_f fe fm = Binarymap.peek(fe,fm)
 
 
-fun match_term pat ct env = 
+fun match_term0 pat ct env = 
     case (pat,ct) of 
         (Fun(f1,s1,l1),Fun(f2,s2,l2)) => 
         if f1 <> f2 then raise ERR "different function names"
-        else match_sort s1 s2 (match_tl l1 l2 env)  
+        else match_sort0 s1 s2 (match_tl l1 l2 env)  
       | (Var(n1,s1),_) => 
         (case (lookup_t env (n1,s1)) of
             SOME t => if t = ct then env else
                       raise ERR "double bind"
           | _ => 
-            Binarymap.insert (match_sort s1 (sort_of ct) env,(n1,s1),ct))
+            Binarymap.insert (match_sort0 s1 (sort_of ct) env,(n1,s1),ct))
       | (Bound i1,Bound i2) => 
         if i1 <> i2 then 
             raise ERR "bounded variable cannot be unified"
         else env
       | _ => raise Fail "unexpected term constructor"
-and match_sort sp cs env = 
+and match_sort0 sp cs env = 
     case (sp,cs) of 
         (ob,ob) => env
       | (ar(d1,c1),ar(d2,c2)) => 
-        match_term c1 c2 (match_term d1 d2 env)
+        match_term0 c1 c2 (match_term0 d1 d2 env)
       | _ => raise ERR "cannot match ob with ar"
 and match_tl l1 l2 env =
     case (l1,l2) of 
         ([],[]) => env
       | (h1 :: t1,h2 :: t2) => 
-        match_tl t1 t2 (match_term h1 h2 env)
+        match_tl t1 t2 (match_term0 h1 h2 env)
       | _ => raise ERR "incorrect length of list"
 
 
-fun match_form pat cf env fe = 
+fun match_form pat cf env = 
     case (pat,cf) of
         (Pred(P1,l1),Pred(P2,l2)) => 
         if P1 <> P2 then raise ERR "different predicates"
-        else (match_tl l1 l2 env,fe)
+        else match_tl l1 l2 env
       | (Conn(co1,l1),Conn(co2,l2)) => 
         if co1 <> co2 then raise ERR "different connectives"
-        else match_fl l1 l2 env fe
+        else match_fl l1 l2 env
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
         if q1 <> q2 then raise ERR "different quantifiers"
-        else match_form b1 b2 (match_sort s1 s2 env) fe
-      | (fVar fm,_) => (env, Binarymap.insert (fe,fm,cf))
+        else match_form b1 b2 (match_sort0 s1 s2 env)
       | _ => raise ERR "different formula constructors"
-and match_fl l1 l2 env fe = 
+and match_fl l1 l2 env = 
     case (l1,l2) of 
-        ([],[]) => (env,fe)
+        ([],[]) => env
       | (h1::t1,h2::t2) =>  
-        match_fl t1 t2 (#1 (match_form h1 h2 env fe))
-                 (#2 (match_form h1 h2 env fe))
+        match_fl t1 t2 (match_form h1 h2 env)
       | _ => raise ERR "incorrect length of list"
 
 fun inst_term env t = 
@@ -253,17 +243,12 @@ and inst_sort env s =
         ob => ob
       | ar(d,c) => ar(inst_term env d,inst_term env c)
 
-
-
-fun inst_form env fe f = 
+fun inst_form env f = 
     case f of
         Pred(P,tl) => Pred(P,List.map (inst_term env) tl)
-      | Conn(co,l) => Conn(co,List.map (inst_form env fe) l)
+      | Conn(co,l) => Conn(co,List.map (inst_form env) l)
       | Quant(q,n,s,b) =>
-        Quant(q,n,inst_sort env s, inst_form env fe b) 
-      | fVar fm => case lookup_f fe f of 
-                       SOME f' => f'
-                     | _ => f
+        Quant(q,n,inst_sort env s, inst_form env b) 
 
 fun strip_all f = 
     case f of 

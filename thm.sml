@@ -225,6 +225,8 @@ fun cj_imp2 pq = disch pq (conjE2 (assume pq))
 
 (*given |- A1 <=> A2 , |- B1 <=> B2, return |- A1 /\ B1 <=> A2 /\ B2*)
 
+(*conj_swap conj_comm*)
+
 fun conj_iff (thm(G1,C1)) (thm(G2,C2)) = 
     let val (A1,A2) = dest_iff C1
         val (B1,B2) = dest_iff C2
@@ -518,9 +520,10 @@ fun F_dimp2 f =
     in dimpI feqF2nf nf2feqF
     end
 
+(*
+fun conj_comm c1 c2 = 
 
-
-
+*)
 
 fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
     case (C1,C2) of 
