@@ -9,11 +9,11 @@ use "pterm.sig";
 use "pterm.sml";
 use "thm.sig";
 use "thm.sml";
+(*
 use "conv.sig"; 
 use "conv.sml";
-(*
 use "tactic.sig";
 use "tactic.sml"
+
+open pterm term form thm conv tactic;
 *)
-open thm form term;
-val vs = fvf (concl o_assoc);

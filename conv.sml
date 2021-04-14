@@ -161,6 +161,9 @@ fun orelsefc (fc1,fc2) f = fc1 f handle ERR _ => fc2 f
 
 fun try_fconv fc = fc orelsefc all_fconv
 
+fun changed_fconv fc f = 
+    if fc f =  frefl f then raise unchanged 
+    else fc f
 
 fun pred_fconv c f = 
     case f of 
@@ -381,6 +384,9 @@ fun rewr_conv th t =
     in thm(ant th, Pred("=",[t,inst_term env rhs]))
     end
 *)
+
+fun assum_list aslfun (g as (asl, _)) = aslfun (map assume asl) g
+
 
 
 

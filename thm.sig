@@ -3,6 +3,7 @@ sig
 type form = form.form
 type term = term.term
 type sort = term.sort
+type menv = form.menv
 datatype thm = thm of form list * form
 val assume: form -> thm
 val refl: term -> thm
@@ -10,12 +11,13 @@ val concl: thm -> form
 val trans: thm -> thm -> thm
 val sym: thm -> thm
 val ant: thm -> form list
+val inst1:  thm -> (string * form) -> thm
+val inst: thm -> menv -> thm
 val conjI: thm  -> thm -> thm
 val disjI1: thm -> form -> thm
 val disjI2: form -> thm -> thm
 val dimpI: thm -> thm -> thm
-val dimpE1: thm -> form -> thm
-val dimpE2: thm -> form -> thm
+val dimpE: thm -> thm
 val EQ_fsym: string -> sort -> thm list -> thm
 val EQ_psym: string -> thm list -> thm
 val conjE1: thm -> thm
@@ -41,6 +43,34 @@ val dimpl2r: thm -> thm
 val dimpr2l: thm -> thm
 val iff_trans: thm -> thm -> thm
 val equivT: thm -> thm
+
+val T_conj_1: thm
+val T_conj_2: thm 
+val F_conj_1: thm
+val F_conj_2: thm
+
+val T_disj_1: thm
+val T_disj_2: thm
+val F_disj_1: thm
+val F_disj_2: thm
+
+val T_imp_1: thm
+val T_imp_2: thm
+val F_imp_1: thm
+val F_imp_2: thm
+
+val T_dimp_1: thm
+val T_dimp_2: thm
+val F_dimp_1: thm
+val F_dimp_2: thm
+
+val forall_true_ob: thm
+val forall_true_ar: thm
+
+val forall_false_ob: thm
+val forall_false_ar: thm
+
+
 val idL: thm
 val idR: thm
 val o_assoc: thm

@@ -782,7 +782,7 @@ and sort_from_ps env ps =
       | pob => ob
       | par(A,B) => ar(term_from_pt env A,term_from_pt env B)
 
-
+(*
 fun substt (V as (m,s),t2) t = 
     case t of
         Var(n,s') => if m = n andalso s = s' then t2 else t
@@ -799,17 +799,19 @@ fun substf (V,t2) f =
         Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
       | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
       | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) f)
+      | _ => f
+*)
 
-
-
+(*
 
 fun abstract t = 
     let fun abs i (Pred(a,ts)) = Pred(a, map (substt (t, Bound i)) ts) 
           | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
           | abs i (Quant(q,b,s,A)) = 
             Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
+          | abs i (fVar fm) = fVar fm
     in abs 0 end;
-
+*)
 
 fun form_from_pf env pf = 
     case pf of 
