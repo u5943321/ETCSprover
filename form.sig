@@ -44,6 +44,10 @@ val pair_compare: ('a * 'b -> order) -> ('c * 'd -> order) -> ('a * 'c) * ('b * 
 val sort_compare: sort * sort -> order
 val term_compare: term * term -> order
 type menv
+val vd_of: menv -> (string * sort,term)Binarymap.dict
+val fvd_of: menv -> (string,form)Binarymap.dict
+val mempty: menv
+val emptyvd: (string * sort,term)Binarymap.dict
 val match_term: term -> term -> menv -> menv
 val match_sort: sort -> sort -> menv -> menv
 val match_tl: term list -> term list -> menv -> menv
@@ -51,8 +55,12 @@ val match_form: form -> form -> menv -> menv
 val strip_all: form -> form
 val strip_ALL: form -> form * (string * sort) list
 val pvariantt: (string * sort) set -> term -> term
+val fVarinf: form -> string list
 val inst_fVar: string * form -> form -> form
 val inst_fVarl: (string * form) list -> form -> form
 val inst_fVare: menv -> form -> form
+val string_of_sort: sort -> string
+val string_of_term: term -> string
+val string_of_form: form -> string
 end
 

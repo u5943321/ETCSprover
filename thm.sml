@@ -28,11 +28,16 @@ fun assume f = thm ([f],f)
 
 fun conjI (thm (G1,C1)) (thm (G2,C2)) = thm ((op_union (fn f1 => fn f2 => eq_form (f1,f2)) G1 G2),Conn ("&",[C1,C2]))
 
-fun conjE1 (thm (G1,Conn("&",[C1,C2]))) = thm (G1,C1)
-  | conjE1 _ = raise ERR "not a conjunction"
+fun conjE1 (thm(G,C)) = 
+    case C of 
+        Conn("&",[C1,C2]) => thm (G,C1)
+               | _ => raise ERR ("not a conjunction" ^ " " ^ string_of_form C)
 
-fun conjE2 (thm (G1,Conn("&",[C1,C2]))) = thm (G1,C2)
-  | conjE2 _ = raise ERR "not a conjunction"
+fun conjE2 (thm(G,C)) = 
+    case C of 
+        Conn("&",[C1,C2]) => thm (G,C2)
+               | _ => raise ERR ("not a conjunction" ^ " " ^ string_of_form C)
+
 
 fun disjI1 (thm (G,C)) f = thm (G,Conn ("|",[C,f]))
 
@@ -42,13 +47,16 @@ fun disjE A B C (thm (G1,AorB)) (thm (G2,C1)) (thm (G3,C2)) =
     if AorB = (Conn("|",[A,B])) andalso C1 = C andalso C2 = C 
        andalso mem A G2 andalso mem B G3 then 
         (thm (assum_U (ril A G2) (assum_U (ril B G3) G1),C))
-    else raise ERR "not sufficient for elimination"
+    else raise ERR ("not sufficient for elimination"
+              ^ " " ^ (string_of_form AorB) ^ " , " ^ string_of_form C1 ^
+              " " ^ (string_of_form C2))
 
 fun EQ_fsym f s thml = 
     let fun is_eq (thm(G,C),(ll,rl,assuml)) = 
             case C of Pred("=",[t1,t2]) => 
                       (t1::ll,t2::rl,op_union (fn f1 => fn f2 => eq_form (f1,f2)) G assuml)
-                    | _ => raise ERR "not an equality" 
+                    | _ => raise ERR ("not an equality" 
+                           ^ " " ^ (string_of_form C))
         val (ll,rl,assuml) = List.foldr is_eq ([],[],[]) thml 
     in 
         thm(assuml,Pred("=",[Fun(f,s,ll),Fun(f,s,rl)]))
@@ -58,7 +66,7 @@ fun EQ_psym p thml =
     let fun is_eq (thm(G,C),(ll,rl,assuml)) = 
             case C of Pred("=",[t1,t2]) => 
                       (t1::ll,t2::rl,op_union (fn f1 => fn f2 => eq_form (f1,f2)) G assuml)
-                    | _ => raise ERR "not an equality" 
+                    | _ => raise ERR ("not an equality" ^ " " ^ string_of_form C)
         val (ll,rl,assuml) = List.foldr is_eq ([],[],[]) thml 
     in 
         thm(assuml,Conn("<=>",[Pred(p,ll),Pred(p,rl)]))
@@ -69,12 +77,13 @@ fun tautI f = thm([],Conn("|",[f,mk_neg f]))
 fun negI (thm (G,C)) f = 
     if C = FALSE andalso mem f G then 
         (thm (ril f G, (Conn("~",[f]))))
-    else raise ERR "conclusion is not a FALSE"
+    else raise ERR ("conclusion is not a FALSE" ^ " " ^ string_of_form C)
 
 fun negE (thm (G1,A1)) (thm (G2,A2)) = 
     if A2 = (Conn("~",[A1])) orelse A1 = (Conn("~",[A2]))
     then (thm (assum_U G1 G2,FALSE))
-    else raise ERR "not a contradiction"
+    else raise ERR ("not a contradiction" 
+         ^ " " ^ (string_of_form A1)  ^ " , " ^ string_of_form A2)
 
 (*should I have the orelse in above?*)
 
@@ -87,31 +96,36 @@ fun dimpI (thm (G1,I1)) (thm (G2,I2)) =
         (Conn("==>",[f1,f2]),Conn("==>",[f3,f4])) =>
         if f1 = f4 andalso f2 = f3 
         then (thm (assum_U G1 G2,Conn("<=>",[f1,f2])))
-        else raise ERR "implications are not inverse of each other"
-      | _ => raise ERR "not a pair of implications"
+        else raise ERR ("implications are not inverse of each other"
+              ^ " " ^ (string_of_form I1) ^ " , " ^ string_of_form I2)
+      | _ => raise ERR ("not a pair of implications"
+              ^ " " ^ (string_of_form I1) ^ " , " ^ string_of_form I2)
 
 fun dimpE (thm(G,A)) = 
     case A of
         Conn("<=>",[f1,f2]) => 
         thm(G,Conn("&", 
              [Conn("==>",[f1,f2]),Conn("==>",[f2,f1])]))
-      | _ => raise ERR "not an iff"
+      | _ => raise ERR ("not an iff" ^ " " ^ string_of_form A)
 
 fun allI (n,s) (thm(G,C)) = 
-    if HOLset.member (fvfl G,(n,s)) then raise ERR "term occurs free on assumption"
+    if HOLset.member (fvfl G,(n,s))
+    then raise ERR ("term occurs free on assumption" ^
+         " " ^ string_of_term (Var(n,s)))
     else thm(G,Quant("ALL",n,s,abstract (n,s) C))
 
 fun allE (thm(G,C)) t = 
     case C of
         (Quant("ALL",n,s,b)) => 
         if sort_of t = s then thm(G,subst_bound t b)
-        else raise ERR "sort inconsistant"
-      | _ => raise ERR "not an ALL"
+        else raise ERR ("sort inconsistant"
+             ^ (string_of_sort (sort_of t)) ^ " " ^ string_of_sort s)
+      | _ => raise ERR ("not an ALL" ^ string_of_form C)
 
 fun existsI (thm(G,C)) (n,s) t f = 
     if C = substf ((n,s),t) f then 
         thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
-    else raise ERR "formula has the wrong form"
+    else raise ERR ("formula has the wrong form" ^ string_of_form C)
 
 fun simple_exists (v as (n,s)) th = existsI th v (Var v) (concl th) 
 
@@ -121,8 +135,8 @@ fun existsE (thm(G,C)) (n,s) =
         if HOLset.member(fvfl G,(n,s)) then raise ERR "term occurs free in assumption"
         else if s = s1 
         then thm(G,subst_bound (Var (n,s)) b)
-        else raise ERR "inconsist sorts"
-      | _ => raise ERR "not an EXISTS"
+        else raise ERR ("inconsist sorts" ^ (string_of_sort s) ^ " " ^ string_of_sort s1)
+      | _ => raise ERR ("not an EXISTS"  ^ string_of_form C) 
 
 (*refl, sym, trans of equalities*)
 
@@ -133,7 +147,7 @@ fun sym th =
     then let val (l,r) = dest_eq (concl th)
          in thm(ant th,Pred("=",[r,l]))
          end
-    else raise ERR "not an equality"
+    else raise ERR ("not an equality" ^ string_of_form (concl th))
 
 fun trans th1 th2 = 
     if is_eqn (concl th1) andalso is_eqn (concl th2)
@@ -142,9 +156,11 @@ fun trans th1 th2 =
          in 
              (if t2 = t3 then 
                   thm(assum_U (ant th1) (ant th2),Pred("=",[t1,t4]))
-              else raise ERR "equalities do not  match")
+              else raise ERR ("equalities do not  match" ^ 
+                   (string_of_form (concl th1)) ^ " " ^ string_of_form (concl th2)))
          end
-    else raise ERR "not an equality"
+    else raise ERR ("not an equality" ^ 
+         (string_of_form (concl th1)) ^ " " ^ string_of_form (concl th2))
 
 (*derived rules*)
 
@@ -152,8 +168,10 @@ fun disch f1 (thm(G,f2)) = thm (ril f1 G,Conn ("==>",[f1,f2]))
 
 fun mp (thm (G1,f1)) (thm (G2,f2)) = 
     case f1 of 
-        Conn ("==>",[A,B]) => if f2 = A then (thm (assum_U G1 G2,B)) else raise ERR "no match" 
-      | _ => raise ERR "no match" 
+        Conn ("==>",[A,B]) =>
+        if eq_form(f2,A) then (thm (assum_U G1 G2,B)) 
+        else raise ERR ("no match" ^ (string_of_form f1) ^ " " ^ string_of_form f2)
+      | _ => raise ERR ("no match" ^ (string_of_form f1) ^ " " ^ string_of_form f2)
 
 fun undisch th = mp th (assume (#1(dest_imp (concl th))))
 
@@ -347,15 +365,19 @@ fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,
 fun all_true (n,s) = dimpI (disch (Quant("ALL",n,s,TRUE)) (trueI []))
                            (disch TRUE (allI (n,s) (trueI [])))
 
+(*
 val all_true_ar = all_true ("a",ar(Var("A",ob),Var("B",ob)))
 val all_true_ob = all_true ("A",ob)
+*)
 
 fun all_false (n,s) = dimpI (disch (Quant("ALL",n,s,FALSE)) 
                                    (allE (assume (Quant("ALL",n,s,FALSE))) (Var (n,s))))
                             (disch FALSE (allI (n,s) (assume FALSE)))
 
+(*
 val all_false_ar = all_false ("a",ar(Var("A",ob),Var("B",ob)))
 val all_false_ob = all_false ("A",ob)
+*)
 
 fun T_imp1 f =
     let val Timpf2f = disch (Conn("==>",[TRUE,f])) (mp (assume (Conn("==>",[TRUE,f]))) (trueI []))
@@ -478,10 +500,12 @@ fun conj_comm c1 c2 =
 
 *)
 
+(*compare*)
+
 fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
     case (C1,C2) of 
         (Conn("<=>",[f1,f2]), Conn("<=>",[f3,f4])) => 
-        if f2 = f3 then 
+        if eq_form (f2,f3) then 
             let val f1f2 = conjE1 (dimpE (thm(G1,C1)))
                 val f2f1 = conjE2 (dimpE (thm(G1,C1)))
                 val f2f4 = conjE1 (dimpE (thm(G2,C2)))
@@ -490,7 +514,7 @@ fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
                 val f4f1 = imp_trans f4f2 f2f1
             in dimpI f1f4 f4f1
             end
-        else raise ERR "two iffs do not match"
+        else raise ERR ("two iffs do not match" ^ (string_of_form C1) ^ " , " ^ (string_of_form C2))
       | _ => raise ERR "not a pair of iffs"
 
 fun iff_swap (thm(G,C)) = 
@@ -510,7 +534,7 @@ fun dimp_iff (th1 as thm(G1,C1)) (th2 as thm(G2,C2)) =
             val P2iffQ22P1iffQ1 = disch P2iffQ2 (iff_trans (iff_trans th1 (assume P2iffQ2)) (iff_swap th2))
         in dimpI P1iffQ12P2iffQ2 P2iffQ22P1iffQ1
         end
-      | _ => raise ERR "not a pair of iff"
+      | _ => raise ERR ("not a pair of iff" ^ string_of_form C1 ^ " , " ^ string_of_form C2)
 
 
 fun all_iff (th as thm(G,C)) (n,s) = 
@@ -523,7 +547,7 @@ fun all_iff (th as thm(G,C)) (n,s) =
         in
             dimpI allP2allQ allQ2allP
         end
-      | _ => raise ERR "conclusion of theorem is not an iff"
+      | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
 
 fun exists_iff (th as thm(G,C)) (n,s) = 
@@ -536,7 +560,7 @@ fun exists_iff (th as thm(G,C)) (n,s) =
         in
             dimpI eP2eQ eQ2eP
         end
-      | _ => raise ERR "conclusion of theorem is not an iff"
+      | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 
@@ -560,11 +584,11 @@ val T_dimp_2 = T_dimp2 (fVar "f0")
 val F_dimp_1 = F_dimp1 (fVar "f0")
 val F_dimp_2 = F_dimp2 (fVar "f0")
 
-val forall_true_ob = forall_true ("A",ob)
-val forall_true_ar = forall_true ("a",ar(mk_ob "A",mk_ob "B"))
+val all_true_ob = forall_true ("A",ob)
+val all_true_ar = forall_true ("a",ar(mk_ob "A",mk_ob "B"))
 
-val forall_false_ob = forall_false ("A",ob)
-val forall_false_ar = forall_false ("a",ar(mk_ob "A",mk_ob "B"))
+val all_false_ob = forall_false ("A",ob)
+val all_false_ar = forall_false ("a",ar(mk_ob "A",mk_ob "B"))
 
 (*ETCS axioms*)
 

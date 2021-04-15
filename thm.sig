@@ -44,6 +44,13 @@ val dimpr2l: thm -> thm
 val iff_trans: thm -> thm -> thm
 val equivT: thm -> thm
 
+val conj_iff: thm -> thm -> thm
+val disj_iff: thm -> thm -> thm
+val imp_iff: thm -> thm -> thm
+val dimp_iff: thm -> thm -> thm
+val all_iff: thm -> (string * sort) -> thm
+val exists_iff: thm -> (string * sort) -> thm
+
 val T_conj_1: thm
 val T_conj_2: thm 
 val F_conj_1: thm
@@ -64,11 +71,11 @@ val T_dimp_2: thm
 val F_dimp_1: thm
 val F_dimp_2: thm
 
-val forall_true_ob: thm
-val forall_true_ar: thm
+val all_true_ob: thm
+val all_true_ar: thm
 
-val forall_false_ob: thm
-val forall_false_ar: thm
+val all_false_ob: thm
+val all_false_ar: thm
 
 
 val idL: thm

@@ -179,6 +179,10 @@ fun ps_of_pt pt =
       | pFun (n,ps,l) => ps
       | pAnno(pt,ps) => ps_of_pt pt
 
+datatype nterm = nvar of num * nsort
+               | nfun of nterm list
+     and nsort = nob
+               | nar of nterm * nterm
 
 (*
 fun type_infer env t ty = 
@@ -841,5 +845,9 @@ fun read_f f =
         val env1 = type_infer_pf env pf
     in (form_from_pf env1 pf,pdict env1)
     end
+
+val readf = fst o read_f
+
+val readt = fst o read_t
 
 end

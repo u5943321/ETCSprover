@@ -244,7 +244,9 @@ and match_tl l1 l2 env =
 
 type menv = ((string * sort),term)Binarymap.dict * (string,form)Binarymap.dict
 
-val empty : menv = (Binarymap.mkDict (pair_compare String.compare sort_compare), Binarymap.mkDict String.compare)
+val emptyvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
+
+val mempty : menv = (emptyvd, Binarymap.mkDict String.compare)
 
 fun v2t V t ((vd,fvd):menv):menv = (Binarymap.insert(vd,V,t),fvd)
     
@@ -387,6 +389,7 @@ fun fVarinf f =
       | Conn(co,[f1,f2]) => (fVarinf f1) @ (fVarinf f2)
       | Conn(co,[f0]) => fVarinf f0
       | Quant(_,_,_,b) => fVarinf b
+      | fVar fm => [fm]
       | _ => raise ERR "ill-formed formula"
 
 fun inst_fVar (fm,f0) f = 
@@ -398,7 +401,7 @@ fun inst_fVar (fm,f0) f =
                 if mem n (fVarinf f0) then n ^ "'" else n
         in Quant(q,n ^ "'",s,inst_fVar (fm,f0) b)
         end
-      | fVar ff => if ff = fm then fVar fm else f
+      | fVar ff => if ff = fm then f0 else f
 
 fun inst_fVarl l f = 
     case l of 
@@ -410,6 +413,82 @@ fun inst_fVare (env:menv) f =
     let val fVs = Binarymap.listItems (fvd_of env)
     in inst_fVarl fVs f
     end
+
+fun enclose a = "(" ^ a ^ ")";
+
+fun conc_list sep l = 
+    case l of 
+        [] => ""
+      | h :: t => sep ^ h ^ conc_list sep t
+
+fun conc_list1 sep l = 
+    case l of [] => ""
+            | h :: t => h  ^ (conc_list sep t);
+
+
+(* with sorts
+fun string_of_tl l = 
+    case l of
+        [] => ""
+      | h :: t => 
+        enclose (conc_list1 ","
+                            (List.map string_of_term (h :: t)))
+and string_of_term t = 
+    case t of
+        Var(n,s) => n ^ ":" ^ string_of_sort s
+      | Fun(f,s,[t1,t2]) => 
+        enclose 
+            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
+             (string_of_term t2)) ^ 
+        ":" ^ string_of_sort s
+      | Fun(f,s,l) => 
+        f ^ (string_of_tl l) ^ ":" ^ string_of_sort s
+      | _ => " "
+and string_of_sort s = 
+    case s of 
+        ob => "ob"
+      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+*)
+
+fun string_of_tl l = 
+    case l of
+        [] => ""
+      | h :: t => 
+        enclose (conc_list1 ","
+                            (List.map string_of_term (h :: t)))
+and string_of_term t = 
+    case t of
+        Var(n,s) => n
+      | Fun(f,s,[t1,t2]) => 
+        enclose 
+            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
+             (string_of_term t2)) 
+      | Fun(f,s,l) => 
+        f ^ (string_of_tl l)
+      | _ => ""
+and string_of_sort s = 
+    case s of 
+        ob => "ob"
+      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+
+
+
+fun string_of_form f = 
+    case f of
+        Pred(p,[t1,t2]) => 
+        (string_of_term t1) ^ " " ^ p ^ " " ^ (string_of_term t2)
+      | Pred(p,tl) =>  p ^ string_of_tl tl
+      | Conn(co,[f1,f2]) =>
+        string_of_form f1 ^ co ^ string_of_form f2
+      | Conn(co,[f]) => co ^ string_of_form f
+      | Quant(q,n,s,b) => 
+        q ^ string_of_term (Var(n,s)) ^ "." ^
+        string_of_form 
+            (subst_bound (Var(n,s)) b)
+      | fVar fm => "fV" ^ enclose fm
+      | _ => raise ERR "bad formula"
+
+(*basic_fconv c basic_taut_fconv (Quant ("ALL", "x", ob, Conn ("|", [Pred ("T", []), Pred ("F", [])])));*)
   
 
 (*Variables To Be Specialized*)
