@@ -179,10 +179,7 @@ fun ps_of_pt pt =
       | pFun (n,ps,l) => ps
       | pAnno(pt,ps) => ps_of_pt pt
 
-datatype nterm = nvar of num * nsort
-               | nfun of nterm list
-     and nsort = nob
-               | nar of nterm * nterm
+
 
 (*
 fun type_infer env t ty = 
@@ -196,6 +193,8 @@ in unify env2 ps ps0
 
 
 *)
+
+
 
 fun type_infer env t ty = 
     case t of 
@@ -416,6 +415,90 @@ and env_from_ptl env ptl =
         in env_from_ptl env1 t
         end
  
+
+type psymd = (string, term list) Binarymap.dict
+
+type uvd = (string, string) Binarymap.dict
+(*
+
+fun insert_ps n s ((dpt,dps,dv,i):env):env = (dpt,insert (dps,n,s),dv,i)
+    
+fun insert_pt n t ((dpt,dps,dv,i):env):env = (insert (dpt,n,t),dps,dv,i)
+
+fun dps_of ((dpt,dps,dv,i):env) = dps
+
+fun dpt_of ((dpt,dps,dv,i):env) = dpt
+
+fun dv_of ((dpt,dps,dv,i):env) = dv
+
+fun var_of ((dpt,dps,dv,i):env) = i
+
+fun fresh_var ((td,sd,dv,i):env):string * env = (" " ^ Int.toString i,(td,sd,dv, i + 1))
+*)
+
+fun lookup_p (pd:psymd) p = Binarymap.peek (pd,p)
+
+fun lookup_n (ud:uvd) n = Binarymap.peek (ud,n)
+
+fun insert_n2v n v (ud:uvd) = Binarymap.insert (ud,n,v)
+
+
+(*
+fun lookup_ps ((_,dps,_,_):env) n = peek (dps,n)
+
+fun ps_of ((_,_,dv,_):env) n:psort option = peek (dv,n)
+
+fun record_n2v n v pd:psyms =  (dv,n,s),i)
+*)
+
+(*ud is string * string dict records where the name goes to the unification variables
+match_t2pt returns (env,ud) pair, where ud will be discard after each usage of type-inference of pred*)
+
+val psyms: psymd = Binarymap.mkDict String.compare
+
+
+val psyms0 = List.foldr (fn ((p:string,tl:term list),d) => Binarymap.insert (d,p,tl)) 
+                        (Binarymap.mkDict String.compare)
+                        [("ismono",[mk_ar "a" "A" "B"])]
+(*should we allow definition to take only function terms?*)
+
+
+fun unify_t2pt t (pt:pterm) (env:env) (n2u:uvd) : env * uvd = 
+    case (t,chasevart pt env) of 
+        (Var(n,s),pt1) =>
+        let 
+            val (env1,n2u1) = unify_s2ps s (ps_of_pt pt1) env n2u
+        in
+            case (lookup_n n2u1 n) of 
+                SOME u => (*chasevar here*)
+                (unify_pt env1 (ptUVar u) pt1,n2u1)
+              | _ => let val (Av,env2) = fresh_var env1
+                     in (insert_pt Av pt1 env2, insert_n2v n Av n2u1)
+                     end  
+        end
+        | (_,_) => raise ERR "unexpected term constructor"
+and unify_s2ps s (ps:psort) env n2u : env * uvd = 
+    case (s,chasevars ps env) of
+        (ob,pob) => (env,n2u)
+      | (ar(A0,B0), par(A,B)) =>  
+        let val (env1,n2u1) = unify_t2pt A0 A env n2u
+        in unify_t2pt B0 B env1 n2u1
+        end 
+
+fun unify_t2pt' ((t,pt),(env,n2u)) = unify_t2pt t pt env n2u
+
+fun type_infer_args env pf = 
+    case pf of 
+        pPred(p,l) => 
+        case (lookup_p psyms p) of 
+            SOME tl => List.foldr unify_t2pt' (env,Binarymap.mkDict String.compare) 
+                                  (zip tl l) 
+          | _ => (env,Binarymap.mkDict String.compare)
+             
+fun type_infer_pf env pf = 
+    case pf of
+        pPred(p,l) => 
+
 fun type_infer_pf env pf = 
     case pf of 
         pQuant(q,n,ps,pb) => type_infer_pf env pb
