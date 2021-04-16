@@ -495,6 +495,24 @@ fun forall_false (n,s) =
     in dimpI aF2F F2aF
     end
 
+
+(*the Var(n,s) can be any term*)
+
+fun exists_true (n,s) = 
+    let val eT = mk_exists n s TRUE
+        val eT2T = disch eT (trueI [eT])
+        val T2eT = disch TRUE (existsI (assume TRUE) (n,s) (Var(n,s)) TRUE)
+    in dimpI eT2T T2eT
+    end
+
+
+fun exists_false (n,s) = 
+    let val eF = mk_exists n s FALSE
+        val eF2F = disch eF (existsE (assume eF) (n,s))
+        val F2eF = disch FALSE (falseE eF)
+    in dimpI eF2F F2eF
+    end
+
 (*
 fun conj_comm c1 c2 = 
 
@@ -589,6 +607,14 @@ val all_true_ar = forall_true ("a",ar(mk_ob "A",mk_ob "B"))
 
 val all_false_ob = forall_false ("A",ob)
 val all_false_ar = forall_false ("a",ar(mk_ob "A",mk_ob "B"))
+
+
+val exists_true_ob = exists_true ("A",ob)
+val exists_true_ar = exists_true ("a",ar(mk_ob "A",mk_ob "B"))
+
+val exists_false_ob = exists_false ("A",ob)
+val exists_false_ar = exists_false ("a",ar(mk_ob "A",mk_ob "B"))
+
 
 (*ETCS axioms*)
 
