@@ -122,6 +122,8 @@ fun allE (thm(G,C)) t =
              ^ (string_of_sort (sort_of t)) ^ " " ^ string_of_sort s)
       | _ => raise ERR ("not an ALL" ^ string_of_form C)
 
+
+(*wrong error message*)
 fun existsI (thm(G,C)) (n,s) t f = 
     if C = substf ((n,s),t) f then 
         thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
@@ -567,6 +569,19 @@ fun all_iff (th as thm(G,C)) (n,s) =
         end
       | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
+(*
+fun exists_iff (th as thm(G,C)) (n,s) = 
+    case C of 
+        Conn("<=>",[P,Q]) => 
+        let val eP = Quant("EXISTS", n, s, P)
+            val eQ = Quant("EXISTS", n, s, Q)
+            val eP2eQ = disch eP (simple_exists (n,s) (dimp_mp_l2r (existsE (assume eP) (n,s)) th))
+            val eQ2eP = disch eQ (existsI (dimp_mp_r2l th (existsE (assume eQ) (n,s))) (n,s))
+        in
+            dimpI eP2eQ eQ2eP
+        end
+      | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
+*)
 
 fun exists_iff (th as thm(G,C)) (n,s) = 
     case C of 
@@ -579,6 +594,7 @@ fun exists_iff (th as thm(G,C)) (n,s) =
             dimpI eP2eQ eQ2eP
         end
       | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
+
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 

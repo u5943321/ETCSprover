@@ -19,7 +19,8 @@ exception ERR of string
 val TRUE: form
 val FALSE: form
 val mk_ob: string -> term
-val mk_ar: string -> string -> string -> term
+val mk_ar: string -> term -> term -> term
+val mk_ar0: string -> string -> string -> term
 val mk_neg: form -> form
 val mk_conj: form -> form -> form
 val mk_disj: form -> form -> form

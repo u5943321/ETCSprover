@@ -77,6 +77,11 @@ val all_true_ar: thm
 val all_false_ob: thm
 val all_false_ar: thm
 
+val exists_true_ar: thm
+val exists_true_ob: thm
+val exists_false_ar: thm 
+val exists_false_ob: thm
+
 
 val idL: thm
 val idR: thm

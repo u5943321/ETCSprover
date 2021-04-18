@@ -19,7 +19,13 @@ val TRUE = Pred("T",[])
 val FALSE = Pred("F",[])
 
 fun mk_ob a = Var(a,ob)
-fun mk_ar a A B = Var(a,ar(mk_ob A,mk_ob B))
+fun mk_ar a t1 t2 = Var(a,ar(t1,t2))
+
+fun mk_ar0 a A B = Var(a,ar(mk_ob A,mk_ob B))
+
+fun mk_var n s = Var(n,s)
+
+fun mk_fun f s l = Fun(f,s,l)
 
 fun mk_neg f = Conn("~",[f])
 
@@ -99,7 +105,7 @@ fun substf (V,t2) f =
     case f of 
         Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
       | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
-      | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) f)
+      | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) b)
       | _ => f
 
 fun pair_compare ac bc ((a1,b1),(a2,b2)) = 
