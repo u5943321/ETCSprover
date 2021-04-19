@@ -26,6 +26,7 @@ val mk_conj: form -> form -> form
 val mk_disj: form -> form -> form
 val mk_imp: form -> form -> form
 val mk_dimp: form -> form -> form
+val mk_fun: string -> sort -> term list -> term
 val dest_eq: form -> term * term
 val dest_imp: form -> form * form
 val dest_iff: form -> form * form

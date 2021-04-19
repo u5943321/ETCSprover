@@ -53,6 +53,9 @@ fun conc_list sep [] = ""
 fun conc_list1 sep [] = " "
   | conc_list1 sep (b::bs) = b ^ (conc_list sep bs);
 
+
+fun enclose a = "(" ^ a ^ ")"
+
 fun stringof_pt pt = 
     case pt of 
         pVar (name,ps) => "pv" ^ " " ^ name ^ " : " ^ stringof_ps ps
@@ -178,21 +181,6 @@ fun ps_of_pt pt =
       | pVar (n,ps) => ps
       | pFun (n,ps,l) => ps
       | pAnno(pt,ps) => ps_of_pt pt
-
-
-
-(*
-fun type_infer env t ty = 
-case t of 
-pFun(f,ps,ptl) =>
-let 
-val (psl, ps0) = lookup(f,fsymdict)
-val env1 = foldr env (fn env0 pt => type_infer env0 pt (ps_of pt))  ptl
-val env2 = foldr env1 (fn env0 (pt,ps) => unify_ps env0 (ps_of pt) ps) (zip(ptl,psl))
-in unify env2 ps ps0
-
-
-*)
 
 
 
@@ -415,23 +403,20 @@ and env_from_ptl env ptl =
         in env_from_ptl env1 t
         end
  
-(*
+
 (*working on pred type inference*)
 type psymd = (string, term list) Binarymap.dict
 
-type uvd = (string, string) Binarymap.dict
+type uvd = ((string * sort), pterm) Binarymap.dict
 
 fun lookup_p (pd:psymd) p = Binarymap.peek (pd,p)
 
-fun lookup_n (ud:uvd) n = Binarymap.peek (ud,n)
+fun lookup_ns (ud:uvd) (n,s) = Binarymap.peek (ud,(n,s))
 
-fun insert_n2v n v (ud:uvd) = Binarymap.insert (ud,n,v)
-
-
-val psyms: psymd = Binarymap.mkDict String.compare
+fun insert_ns2pt (n,s) pt (ud:uvd) = Binarymap.insert (ud,(n,s),pt)
 
 
-val psyms0 = List.foldr (fn ((p:string,tl:term list),d) => Binarymap.insert (d,p,tl)) 
+val psyms0:psymd = List.foldr (fn ((p:string,tl:term list),d) => Binarymap.insert (d,p,tl)) 
                         (Binarymap.mkDict String.compare)
                         [("ismono",[mk_ar0 "a" "A" "B"]),
                          ("isgroup",[mk_ob "G",
@@ -444,8 +429,94 @@ val psyms0 = List.foldr (fn ((p:string,tl:term list),d) => Binarymap.insert (d,p
                                      mk_ar "inv" (mk_ob "G") (mk_ob "G")])]
 (*should we allow definition to take only function terms?*)
 
-val n2u0:uvd = Binarymap.mkDict String.compare
+val n2u0:uvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
 
+fun unify_sps s ps env ns2pt = (empty,n2u0)
+
+(*clause for pFun/pAnno : do type_infer for fun sym first?
+do not do type_infer for other clauses because on pFun/pAnno gives information*)
+
+fun unify_tpt t pt env (ns2pt:uvd) = 
+    case (t,pt) of 
+        (Var(n,s),ptUVar m) => 
+        if s = ob then
+            case lookup_ns ns2pt (n,s) of 
+                SOME pt0 => (unify_pt env pt pt0,ns2pt)
+              | NONE => 
+                (env, insert_ns2pt (n,s) pt ns2pt)
+        else 
+            raise ERR ("ptUVar with name " ^ m ^ "cannot be an arrow")
+      | (Var(n,s),pVar(n0,s0)) => 
+        (case lookup_ns ns2pt (n,s) of
+            SOME pt0 => 
+            let
+                val env1 = unify_pt env pt pt0
+            in unify_sps s s0 env1 ns2pt
+            end
+          | NONE => 
+            let val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
+            in unify_sps s s0 env ns2pt1
+            end)
+      | (Var(n,s),pFun(f,ps,ptl)) => 
+        let 
+            val env = type_infer env pt ps 
+        in
+            case lookup_ns ns2pt (n,s) of
+                SOME pt0 => (unify_pt env pt0 pt,ns2pt)
+              | NONE => 
+                let 
+                    val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
+                in unify_sps s ps env ns2pt1
+                end
+        end
+      | (Var(n,s),pAnno(pt0,ps)) => 
+        let
+            val env = type_infer env pt ps
+        in
+            case lookup_ns ns2pt (n,s) of
+                SOME pt0 => (unify_pt env pt0 pt0,ns2pt)
+              | NONE => 
+                let 
+                    val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
+                in
+                    unify_sps s ps env ns2pt1
+                end
+        end
+      | (Fun(f,s,l),pFun(pf,ps,pl)) => 
+        if f = pf then
+            let val env = type_infer env pt ps
+                val (env1,ns2pt1) = unify_sps s ps env ns2pt
+            in
+                foldr (fn ((t0,pt0),(e,nspt)) => unify_tpt t0 pt0 e nspt)
+                      (env1,ns2pt1)
+                      (zip l pl)
+            end
+        else 
+            raise ERR ("different function symbols: " ^ f ^ " , " ^ pf)
+      | _ => raise ERR "unexpected constructors"
+and unify_sps s ps env (ns2pt:uvd) = 
+    case (s,ps) of
+        (ob,pob) => (env,ns2pt)
+      | (ar(d1,c1),par(d2,c2)) => 
+        let val env1 = unify_ps env pob (ps_of_pt d2)
+            val env2 = unify_ps env1 pob (ps_of_pt c2)
+            val (env3,ns2pt1) = unify_tpt d1 d2 env2 ns2pt
+        in unify_tpt c1 c2 env3 ns2pt1
+        end
+      | (ob,psvar n) => (unify_ps env pob ps,ns2pt)
+      | (ar(d,c),psvar n) => 
+        let val (Av,env1) = fresh_var env
+            val (Bv,env2) = fresh_var env1
+            val env3 = unify_ps env2 (psvar n) (par(ptUVar Av,ptUVar Bv))
+            val (env4,ns2pt1) = unify_tpt d (ptUVar Av) env3 ns2pt
+        in unify_tpt c (ptUVar Bv) env4 ns2pt1
+        end
+      | (ob,par(_,_)) => raise ERR "cannot unify ob with par"
+      | (ar(_,_),pob) => raise ERR "cannot unify ar with pob"
+
+
+
+(*
 fun unify_t2pt t (pt:pterm) (env:env) (n2u:uvd) : env * uvd = 
     case (t,chasevart pt env) of 
         (Var(n,s),pt1) =>
@@ -476,7 +547,7 @@ and unify_s2ps s (ps:psort) env n2u : env * uvd =
         let val (env1,n2u1) = unify_t2pt A0 A env n2u
         in unify_t2pt B0 B env1 n2u1
         end 
-
+*)
 
 
 fun pdpair (env,uvd) =  (pdict env,Binarymap.listItems uvd)
@@ -492,7 +563,7 @@ fun type_infer_args env pf =
           | _ => (env,Binarymap.mkDict String.compare))
       | _ => raise ERR "not a predicate"
              
-*)
+
 
 fun type_infer_pf env pf = 
     case pf of 
