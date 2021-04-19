@@ -536,19 +536,6 @@ exception ERROR of string
 fun rightparen (x, Key")"::toks,env) = (x, toks,env)
   | rightparen _ = raise ERROR "Symbol ) expected";
 
-(*
-fun parse_until (al,parsefn) tl env = 
-    case tl of 
-        (Key(b)::tl1) => if mem b al then 
-                             parse_until1 (al,parsefn) tl1 env
-                         else ([],tl,env)
-      | _ => ([],tl,env)
-and parse_until1 (al,parsefn) tl env =
-    let val (u,tl1,env1) = parsefn tl env
-    in (parse_until (al,parsefn) tl1 env1)
-    end
-*)
-
 (*really parse pob/par because they are actually doing type-infer. ?*)
 
 (*type inference during parsing : 
@@ -653,61 +640,12 @@ and parse_pob tl env =
     let val (pt,tl1,env1) = parse_pt tl env
     in (pAnno (pt,pob),tl1,env1)
     end
-(*
-fun parse_pt tl env = 
-    case tl of
-        (Id(a)::tl1) => 
-        (case tl1 of
-             (Key":"::tl2) =>      
-             (case (ps_of env a) of 
-                 SOME ps => let val (pas,tl3,env1) = parse_par tl2 env
-                            in (pAnno (pVar(a,ps),pas),tl3,env1)
-                            end
-               | NONE => let val (n,env1) = fresh_var env
-                             val (ps,tl3,env2) = parse_par tl2 env1
-                             val env3 = record_ps a (psvar n) env2
-                         in (pAnno (pVar(a,psvar n),ps),tl3,env3)
-                         end)
-           | (Key"("::tl2) => 
-             let val (ptl,tl3,env1) = 
-                     rightparen (parse_repeat1 (",",parse_pt) tl2 env)
-             in (case tl3 of 
-                     (Key":"::tl4) => 
-                     (let val (ps,tl5,env2) = parse_par tl4 env1
-                          val (n,env3) = fresh_var env2
-                      in (pAnno(pFun(a,psvar n,ptl),ps),tl5,env3)
-                             (*pAnno or pVar with ps?*)
-                      end)
-                   | _ =>
-                     let val (n,env2) = fresh_var env1
-                     in (pFun(a,psvar n,ptl),tl3,env2)
-                     end)
-             end
-           | _ => 
-             (case (ps_of env a) of 
-                  SOME ps => (pVar (a,ps),tl1,env)
-                | NONE => let val (n,env1) = fresh_var env
-                              val env2 = record_ps a (psvar n) env1
-                          in (pVar (a,psvar n),tl1,env2)
-                          end))
-      | [] => raise ERROR "Syntax of preterm: unexpected end of file"
-      | t::_ => raise ERROR ("Syntax of preterm: " ^ tokentoString t) 
-and parse_par tl env = 
-    (case (parse_pob tl env) of 
-         (A,Key"->"::tl1,env1) => 
-         apfst (fn B => par(A,B)) (parse_pob tl1 env1)
-       | _ => raise ERROR "Expected arrow")  
-and parse_pob tl env = 
-    let val (pt,tl1,env1) = parse_pt tl env
-    in (pAnno (pt,pob),tl1,env1)
-    end
-*)
  
 fun mk_quant q n ps pf = pQuant (q,n,ps,pf)
 
 fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
 
-fun mk_neg pf = pConn("~",[pf])
+fun mk_pneg pf = pConn("~",[pf])
 
 fun mk_pPred P ptl = pPred(P,ptl)
 
@@ -721,7 +659,11 @@ fun prec_of "~" = 4
 
 datatype ForP = fsym | psym
 
-val fpdict0:(string,ForP) dict = insert(insert(insert(insert(insert(insert(insert(insert(insert(insert(insert (Binarymap.mkDict String.compare,"=",psym),"P",psym),"o",fsym),"id",fsym),"to1",fsym),"from0",fsym),"p1",fsym),"p2",fsym),"pa",fsym),"ismono",psym),"T",psym)
+val fpdict0:(string,ForP) Binarymap.dict =
+    foldr (fn ((n,forp),d) => Binarymap.insert(d,n,forp)) (Binarymap.mkDict String.compare) 
+          [("=",psym),("P",psym),("o",fsym),("id",fsym),("to1",fsym),
+           ("from0",fsym),("p1",fsym),("p2",fsym),("pa",fsym),("ismono",psym),
+           ("T",psym),("F",psym)]
 
 (*change to fold*)
 
@@ -795,7 +737,7 @@ and parsefix prec (pf,tl,env) =
       | _ => (pf,tl,env) 
 and parse_atom tl env =
     case tl of 
-        (Key"~"::tl1) => apfst mk_neg (parse_atom tl1 env)
+        (Key"~"::tl1) => apfst mk_pneg (parse_atom tl1 env)
       | (Key"("::tl1) =>
         (rightparen (parse_pf tl1 env)
          handle ERROR _ => 

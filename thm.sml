@@ -123,7 +123,7 @@ fun allE (thm(G,C)) t =
       | _ => raise ERR ("not an ALL" ^ string_of_form C)
 
 
-(*wrong error message*)
+(*change to eq_form in some proper way?*)
 fun existsI (thm(G,C)) (n,s) t f = 
     if C = substf ((n,s),t) f then 
         thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
@@ -596,6 +596,35 @@ fun exists_iff (th as thm(G,C)) (n,s) =
       | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
 
 
+(*spec_all*)
+
+fun specl th l = 
+    if is_all (concl th) then 
+        (case l of [] => th
+                 | h :: t => 
+                   let val f1 = allE th h handle ERR _ => th
+                   in 
+                       specl f1 t
+                   end)
+    else th (*raise ERR "conclusion not universally quantified"*)
+
+
+
+fun spec_all th = 
+    let val fv = fvfl (ant th)
+        val v2bs = snd (strip_ALL (concl th))
+        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
+    in 
+        specl th (rev v2bs')
+    end
+
+fun abstl th l = 
+    case l of 
+        [] => th
+      | (n,s) :: t => allI (n,s) (abstl th t)
+         
+
+
 (*theorems with fVars to be matched, to deal with propositional taut*)
 
 val T_conj_1 = T_conj1 (fVar "f0")
@@ -630,6 +659,172 @@ val exists_true_ar = exists_true ("a",ar(mk_ob "A",mk_ob "B"))
 
 val exists_false_ob = exists_false ("A",ob)
 val exists_false_ar = exists_false ("a",ar(mk_ob "A",mk_ob "B"))
+
+
+(*A \/ B ==> C  <=> A ==> C /\ B ==> C*)
+
+fun disj_imp_distr1 A B C = 
+    let val AorB = mk_disj A B
+        val AorB2C = mk_imp AorB C
+        val AonC = mp (assume AorB2C) (disjI1 (assume A) B)
+    in disch AorB2C (disch A AonC)
+    end
+
+
+fun disj_imp_distr2 A B C = 
+    let val AorB = mk_disj A B
+        val AorB2C = mk_imp AorB C
+        val BonC = mp (assume AorB2C) (disjI2 A (assume B))
+    in disch AorB2C (disch B BonC)
+    end
+
+fun imp_disj_distr A B C = 
+    let val A2C = mk_imp A C
+        val B2C = mk_imp B C
+        val A2CandB2C = mk_conj A2C B2C
+        val AorB = mk_disj A B
+        val AonC = mp (conjE1 (assume A2CandB2C)) (assume A)
+        val BonC = mp (conjE2 (assume A2CandB2C)) (assume B)
+    in disch A2CandB2C (disch AorB (disjE A B C (assume AorB) AonC BonC))
+    end
+
+
+fun disj_imp_distr A B C = 
+    dimpI (disch (mk_imp (mk_disj A B) C)
+               (conjI (undisch (disj_imp_distr1 A B C)) (undisch (disj_imp_distr2 A B C)))) (imp_disj_distr A B C)
+  
+fun disj_imp_distr_th (th as thm(G,C)) = 
+    case C of
+        (Conn("==>",[Conn("|",[P,Q]),R])) => dimp_mp_l2r th (disj_imp_distr P Q R)
+      | f => raise ERR ("Error disj_imp_distr_th" ^ " : " ^ (string_of_form f))
+
+(*function that deal with dimp_mp_l2r for thm?*)
+
+
+(*exists imp need to be tested func sym*)
+
+(*(?x A) ==> B ==> A[y/x] ==> B*)
+fun exists_imp x s y A B = 
+    let val eA = mk_exists x s A
+        val eA2B = mk_imp eA B
+        val Ayx = substf ((x,s),y) A
+        val AyxoneA = existsI (assume Ayx) (x,s) y A
+        val AyxonB = mp (assume eA2B) AyxoneA
+    in  disch eA2B (disch Ayx AyxonB)
+    end
+
+(*(?x A(x)) ==> B <=> !y. A(y) ==> B
+
+assume A is A(x)*)
+
+fun exists_all_imp x sx y sy A B = 
+    let val eA = mk_exists x sx A
+        val eA2B = mk_imp eA B
+        val Ayx = substf ((x,sx),Var(y,sy)) A
+        val AyxoneA = existsI (assume Ayx) (x,sx) (Var(y,sy)) A
+        val AyxonB = mp (assume eA2B) AyxoneA
+        val l2r = disch eA2B (allI (y,sy) (disch Ayx AyxonB))
+        val Ayx2B = (mk_imp Ayx B)
+        val eAonA = existsE (assume eA) (x,sx)
+        val ayAyx2BeAonB =
+            mp (allE 
+                    (assume (mk_all y sy (mk_imp Ayx B)))
+                    (Var(x,sx))) eAonA
+        val r2l = disch (mk_all y sy (mk_imp Ayx B)) (disch eA ayAyx2BeAonB)
+    in dimpI l2r r2l
+    end
+
+(*need rename for existential case...
+
+say we have (?b. P(b)) ==> A(b)*)
+
+fun imp_canon (th as thm(G,C)) = 
+    case C of
+        Conn("&",[A,B]) => (imp_canon (conjE1 th)) @ (imp_canon (conjE2 th))
+      | Conn("==>",[Conn("|",[P,Q]),R]) => 
+        (imp_canon (conjE1 (disj_imp_distr_th th)))  @ (imp_canon (conjE2 (conjE2 (disj_imp_distr_th th))))
+      | Conn("==>",[Conn("&",[P,Q]),R]) => 
+        imp_canon (dimp_mp_l2r th (conj_imp_equiv P Q R))
+      | Quant("ALL",n,s,b) => 
+        imp_canon (allE th (Var(n,s)))
+      | Conn("==>",[Quant("EXISTS",n,s,b),B]) => 
+        let 
+            val n = if HOLset.member (fvf B,(n,s)) then n ^ " ' " else n 
+        in
+        imp_canon (dimp_mp_l2r th (exists_all_imp n s n s (subst_bound (Var(n,s)) b) B))
+        end
+      | Conn("==>",[_,_]) => imp_canon (undisch th) 
+      | _ => [th]
+
+val nT_equiv_F = 
+    let val nT2F = disch (mk_neg TRUE) (negE (trueI []) (assume (mk_neg TRUE)))
+        val F2nT = disch FALSE (falseE (mk_neg TRUE))
+    in dimpI nT2F F2nT
+    end
+
+(*need nF_equiv_T ?*)
+
+fun aconv f1 f2 = eq_form(f1,f2)
+
+fun is_dimp f = 
+    case f of
+        Conn("<=>",[f1,f2]) => true
+      | _ => false
+
+fun is_conj f = 
+    case f of
+        Conn("&",[f1,f2]) => true
+      | _ => false
+
+fun is_neg f = 
+    case f of
+        Conn("~",[f0]) => true
+      | _ => false
+
+fun conj_pair th =
+    (conjE1 th,conjE2 th)
+    handle ERR _ => 
+           raise ERR ("not a conjunction" ^ (string_of_form (concl th)) ^ ": From conj_pair")
+
+fun eqT_intro_form f = 
+    let val f2feqT = disch f (dimpI (disch f (trueI [f,f]))
+                                    (disch TRUE (add_assum TRUE (assume f))))
+        val feqT2f = disch (mk_dimp f TRUE) (dimp_mp_r2l (assume (mk_dimp f TRUE)) (trueI []))
+    in
+        dimpI f2feqT feqT2f
+    end
+                           
+fun eqT_intro th = dimp_mp_l2r (eqT_intro_form (concl th)) th
+
+fun eqF_intro_form f = 
+    let 
+        val nF2feqF = disch (mk_neg f)
+                            (dimpI (disch f (negE (assume f) (assume (mk_neg f))))
+                                   (disch FALSE
+                                                 (add_assum (mk_neg f) (falseE f))))
+        val Feqf2nF = disch (mk_dimp f FALSE) 
+                            (negI (dimp_mp_l2r (assume f) (assume (mk_dimp f FALSE))) f)
+    in 
+        dimpI nF2feqF Feqf2nF
+    end
+
+fun eqF_intro th = 
+    case (concl th) of
+        Conn("~",[f]) => dimp_mp_l2r (eqF_intro_form f) th
+      | _ => raise 
+                 ERR ("eqF_intro: conclusion " ^ (string_of_form (concl th)) ^ " is not a negation") 
+    
+fun fconv_canon th = 
+    let val th = spec_all th
+        val f = concl th
+    in 
+       (* if aconv f TRUE then [] else seems happens in HOL but not here*)
+        if is_dimp f then [th] else
+        if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
+        if is_neg f then [eqF_intro th] 
+        else [eqT_intro th]
+    end
+
 
 
 (*ETCS axioms*)
