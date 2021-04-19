@@ -493,6 +493,23 @@ fun unify_tpt t pt env (ns2pt:uvd) =
             end
         else 
             raise ERR ("different function symbols: " ^ f ^ " , " ^ pf)
+      (*| (Fun(f,s,l),ptUVar m) => 
+        if s = ob then 
+            let fun t2pt t = 
+                    case t of 
+                        Var(n0,s0) =>
+                        (case lookup_ns ns2pt (n0,s0) of
+                             SOME pt0 => (pt0,env,ns2pt)
+                           | NONE => 
+                             case s0 of
+                                 ob =>
+                                 ar(A,B))
+                fun ptl2l l = 
+                    case l of
+                        [] => []
+                      | h :: t => 
+        else
+            raise ERR ("ptUVar " ^ m ^ "must be an object") *)
       | _ => raise ERR "unexpected constructors"
 and unify_sps s ps env (ns2pt:uvd) = 
     case (s,ps) of
@@ -515,52 +532,22 @@ and unify_sps s ps env (ns2pt:uvd) =
       | (ar(_,_),pob) => raise ERR "cannot unify ar with pob"
 
 
-
-(*
-fun unify_t2pt t (pt:pterm) (env:env) (n2u:uvd) : env * uvd = 
-    case (t,chasevart pt env) of 
-        (Var(n,s),pt1) =>
-        let 
-            val (env1,n2u1) = unify_s2ps s (ps_of_pt pt1) env n2u
-        in
-            case (lookup_n n2u1 n) of 
-                SOME u => (*chasevar here*)
-                (unify_pt env1 (ptUVar u) pt1,n2u1)
-              | _ => let val (Av,env2) = fresh_var env1
-                     in (insert_pt Av pt1 env2, insert_n2v n Av n2u1)
-                     end  
-        end
-      | (Fun(f0,s,l),pFun(f,ps,ptl)) => 
-        if f0 <> f then raise ERR ("different function symbols: " ^ f0 ^ " , " ^ f)
-        else 
-            let val (env1, n2u1) = unify_s2ps s ps env n2u
-            in List.foldr unify_t2pt' (env1,n2u1) 
-                                  (zip l ptl) 
-            end
-      | (_,_) => raise ERR "unexpected term constructor"
-and unify_s2ps s (ps:psort) env n2u : env * uvd = 
-    case (s,chasevars ps env) of
-        (ob,pob) => (env,n2u)
-      | (ob,psvar n) => (insert_ps n pob env,n2u) 
-      | (ar(A0,B0),psvar n) => 
-      | (ar(A0,B0), par(A,B)) =>  
-        let val (env1,n2u1) = unify_t2pt A0 A env n2u
-        in unify_t2pt B0 B env1 n2u1
-        end 
-*)
-
-
 fun pdpair (env,uvd) =  (pdict env,Binarymap.listItems uvd)
 
-fun unify_t2pt' ((t,pt),(env,n2u)) = unify_t2pt t pt env n2u
+fun unify_tpt' ((t,pt),(env,n2t)) = unify_tpt t pt env n2t
 
 fun type_infer_args env pf = 
     case pf of 
         pPred(p,l) => 
         (case (lookup_p psyms0 p) of 
-            SOME tl => List.foldr unify_t2pt' (env,Binarymap.mkDict String.compare) 
-                                  (zip tl l) 
-          | _ => (env,Binarymap.mkDict String.compare))
+            SOME tl =>
+            List.foldr
+                unify_tpt' 
+                (env,Binarymap.mkDict 
+                         (pair_compare String.compare sort_compare))
+                (zip tl l)
+          | _ => (env,Binarymap.mkDict 
+                          (pair_compare String.compare sort_compare)))
       | _ => raise ERR "not a predicate"
              
 
