@@ -402,40 +402,121 @@ and env_from_ptl env ptl =
         let val env1 = type_infer env h (ps_of_pt h)
         in env_from_ptl env1 t
         end
- 
+
+(*change ptUVar takes a ps*)
 
 (*working on pred type inference*)
-type psymd = (string, term list) Binarymap.dict
+
+type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
+
+
+
+type psymd = (string, (string * sort) list) Binarymap.dict
 
 type uvd = ((string * sort), pterm) Binarymap.dict
 
-fun lookup_p (pd:psymd) p = Binarymap.peek (pd,p)
+fun lookup_pred (pd:psymd) p = Binarymap.peek (pd,p)
 
 fun lookup_ns (ud:uvd) (n,s) = Binarymap.peek (ud,(n,s))
 
 fun insert_ns2pt (n,s) pt (ud:uvd) = Binarymap.insert (ud,(n,s),pt)
 
+val emptypsd: psymd = (Binarymap.mkDict 
+                             (pair_compare String.compare))
 
-val psyms0:psymd = List.foldr (fn ((p:string,tl:term list),d) => Binarymap.insert (d,p,tl)) 
+(*take the sig list -> give a pterm term list*)
+val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
+                                  Binarymap.insert (d,p,l)) 
                         (Binarymap.mkDict String.compare)
-                        [("ismono",[mk_ar0 "a" "A" "B"]),
-                         ("isgroup",[mk_ob "G",
-                                     mk_ar "m" 
-                                           (mk_fun "*" ob [mk_ob "G",mk_ob "G"]) 
-                                           (mk_ob "G"),
-                                     mk_ar "i" 
-                                           (mk_fun "1" ob [])
-                                           (mk_ob "G"),
-                                     mk_ar "inv" (mk_ob "G") (mk_ob "G")])]
+                        [("ismono",[("a",ar(mk_ob "A",mk_ob "B"))]),
+                         ("isgroup",[("G",ob),
+                                     ("m",ar (mk_fun "*" ob [mk_ob "G",mk_ob "G"],
+                                              mk_ob "G")),
+                                     ("i",ar (mk_fun "1" ob [],mk_ob "G")),
+                                     ("inv",ar (mk_ob "G",mk_ob "G"))])]
 (*should we allow definition to take only function terms?*)
+
+fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
 
 val n2u0:uvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
 
-fun unify_sps s ps env ns2pt = (empty,n2u0)
 
 (*clause for pFun/pAnno : do type_infer for fun sym first?
 do not do type_infer for other clauses because on pFun/pAnno gives information*)
 
+(*do chase somewhere?*)
+
+
+(*define chase which chase the var and convert it to a pt for others*)
+
+fun t2pt t = 
+    case t of 
+        Var(n,s) => pVar(n,s2ps s)
+      | Fun(f,s,l) => pFun(f,s2ps s,map t2pt l)
+      | _ => raise ERR "bounded variable cannot be converted into pterm"
+and s2ps s = 
+    case s of
+        ob => pob
+      | ar(t1,t2) => par(t2pt t2,t2pt t2)
+
+(*do not look at the pterms to compare, just turn a ptl (obtained by turning tl into ptl) into a pt list where names are replaced by unification variables.*)
+
+fun ptwUVar pt nd env = 
+    case pt of
+        pVar(name,ps) =>
+        (case Binarymap.peek(nd,name) of 
+            SOME u => 
+            let val (ps1,nd1,env1) = pswUVar ps
+            in (ptUVar(n,pswUVar),nd1,env1)
+            end                   
+            | NONE => 
+              let val (Av, env1) = fresh_var env 
+                  val nd1 = Binarymap.insert(nd,name,Av)
+                  val (ps1,nd2,env2) = pswUVar ps nd1 env1
+              in (ptUVar(Av,ps1),nd2,env2)
+              end)
+      | pFun(f,ps,ptl) => 
+        let val (ptl1,nd1,env1) = 
+                foldr
+                    (fn (pt0,(ptl0,nd0,env0)) => 
+                        let val (pt',nd',env') = ptwUVar pt0 nd0 env0 
+                        in (pt':: ptl,nd',env')
+                        end)
+                    ([],nd,env) ptl
+            val (ps1,nd2,env2) = pswUVar ps nd1 env1
+        in pFun(f,ps1,ptl1)
+        end
+      | ptUVar(name,ps) => 
+        let val (ps1,nd1,env1) = pswUVar ps nd env
+        in (ptUVar (name,ps1),nd1,env1)
+        end
+      | pAnno _ =>  raise ERR "unexpected pterm constructor"
+and pswUVar ps nd env = 
+    case ps of
+        pob => (pob,nd,env)
+      | psvar _ => raise ERR "unexpected psort constructor"
+      | par(pt1,pt2) => 
+        let val (pt3,nd1,env1) = ptwUVar pt1 nd env
+            val (pt4,nd2,env2) = ptwUVar pt2 nd1 env1
+        in (par(pt3,pt4),nd2,env2)
+        end
+      
+(*      
+fun ptwUVar ptl nd env = 
+    case ptl of 
+        [] => 
+      | h :: t => 
+        case h of 
+            pVar(name,ps) => 
+            case Binarymap.peek(nd,name) of 
+                SOME uvn => 
+                let val (ps1,nd1,env1) = pswUVar s
+                in (ptUVar (n,ps1),nd1,env1)
+                end
+              | NONE => 
+                let val env1 = fresh_var env 
+
+*)
 fun unify_tpt t pt env (ns2pt:uvd) = 
     case (t,pt) of 
         (Var(n,s),ptUVar m) => 
@@ -493,7 +574,8 @@ fun unify_tpt t pt env (ns2pt:uvd) =
             end
         else 
             raise ERR ("different function symbols: " ^ f ^ " , " ^ pf)
-      (*| (Fun(f,s,l),ptUVar m) => 
+      (*convert to pFun and unify*)
+     (* | (Fun(f,s,l),ptUVar m) => 
         if s = ob then 
             let fun t2pt t = 
                     case t of 

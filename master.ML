@@ -9,7 +9,7 @@ use "pterm.sig";
 use "pterm.sml";
 use "thm.sig";
 use "thm.sml";
-open pterm term form thm 
+open pterm term form thm; 
 (*
 use "conv.sig"; 
 use "conv.sml";
