@@ -510,225 +510,34 @@ and fgt_name_ps ps nd env =
       | _ => raise ERR "unexpected presort variable"
             
 
-
-
-fun nps2ptUVar (n,ps) nd env = 
-    let val (Av, env1) = fresh_var env
-        val nd1 = Binarymap.insert(nd,n,Av) 
-        val (ps1,nd2,env2) = fgt_name_ps ps nd1 env1
-        val env3 = insert_ps Av ps1 env2
-    in (ptUVar Av,nd2,env3)
-    end
-
-
-
 fun nps2ptUVar (n,ps) nd env = fgt_name_pt (pVar(n,ps)) nd env
 
  
 
-fun npsl2ptUVarl l = 
+fun npsl2ptUVarl l env = 
     foldr (fn (p,(l,nd,env)) => 
               let val (pt,nd1,env1) = nps2ptUVar p nd env
               in (pt :: l,nd1,env1)
               end)
-          ([],essd,empty)
+          ([],essd,env)
           l
-   
 
-(*
-    case (chasen n, ps) of 
-        (n1,pob) =>
-        (*means that n |-> ptUVar n1*)
-        case lookup 
-        let val env1 = unify_ps env pob (lookup_ps) ptUVar n1
-*)
-
-(*
-fun dl2uvl l env = 
-    case l of
-        [] => []
-      | h :: t => 
-        foldr (fn )
-
-fun nps2ptUVar (n,ps) nd env = 
-    let val (Av, env1) = fresh_var env
-        val nd1 = Binarymap.insert(nd,n,Av) 
-        val (ps1,nd2,env2) = pswUVar ps nd1 env1
-        val env3 = insert_ps Av ps1
-    in (ptUVar Av,nd2,env3)
-    end
-fun ptwUVar pt nd env = 
-    case pt of
-        pVar(name,ps) =>
-        (case Binarymap.peek(nd,name) of 
-            SOME u => 
-            let val (ps1,nd1,env1) = pswUVar ps
-            in (ptUVar(n,pswUVar),nd1,env1)
-            end                   
-            | NONE => 
-              let val (Av, env1) = fresh_var env 
-                  val nd1 = Binarymap.insert(nd,name,Av)
-                  val (ps1,nd2,env2) = pswUVar ps nd1 env1
-              in ptUVar(Av,ps1)
-              end)
-      | pFun(f,ps,ptl) => 
-        let val (ptl1,nd1,env1) = 
-                foldr
-                    (fn (pt0,(ptl0,nd0,env0)) => 
-                        let val (pt',nd',env') = ptwUVar pt0 nd0 env0 
-                        in (pt':: ptl,nd',env')
-                        end)
-                    ([],nd,env) ptl
-            val (ps1,nd2,env2) = pswUVar ps nd1 env1
-        in pFun(f,ps1,ptl1)
-        end
-      | ptUVar u => 
-        let val (ps1,nd1,env1) = pswUVar ps nd env
-        in (ptUVar (name,ps1),nd1,env1)
-        end
-      | pAnno _ =>  raise ERR "unexpected pterm constructor"
-and pswUVar ps nd env = 
-    case ps of
-        pob => (pob,nd,env)
-      | psvar _ => raise ERR "unexpected psort constructor"
-      | par(pt1,pt2) => 
-        let val (pt3,nd1,env1) = ptwUVar pt1 nd env
-            val (pt4,nd2,env2) = ptwUVar pt2 nd1 env1
-        in (par(pt3,pt4),nd2,env2)
-        end
-      
-(*      
-fun ptwUVar ptl nd env = 
-    case ptl of 
-        [] => 
-      | h :: t => 
-        case h of 
-            pVar(name,ps) => 
-            case Binarymap.peek(nd,name) of 
-                SOME uvn => 
-                let val (ps1,nd1,env1) = pswUVar s
-                in (ptUVar (n,ps1),nd1,env1)
-                end
-              | NONE => 
-                let val env1 = fresh_var env 
-
-*)
-fun unify_tpt t pt env (ns2pt:uvd) = 
-    case (t,pt) of 
-        (Var(n,s),ptUVar m) => 
-        if s = ob then
-            case lookup_ns ns2pt (n,s) of 
-                SOME pt0 => (unify_pt env pt pt0,ns2pt)
-              | NONE => 
-                (env, insert_ns2pt (n,s) pt ns2pt)
-        else 
-            raise ERR ("ptUVar with name " ^ m ^ "cannot be an arrow")
-      | (Var(n,s),pVar(n0,s0)) => 
-        (case lookup_ns ns2pt (n,s) of
-            SOME pt0 => 
-            let
-                val env1 = unify_pt env pt pt0
-            in unify_sps s s0 env1 ns2pt
-            end
-          | NONE => 
-            let val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
-            in unify_sps s s0 env ns2pt1
-            end)
-      | (Var(n,s),pFun(f,ps,ptl)) => 
-        let 
-            val env = type_infer env pt ps 
-        in
-            case lookup_ns ns2pt (n,s) of
-                SOME pt0 => (unify_pt env pt0 pt,ns2pt)
-              | NONE => 
-                let 
-                    val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
-                in unify_sps s ps env ns2pt1
-                end
-        end
-      | (Var(n,s),pAnno(pt0,ps)) => 
-        let
-            val env = type_infer env pt ps
-        in
-            case lookup_ns ns2pt (n,s) of
-                SOME pt0 => (unify_pt env pt0 pt0,ns2pt)
-              | NONE => 
-                let 
-                    val ns2pt1 = insert_ns2pt (n,s) pt ns2pt
-                in
-                    unify_sps s ps env ns2pt1
-                end
-        end
-      | (Fun(f,s,l),pFun(pf,ps,pl)) => 
-        if f = pf then
-            let val env = type_infer env pt ps
-                val (env1,ns2pt1) = unify_sps s ps env ns2pt
-            in
-                foldr (fn ((t0,pt0),(e,nspt)) => unify_tpt t0 pt0 e nspt)
-                      (env1,ns2pt1)
-                      (zip l pl)
-            end
-        else 
-            raise ERR ("different function symbols: " ^ f ^ " , " ^ pf)
-      (*convert to pFun and unify*)
-     (* | (Fun(f,s,l),ptUVar m) => 
-        if s = ob then 
-            let fun t2pt t = 
-                    case t of 
-                        Var(n0,s0) =>
-                        (case lookup_ns ns2pt (n0,s0) of
-                             SOME pt0 => (pt0,env,ns2pt)
-                           | NONE => 
-                             case s0 of
-                                 ob =>
-                                 ar(A,B))
-                fun ptl2l l = 
-                    case l of
-                        [] => []
-                      | h :: t => 
-        else
-            raise ERR ("ptUVar " ^ m ^ "must be an object") *)
-      | _ => raise ERR "unexpected constructors"
-and unify_sps s ps env (ns2pt:uvd) = 
-    case (s,ps) of
-        (ob,pob) => (env,ns2pt)
-      | (ar(d1,c1),par(d2,c2)) => 
-        let val env1 = unify_ps env pob (ps_of_pt d2)
-            val env2 = unify_ps env1 pob (ps_of_pt c2)
-            val (env3,ns2pt1) = unify_tpt d1 d2 env2 ns2pt
-        in unify_tpt c1 c2 env3 ns2pt1
-        end
-      | (ob,psvar n) => (unify_ps env pob ps,ns2pt)
-      | (ar(d,c),psvar n) => 
-        let val (Av,env1) = fresh_var env
-            val (Bv,env2) = fresh_var env1
-            val env3 = unify_ps env2 (psvar n) (par(ptUVar Av,ptUVar Bv))
-            val (env4,ns2pt1) = unify_tpt d (ptUVar Av) env3 ns2pt
-        in unify_tpt c (ptUVar Bv) env4 ns2pt1
-        end
-      | (ob,par(_,_)) => raise ERR "cannot unify ob with par"
-      | (ar(_,_),pob) => raise ERR "cannot unify ar with pob"
-
-
-fun pdpair (env,uvd) =  (pdict env,Binarymap.listItems uvd)
-
-fun unify_tpt' ((t,pt),(env,n2t)) = unify_tpt t pt env n2t
 
 fun type_infer_args env pf = 
-    case pf of 
-        pPred(p,l) => 
-        (case (lookup_p psyms0 p) of 
-            SOME tl =>
-            List.foldr
-                unify_tpt' 
-                (env,Binarymap.mkDict 
-                         (pair_compare String.compare sort_compare))
-                (zip tl l)
-          | _ => (env,Binarymap.mkDict 
-                          (pair_compare String.compare sort_compare)))
-      | _ => raise ERR "not a predicate"
-*)             
-
+    case pf of
+        pPred(p,ptl) => 
+        (case lookup_pred psyms0 p of 
+             SOME l => 
+             let val (uvs,_,env1) = npsl2ptUVarl (map ns2nps l) env 
+                 val tounify = zip ptl uvs
+             in
+                 foldr
+                     (fn ((a,b),env) => unify_pt env a b) 
+                     env1 tounify
+             end
+           | _ => env_from_ptl env ptl)
+      | _ => raise ERR "not a predicate" 
+   
 
 
 fun type_infer_pf env pf = 
