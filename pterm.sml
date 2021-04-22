@@ -5,7 +5,8 @@ open token pterm_dtype term form
 structure Env = 
 struct
 open Binarymap List
-type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * (string,psort)Binarymap.dict * int
+type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * 
+           (string,psort)Binarymap.dict * (string,psort)Binarymap.dict * int
 
 
 (*components:
@@ -13,41 +14,51 @@ type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * (string
   2. records where does the psvar goes to,
   3. records how names obtained by parsing is associated to a psvar.
   4. records the sort of ptUVars  *)
-val empty : env = (Binarymap.mkDict String.compare, Binarymap.mkDict String.compare,Binarymap.mkDict String.compare,0)
+val empty : env = (Binarymap.mkDict String.compare, 
+                   Binarymap.mkDict String.compare,
+                   Binarymap.mkDict String.compare,
+                   Binarymap.mkDict String.compare,
+                   0)
 
-fun insert_ps n s ((dpt,dps,dv,i):env):env = (dpt,insert (dps,n,s),dv,i)
+fun insert_ps n s ((dpt,dps,dv,dus,i):env):env = (dpt,insert (dps,n,s),dv,dus,i)
     
-fun insert_pt n t ((dpt,dps,dv,i):env):env = (insert (dpt,n,t),dps,dv,i)
+fun insert_pt n t ((dpt,dps,dv,dus,i):env):env = (insert (dpt,n,t),dps,dv,dus,i)
 
-fun dps_of ((dpt,dps,dv,i):env) = dps
+fun insert_us Av s ((dpt,dps,dv,dus,i):env):env = (dpt,dps,dv,insert (dus,Av,s),i)
 
-fun dpt_of ((dpt,dps,dv,i):env) = dpt
+fun dps_of ((dpt,dps,dv,dus,i):env) = dps
 
-fun dv_of ((dpt,dps,dv,i):env) = dv
+fun dpt_of ((dpt,dps,dv,dus,i):env) = dpt
 
-fun var_of ((dpt,dps,dv,i):env) = i
+fun dv_of ((dpt,dps,dv,dus,i):env) = dv
 
-fun fresh_var ((td,sd,dv,i):env):string * env = (" " ^ Int.toString i,(td,sd,dv, i + 1))
+fun dus_of ((dpt,dps,dv,dus,i):env) = dus
 
-fun lookup_pt ((dpt,_,_,_):env) n = peek (dpt,n)
+fun var_of ((dpt,dps,dv,dus,i):env) = i
 
-fun lookup_ps ((_,dps,_,_):env) n = peek (dps,n)
+fun fresh_var ((td,sd,dv,dus,i):env):string * env = (" " ^ Int.toString i,(td,sd,dv,dus,i + 1))
 
-fun ps_of ((_,_,dv,_):env) n:psort option = peek (dv,n)
+fun lookup_pt ((dpt,_,_,_,_):env) n = peek (dpt,n)
 
-fun record_ps n s ((dpt,dps,dv,i):env):env = (dpt,dps,insert (dv,n,s),i)
+fun lookup_ps ((_,dps,_,_,_):env) n = peek (dps,n)
 
-fun clear_ps n ((dpt,dps,dv,i):env):env = 
-    case ps_of (dpt,dps,dv,i) n of
+fun lookup_us ((_,_,_,dus,_):env) n = peek (dus,n)
+
+fun ps_of ((_,_,dv,_,_):env) n:psort option = peek (dv,n)
+
+fun record_ps n s ((dpt,dps,dv,dus,i):env):env = (dpt,dps,insert (dv,n,s),dus,i)
+
+fun clear_ps n ((dpt,dps,dv,dus,i):env):env = 
+    case ps_of (dpt,dps,dv,dus,i) n of
         SOME ps => 
-        let val (dv1,_) = remove(dv, n) in (dpt,dps,dv1,i) end
-      | NONE => (dpt,dps,dv,i)
+        let val (dv1,_) = remove(dv, n) in (dpt,dps,dv1,dus,i) end
+      | NONE => (dpt,dps,dv,dus,i)
 
-fun clear_psn n ((dpt,dps,dv,i):env):env = 
-    case lookup_ps (dpt,dps,dv,i) n of 
+fun clear_psn n ((dpt,dps,dv,dus,i):env):env = 
+    case lookup_ps (dpt,dps,dv,dus,i) n of 
         SOME ps => 
-        let val (dps1,_) = remove(dps, n) in (dpt,dps1,dv,i) end
-      | NONE => (dpt,dps,dv,i)
+        let val (dps1,_) = remove(dps, n) in (dpt,dps1,dv,dus,i) end
+      | NONE => (dpt,dps,dv,dus,i)
 end
 
 open Binarymap List Env
@@ -85,8 +96,10 @@ fun ptdict (dict:(string,pterm) dict) =  Binarymap.foldl (fn (k,v,A) => ("(" ^ k
 
 fun pdv (dict:(string,psort) dict) =  Binarymap.foldl (fn (k,v,A) => ("(" ^ k ^ " -> " ^ stringof_ps v ^ ")") :: A) [] dict
 
+fun pdus (dict:(string,psort) dict) =  Binarymap.foldl (fn (k,v,A) => ("(" ^ k ^ " -> " ^ stringof_ps v ^ ")") :: A) [] dict
 
-fun pdict env = (ptdict (dpt_of env),psdict (dps_of env),pdv (dv_of env),
+
+fun pdict env = (ptdict (dpt_of env),psdict (dps_of env),pdv (dv_of env),pdus (dus_of env),
                 var_of env)
 
 fun occs_ps psname env ps = 
@@ -103,6 +116,7 @@ and occs_pt ptname env pt =
         ptUVar n => (case lookup_pt env n of 
                          SOME pt' => occs_pt ptname env pt'
                        | NONE => false)
+      (*should we check ptname does not occur in the current ps of ptUVar?*)
       | pAnno (pt,ps) => occs_pt ptname env pt orelse  
                          occs_ps ptname env ps
       | pVar (n,ps) => occs_ps ptname env ps
@@ -130,11 +144,11 @@ fun chasevars ps env =
 fun ps_of_pt pt env =
     case pt of 
         ptUVar n =>
-        (case lookup_ps env n of 
+        (case lookup_us env n of 
              SOME ps => (ps,env) 
            | _ => 
              let val (Av,env1) = fresh_var env
-                 val env2 = insert_ps n (psvar Av) env1
+                 val env2 = insert_us n (psvar Av) env1
              in (psvar Av,env2)
              end)
       | pVar (n,ps) => (ps,env)
@@ -165,6 +179,7 @@ fun unify_ps env (ps1:psort) (ps2:psort):env =
       | (pob,pob) => env
       | _ => raise (UNIFY "sort cannot be unified")
 and unify_pt env pt1 pt2: env= 
+    (*clear up repeated cases?*)
     case (chasevart pt1 env,chasevart pt2 env) of 
         (ptUVar a,ptUVar b) => 
         if a = b then env else 
@@ -423,17 +438,24 @@ fun type_infer env t ty =
                   end
         )
       | pAnno (pt,ps) => 
+        (*order to be think more about*)
         let val env1 = type_infer env pt ps
-            val env2 = type_infer env1 pt (ps_of_pt pt)
+            val (ps',env1') = (ps_of_pt pt env1)
+            val env2 = type_infer env1' pt ps'
         in unify_ps env2 ty ps
         end
       | pVar (name,ps) => unify_ps env ty ps 
-      | ptUVar name => unify_ps env ty pob
+      | ptUVar name => 
+        (*to be carefully considered, worry about looping if generate a psvar here*)
+        (case lookup_us env name of
+             SOME ps => unify_ps env ps ty
+          | _ => insert_us name ty env)
 and env_from_ptl env ptl = 
     case ptl of 
         [] => env
       | h::t => 
-        let val env1 = type_infer env h (ps_of_pt h)
+        let val (ps,env0) = (ps_of_pt h env)
+            val env1 = type_infer env0 h ps
         in env_from_ptl env1 t
         end
 
@@ -447,13 +469,15 @@ type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
 type psymd = (string, (string * sort) list) Binarymap.dict
 
-type uvd = ((string * sort), pterm) Binarymap.dict
+(* type uvd = ((string * sort), pterm) Binarymap.dict *)
 
 fun lookup_pred (pd:psymd) p = Binarymap.peek (pd,p)
-
+(*
 fun lookup_ns (ud:uvd) (n,s) = Binarymap.peek (ud,(n,s))
 
+
 fun insert_ns2pt (n,s) pt (ud:uvd) = Binarymap.insert (ud,(n,s),pt)
+*)
 
 val emptypsd: psymd = (Binarymap.mkDict String.compare)
 
@@ -471,8 +495,9 @@ val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
 
 fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
 
+(*
 val n2u0:uvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
-
+*)
 
 (*clause for pFun/pAnno : do type_infer for fun sym first?
 do not do type_infer for other clauses because on pFun/pAnno gives information*)
@@ -504,9 +529,9 @@ fun fgt_name_pt pt (nd:(string , string) dict) env =
         (case Binarymap.peek(nd,name) of 
             SOME uv => 
             let val (ps1,nd1,env1) = fgt_name_ps ps nd env
-                val env2 = case (lookup_ps env1 uv) of 
+                val env2 = case (lookup_us env1 uv) of 
                                SOME ps2 => unify_ps env ps1 ps2
-                             | NONE => insert_ps uv ps1 env1
+                             | NONE => insert_us uv ps1 env1
             in 
                 (ptUVar uv,nd1,env2)
             end
@@ -514,7 +539,7 @@ fun fgt_name_pt pt (nd:(string , string) dict) env =
             let val (Av,env1) = fresh_var env
                 val nd1 = Binarymap.insert(nd,name,Av)
                 val (ps1,nd2,env2) = fgt_name_ps ps nd1 env1
-                val env3 = insert_ps Av ps1 env2
+                val env3 = insert_us Av ps1 env2
             in 
                 (ptUVar Av, nd2,env3)
             end)
@@ -557,6 +582,8 @@ fun npsl2ptUVarl l env =
           l
 
 
+fun mk_pob A = pVar(A,pob)
+
 fun type_infer_args env pf = 
     case pf of
         pPred(p,ptl) => 
@@ -572,8 +599,19 @@ fun type_infer_args env pf =
            | _ => env_from_ptl env ptl)
       | _ => raise ERR "not a predicate" 
    
+fun type_infer_pf env pf = 
+    case pf of 
+        pQuant(q,n,ps,pb) => type_infer_pf env pb
+      | pConn(co,pfl) => 
+        (case pfl of 
+             [] => env
+           | h::t => let val env1 = type_infer_pf env h
+                     in type_infer_pf env1 (pConn(co,t))
+                     end)
+      | pPred(p,ptl) => type_infer_args env pf
 
 
+(*
 fun type_infer_pf env pf = 
     case pf of 
         pQuant(q,n,ps,pb) => type_infer_pf env pb
@@ -595,6 +633,7 @@ fun type_infer_pf env pf =
         in unify_ps env2 (ps_of_pt pt1) (ps_of_pt pt2)
         end
       | pPred(_,ptl) => env_from_ptl env ptl
+*)
 
 fun apfst f (x,tl,env) = (f x, tl,env);
 
@@ -743,7 +782,7 @@ val fpdict0:(string,ForP) Binarymap.dict =
     foldr (fn ((n,forp),d) => Binarymap.insert(d,n,forp)) (Binarymap.mkDict String.compare) 
           [("=",psym),("P",psym),("o",fsym),("id",fsym),("to1",fsym),
            ("from0",fsym),("p1",fsym),("p2",fsym),("pa",fsym),("ismono",psym),
-           ("T",psym),("F",psym)]
+           ("T",psym),("F",psym),("isgroup",psym)]
 
 (*change to fold*)
 
@@ -875,7 +914,12 @@ fun print_read_pf a =
 
 fun term_from_pt env pt = 
     case (chasevart pt env) of 
-        ptUVar n => Var(n,ob)
+        ptUVar n =>
+        let val s = case (lookup_us env n) of
+                        SOME ps => sort_from_ps env ps 
+                      | NONE => ob
+        in Var(n,s)
+        end
       | pVar(n,ps) => Var(n,sort_from_ps env ps) 
       | pFun(f,ps,ptl) => Fun(f,sort_from_ps env ps,
                               List.map (term_from_pt env) ptl)
@@ -899,7 +943,8 @@ fun form_from_pf env pf =
 
 fun read_t t = 
     let val (pt,env) = read_pt t
-        val pd = type_infer env pt (ps_of_pt pt)
+        val (ps,env1) = (ps_of_pt pt env)
+        val pd = type_infer env1 pt ps
     in (term_from_pt pd pt,pdict pd)
     end
 
@@ -909,6 +954,7 @@ fun read_f0 f =
         val env1 = type_infer_pf env pf
     in (form_from_pf env1 pf,env1)
     end
+        
 
 fun read_f f = 
     let val (pf,env) = read_pf f
