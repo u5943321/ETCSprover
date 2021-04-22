@@ -520,6 +520,12 @@ fun nps2ptUVar (n,ps) nd env =
     in (ptUVar Av,nd2,env3)
     end
 
+
+
+fun nps2ptUVar (n,ps) nd env = fgt_name_pt (pVar(n,ps)) nd env
+
+ 
+
 fun npsl2ptUVarl l = 
     foldr (fn (p,(l,nd,env)) => 
               let val (pt,nd1,env1) = nps2ptUVar p nd env
@@ -528,7 +534,6 @@ fun npsl2ptUVarl l =
           ([],essd,empty)
           l
    
-
 
 (*
     case (chasen n, ps) of 
