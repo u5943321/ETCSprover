@@ -421,8 +421,7 @@ fun lookup_ns (ud:uvd) (n,s) = Binarymap.peek (ud,(n,s))
 
 fun insert_ns2pt (n,s) pt (ud:uvd) = Binarymap.insert (ud,(n,s),pt)
 
-val emptypsd: psymd = (Binarymap.mkDict 
-                             (pair_compare String.compare))
+val emptypsd: psymd = (Binarymap.mkDict String.compare)
 
 (*take the sig list -> give a pterm term list*)
 val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
@@ -457,10 +456,102 @@ fun t2pt t =
 and s2ps s = 
     case s of
         ob => pob
-      | ar(t1,t2) => par(t2pt t2,t2pt t2)
+      | ar(t1,t2) => par(t2pt t1,t2pt t2)
 
 (*do not look at the pterms to compare, just turn a ptl (obtained by turning tl into ptl) into a pt list where names are replaced by unification variables.*)
 
+val ns2nps =  (fn (a,b) => (a,s2ps b))
+
+val essd:(string , string) dict = Binarymap.mkDict String.compare
+
+fun fgt_name_pt pt (nd:(string , string) dict) env = 
+    case pt of
+        pVar (name,ps) =>
+        (case Binarymap.peek(nd,name) of 
+            SOME uv => 
+            let val (ps1,nd1,env1) = fgt_name_ps ps nd env
+                val env2 = case (lookup_ps env1 uv) of 
+                               SOME ps2 => unify_ps env ps1 ps2
+                             | NONE => insert_ps uv ps1 env1
+            in 
+                (ptUVar uv,nd1,env2)
+            end
+          | NONE => 
+            let val (Av,env1) = fresh_var env
+                val nd1 = Binarymap.insert(nd,name,Av)
+                val (ps1,nd2,env2) = fgt_name_ps ps nd1 env1
+                val env3 = insert_ps Av ps1 env2
+            in 
+                (ptUVar Av, nd2,env3)
+            end)
+      | pFun(f,ps,ptl) => 
+        let val (ptl1,nd1,env1) = 
+                foldr 
+                    (fn (pt,(l,nd,env)) => 
+                        let val (pt',nd',env') = fgt_name_pt pt nd env
+                        in (pt':: l,nd',env')
+                        end)
+                    ([],nd,env)
+                    ptl
+            val (ps1,nd2,env2) = fgt_name_ps ps nd1 env1
+        in
+            (pFun(f,ps1,ptl1),nd2,env2)
+        end
+      | _ => raise ERR ("unexpected pretype constructor" ^ (stringof_pt pt))
+and fgt_name_ps ps nd env = 
+    case ps of 
+        pob => (pob,nd,env)
+      | par(t1,t2) => 
+        let val (t1',nd1,env1) = fgt_name_pt t1 nd env
+            val (t2',nd2,env2) = fgt_name_pt t2 nd1 env1
+        in 
+            (par(t1',t2'),nd2,env2)
+        end
+      | _ => raise ERR "unexpected presort variable"
+            
+
+
+
+fun nps2ptUVar (n,ps) nd env = 
+    let val (Av, env1) = fresh_var env
+        val nd1 = Binarymap.insert(nd,n,Av) 
+        val (ps1,nd2,env2) = fgt_name_ps ps nd1 env1
+        val env3 = insert_ps Av ps1 env2
+    in (ptUVar Av,nd2,env3)
+    end
+
+fun npsl2ptUVarl l = 
+    foldr (fn (p,(l,nd,env)) => 
+              let val (pt,nd1,env1) = nps2ptUVar p nd env
+              in (pt :: l,nd1,env1)
+              end)
+          ([],essd,empty)
+          l
+   
+
+
+(*
+    case (chasen n, ps) of 
+        (n1,pob) =>
+        (*means that n |-> ptUVar n1*)
+        case lookup 
+        let val env1 = unify_ps env pob (lookup_ps) ptUVar n1
+*)
+
+(*
+fun dl2uvl l env = 
+    case l of
+        [] => []
+      | h :: t => 
+        foldr (fn )
+
+fun nps2ptUVar (n,ps) nd env = 
+    let val (Av, env1) = fresh_var env
+        val nd1 = Binarymap.insert(nd,n,Av) 
+        val (ps1,nd2,env2) = pswUVar ps nd1 env1
+        val env3 = insert_ps Av ps1
+    in (ptUVar Av,nd2,env3)
+    end
 fun ptwUVar pt nd env = 
     case pt of
         pVar(name,ps) =>
@@ -473,7 +564,7 @@ fun ptwUVar pt nd env =
               let val (Av, env1) = fresh_var env 
                   val nd1 = Binarymap.insert(nd,name,Av)
                   val (ps1,nd2,env2) = pswUVar ps nd1 env1
-              in (ptUVar(Av,ps1),nd2,env2)
+              in ptUVar(Av,ps1)
               end)
       | pFun(f,ps,ptl) => 
         let val (ptl1,nd1,env1) = 
@@ -486,7 +577,7 @@ fun ptwUVar pt nd env =
             val (ps1,nd2,env2) = pswUVar ps nd1 env1
         in pFun(f,ps1,ptl1)
         end
-      | ptUVar(name,ps) => 
+      | ptUVar u => 
         let val (ps1,nd1,env1) = pswUVar ps nd env
         in (ptUVar (name,ps1),nd1,env1)
         end
@@ -631,7 +722,8 @@ fun type_infer_args env pf =
           | _ => (env,Binarymap.mkDict 
                           (pair_compare String.compare sort_compare)))
       | _ => raise ERR "not a predicate"
-             
+*)             
+
 
 
 fun type_infer_pf env pf = 

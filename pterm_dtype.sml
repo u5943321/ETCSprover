@@ -4,7 +4,7 @@ datatype psort = pob
                | par of pterm * pterm
                | psvar of string
 and pterm =
-          ptUVar of string 
+          ptUVar of string
          | pVar of string * psort
          | pFun of string * psort * pterm list
          | pAnno of pterm * psort
