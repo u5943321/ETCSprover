@@ -7,6 +7,12 @@ struct
 open Binarymap List
 type env = (string,pterm)Binarymap.dict * (string,psort)Binarymap.dict * (string,psort)Binarymap.dict * int
 
+
+(*components:
+  1. records where does the ptUVars go to, 
+  2. records where does the psvar goes to,
+  3. records how names obtained by parsing is associated to a psvar.
+  4. records the sort of ptUVars  *)
 val empty : env = (Binarymap.mkDict String.compare, Binarymap.mkDict String.compare,Binarymap.mkDict String.compare,0)
 
 fun insert_ps n s ((dpt,dps,dv,i):env):env = (dpt,insert (dps,n,s),dv,i)
@@ -120,6 +126,22 @@ fun chasevars ps env =
                        | NONE => ps)
       | _ => ps
 
+
+fun ps_of_pt pt env =
+    case pt of 
+        ptUVar n =>
+        (case lookup_ps env n of 
+             SOME ps => (ps,env) 
+           | _ => 
+             let val (Av,env1) = fresh_var env
+                 val env2 = insert_ps n (psvar Av) env1
+             in (psvar Av,env2)
+             end)
+      | pVar (n,ps) => (ps,env)
+      | pFun (n,ps,l) => (ps,env)
+      | pAnno(pt,ps) => ps_of_pt pt env
+
+
 fun unify_ps env (ps1:psort) (ps2:psort):env = 
     case (chasevars ps1 env,chasevars ps2 env) of
         (psvar n1,psvar n2) => 
@@ -145,17 +167,34 @@ fun unify_ps env (ps1:psort) (ps2:psort):env =
 and unify_pt env pt1 pt2: env= 
     case (chasevart pt1 env,chasevart pt2 env) of 
         (ptUVar a,ptUVar b) => 
-        if a = b then env else insert_pt a (ptUVar b) env
+        if a = b then env else 
+        let val (psa, env1) = ps_of_pt pt1 env
+            val (psb, env2) = ps_of_pt pt2 env1
+            val env3 = unify_ps env2 psa psb
+        in insert_pt a (ptUVar b) env3
+        end
       | (ptUVar a, t) => 
         if occs_pt a env t 
         then raise UNIFY ("occurs check(pt):" ^
              stringof_pt (ptUVar a) ^ " " ^ stringof_pt t)
-        else insert_pt a t env
+        else 
+            let val (ps1, env1) = ps_of_pt pt1 env
+                val (ps2, env2) = ps_of_pt pt2 env1
+                val env3 = unify_ps env2 ps1 ps2
+            in 
+                insert_pt a t env3
+            end
       | (t, ptUVar a) => 
         if occs_pt a env t 
         then raise UNIFY ("occurs check(pt):" ^
              stringof_pt t ^ " " ^ stringof_pt (ptUVar a))
-        else insert_pt a t env
+        else
+            let val (ps1, env1) = ps_of_pt pt1 env
+                val (ps2, env2) = ps_of_pt pt2 env1
+                val env3 = unify_ps env2 ps1 ps2
+            in 
+                insert_pt a t env3
+            end
       | (pVar (a1,ps1), pVar (a2,ps2)) => 
         if a1 = a2 then unify_ps env ps1 ps2
         else raise (UNIFY "different variable name")
@@ -175,12 +214,7 @@ and unify_pt env pt1 pt2: env=
       | (t,pAnno(pt,ps)) => unify_pt env pt t
       | _ => raise (UNIFY "terms cannot be unified")
 
-fun ps_of_pt pt =
-    case pt of 
-        ptUVar n => pob
-      | pVar (n,ps) => ps
-      | pFun (n,ps,l) => ps
-      | pAnno(pt,ps) => ps_of_pt pt
+
 
 
 
