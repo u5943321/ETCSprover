@@ -5,12 +5,13 @@ use "term.sig";
 use "term.sml";
 use "form.sig";
 use "form.sml";
-(*
 use "pterm.sig";
 use "pterm.sml";
 use "thm.sig";
 use "thm.sml";
-open pterm term form thm; *)
+use "drule.sig";
+use "drule.sml";
+open pterm term form thm drule; 
 (*
 use "conv.sig"; 
 use "conv.sml";

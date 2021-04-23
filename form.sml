@@ -15,6 +15,149 @@ Pred of string * term list
 | Quant of string * string * sort * form
 | fVar of string;   
 
+
+exception ERR of string 
+
+
+fun replacet (u,new) t = 
+    if t=u then new else 
+    case t 
+     of Fun(f,s,tl) => 
+        Fun(f,replaces (u,new) s, map (replacet(u,new)) tl) 
+      | _=> t
+and replaces (u,new) s = 
+    case s of 
+        ob => ob
+      | ar(t1,t2) => ar(replacet (u,new) t1, replacet  (u,new) t2)
+
+fun subst_bound t = 
+    let fun subst i (Pred(a,ts)) = Pred(a, List.map (replacet (Bound i, t)) ts) 
+          | subst i (Conn(b,As)) = Conn(b, List.map (subst i) As) 
+          | subst i (Quant(q,n,s,b)) =
+            Quant(q, n, replaces (Bound (i + 1),t) s, subst (i+1) b)
+          | subst i (fVar fm) = fVar fm 
+    in subst 0 end
+
+
+fun substt (V as (m,s),t2) t = 
+    case t of
+        Var(n,s') => if m = n andalso s = s' then t2 else t
+      | Fun(f,s',tl) => Fun(f,substs (V,t2) s',List.map (substt (V,t2)) tl)
+      | _ => t
+and substs (V,t2) s = 
+    case s of 
+        ob => s
+      | ar(d,c) => ar(substt (V,t2) d,substt (V,t2) c)
+
+
+fun substf (V,t2) f = 
+    case f of 
+        Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
+      | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
+      | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) b)
+      | _ => f
+
+fun abstract t = 
+    let fun abs i (Pred(a,ts)) = Pred(a, map (substt (t, Bound i)) ts) 
+          | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
+          | abs i (Quant(q,b,s,A)) = 
+            Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
+          | abs i (fVar fm) = fVar fm 
+    in abs 0 end;
+
+
+fun enclose a = "(" ^ a ^ ")";
+
+fun conc_list sep l = 
+    case l of 
+        [] => ""
+      | h :: t => sep ^ h ^ conc_list sep t
+
+fun conc_list1 sep l = 
+    case l of [] => ""
+            | h :: t => h  ^ (conc_list sep t);
+
+
+(* with sorts
+fun string_of_tl l = 
+    case l of
+        [] => ""
+      | h :: t => 
+        enclose (conc_list1 ","
+                            (List.map string_of_term (h :: t)))
+and string_of_term t = 
+    case t of
+        Var(n,s) => n ^ ":" ^ string_of_sort s
+      | Fun(f,s,[t1,t2]) => 
+        enclose 
+            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
+             (string_of_term t2)) ^ 
+        ":" ^ string_of_sort s
+      | Fun(f,s,l) => 
+        f ^ (string_of_tl l) ^ ":" ^ string_of_sort s
+      | _ => " "
+and string_of_sort s = 
+    case s of 
+        ob => "ob"
+      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+*)
+
+fun string_of_tl l = 
+    case l of
+        [] => ""
+      | h :: t => 
+        enclose (conc_list1 ","
+                            (List.map string_of_term (h :: t)))
+and string_of_term t = 
+    case t of
+        Var(n,s) => n
+      | Fun(f,s,[t1,t2]) => 
+        enclose 
+            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
+             (string_of_term t2)) 
+      | Fun(f,s,l) => 
+        f ^ (string_of_tl l)
+      | _ => ""
+and string_of_sort s = 
+    case s of 
+        ob => "ob"
+      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+
+
+
+fun string_of_form f = 
+    case f of
+        Pred(p,[t1,t2]) => 
+        (string_of_term t1) ^ " " ^ p ^ " " ^ (string_of_term t2)
+      | Pred(p,tl) =>  p ^ string_of_tl tl
+      | Conn(co,[f1,f2]) =>
+        string_of_form f1 ^ co ^ string_of_form f2
+      | Conn(co,[f]) => co ^ string_of_form f
+      | Quant(q,n,s,b) => 
+        q ^ string_of_term (Var(n,s)) ^ "." ^
+        string_of_form 
+            (subst_bound (Var(n,s)) b)
+      | fVar fm => "fV" ^ enclose fm
+      | _ => raise ERR "bad formula"
+
+
+fun is_dimp f = 
+    case f of
+        Conn("<=>",[f1,f2]) => true
+      | _ => false
+
+fun is_conj f = 
+    case f of
+        Conn("&",[f1,f2]) => true
+      | _ => false
+
+fun is_neg f = 
+    case f of
+        Conn("~",[f0]) => true
+      | _ => false
+
+
+
 val TRUE = Pred("T",[])
 val FALSE = Pred("F",[])
 
@@ -36,9 +179,12 @@ fun mk_disj f1 f2 = Conn("|",[f1,f2])
 fun mk_imp f1 f2 = Conn("==>",[f1,f2])
 
 fun mk_dimp f1 f2 = Conn("<=>",[f1,f2])
+fun mk_all n s b = Quant("ALL",n,s,abstract (n,s) b)
+
+fun mk_exists n s b = Quant("EXISTS",n,s,abstract (n,s) b)
 
 
-exception ERR of string 
+
 
 (*destructor functions*)
 
@@ -52,11 +198,6 @@ fun dest_eq f =
         Pred("=",[t1,t2]) => (t1,t2)
       | _ => raise ERR "not an equality"
 
-fun dest_iff f = 
-    case f of
-        Conn("<=>",[f1,f2]) => (f1,f2)
-      | _ => raise ERR "not an iff"
-
 fun dest_imp f = 
     case f of 
         Conn("==>",[f1,f2]) => (f1,f2)
@@ -66,6 +207,17 @@ fun dest_conj f =
     case f of
         Conn("&",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not a conjunction"
+
+fun dest_dimp f = 
+    case f of 
+        Conn("<=>",[L,R]) => (L,R)
+      | _ => raise ERR ((string_of_form f) ^ " is not a double implication")
+
+fun dest_pred f = 
+    case f of 
+        Pred(p,l) => (p,l)
+      | _ => raise ERR ((string_of_form f) ^ " is not a predicate")
+
 
 (*predicate functions*)
 
@@ -90,23 +242,7 @@ fun eq_form fp =
       | (fVar fm1,fVar fm2)  => fm1 = fm2
       | _ => false
 
-fun substt (V as (m,s),t2) t = 
-    case t of
-        Var(n,s') => if m = n andalso s = s' then t2 else t
-      | Fun(f,s',tl) => Fun(f,substs (V,t2) s',List.map (substt (V,t2)) tl)
-      | _ => t
-and substs (V,t2) s = 
-    case s of 
-        ob => s
-      | ar(d,c) => ar(substt (V,t2) d,substt (V,t2) c)
 
-
-fun substf (V,t2) f = 
-    case f of 
-        Pred(P,tl) => Pred(P,List.map (substt (V,t2)) tl)
-      | Conn(co,fl) => Conn(co,List.map (substf (V,t2)) fl)
-      | Quant(q,n,s,b) => Quant(q,n,substs (V,t2) s,substf (V,t2) b)
-      | _ => f
 
 fun pair_compare ac bc ((a1,b1),(a2,b2)) = 
     case (ac (a1,a2)) of 
@@ -180,36 +316,8 @@ and fvfl G =
     case G of [] => essps
             | h :: t => HOLset.union (fvf h,fvfl t)
 
-fun replacet (u,new) t = 
-    if t=u then new else 
-    case t 
-     of Fun(f,s,tl) => 
-        Fun(f,replaces (u,new) s, map (replacet(u,new)) tl) 
-      | _=> t
-and replaces (u,new) s = 
-    case s of 
-        ob => ob
-      | ar(t1,t2) => ar(replacet (u,new) t1, replacet  (u,new) t2)
 
-fun abstract t = 
-    let fun abs i (Pred(a,ts)) = Pred(a, map (substt (t, Bound i)) ts) 
-          | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
-          | abs i (Quant(q,b,s,A)) = 
-            Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
-          | abs i (fVar fm) = fVar fm 
-    in abs 0 end;
 
-fun mk_all n s b = Quant("ALL",n,s,abstract (n,s) b)
-
-fun mk_exists n s b = Quant("EXISTS",n,s,abstract (n,s) b)
-
-fun subst_bound t = 
-    let fun subst i (Pred(a,ts)) = Pred(a, List.map (replacet (Bound i, t)) ts) 
-          | subst i (Conn(b,As)) = Conn(b, List.map (subst i) As) 
-          | subst i (Quant(q,n,s,b)) =
-            Quant(q, n, replaces (Bound (i + 1),t) s, subst (i+1) b)
-          | subst i (fVar fm) = fVar fm 
-    in subst 0 end
 
 
 
@@ -343,25 +451,23 @@ fun inst_form env f =
       | Quant(q,n,s,b) =>
         Quant(q,n,inst_sort env s, inst_form env b) 
 *)
-
+(*
 fun strip_all f = 
     case f of 
         Quant("ALL",n,s,b) => strip_all (subst_bound (Var(n,s)) b)
       | _ => f
 (*very naive, trying to do the spec stuff*)
 
+*)
 
 
+fun strip_all f = 
+    case f of 
+        Quant("ALL",n,s,b) => 
+        let val (b1,l) = strip_all (subst_bound (Var(n,s)) b) in
+            (b1,(n,s) :: l) end
+      | _ => (f,[])
 
-fun strip_ALL f = 
-    let fun strip_all0 f = 
-            case f of 
-                Quant("ALL",n,s,b) => 
-                let val (b1,l) = strip_all0 (subst_bound (Var(n,s)) b) in
-                    (b1,(n,s) :: l) end
-              | _ => (f,[])
-    in strip_all0 f
-    end
 
 
 fun pvariantt vd t = 
@@ -420,79 +526,6 @@ fun inst_fVare (env:menv) f =
     in inst_fVarl fVs f
     end
 
-fun enclose a = "(" ^ a ^ ")";
-
-fun conc_list sep l = 
-    case l of 
-        [] => ""
-      | h :: t => sep ^ h ^ conc_list sep t
-
-fun conc_list1 sep l = 
-    case l of [] => ""
-            | h :: t => h  ^ (conc_list sep t);
-
-
-(* with sorts
-fun string_of_tl l = 
-    case l of
-        [] => ""
-      | h :: t => 
-        enclose (conc_list1 ","
-                            (List.map string_of_term (h :: t)))
-and string_of_term t = 
-    case t of
-        Var(n,s) => n ^ ":" ^ string_of_sort s
-      | Fun(f,s,[t1,t2]) => 
-        enclose 
-            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
-             (string_of_term t2)) ^ 
-        ":" ^ string_of_sort s
-      | Fun(f,s,l) => 
-        f ^ (string_of_tl l) ^ ":" ^ string_of_sort s
-      | _ => " "
-and string_of_sort s = 
-    case s of 
-        ob => "ob"
-      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
-*)
-
-fun string_of_tl l = 
-    case l of
-        [] => ""
-      | h :: t => 
-        enclose (conc_list1 ","
-                            (List.map string_of_term (h :: t)))
-and string_of_term t = 
-    case t of
-        Var(n,s) => n
-      | Fun(f,s,[t1,t2]) => 
-        enclose 
-            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
-             (string_of_term t2)) 
-      | Fun(f,s,l) => 
-        f ^ (string_of_tl l)
-      | _ => ""
-and string_of_sort s = 
-    case s of 
-        ob => "ob"
-      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
-
-
-
-fun string_of_form f = 
-    case f of
-        Pred(p,[t1,t2]) => 
-        (string_of_term t1) ^ " " ^ p ^ " " ^ (string_of_term t2)
-      | Pred(p,tl) =>  p ^ string_of_tl tl
-      | Conn(co,[f1,f2]) =>
-        string_of_form f1 ^ co ^ string_of_form f2
-      | Conn(co,[f]) => co ^ string_of_form f
-      | Quant(q,n,s,b) => 
-        q ^ string_of_term (Var(n,s)) ^ "." ^
-        string_of_form 
-            (subst_bound (Var(n,s)) b)
-      | fVar fm => "fV" ^ enclose fm
-      | _ => raise ERR "bad formula"
 
 (*basic_fconv c basic_taut_fconv (Quant ("ALL", "x", ob, Conn ("|", [Pred ("T", []), Pred ("F", [])])));*)
   

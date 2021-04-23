@@ -1,6 +1,6 @@
 structure tactic :> tactic = 
 struct
-open term form thm
+open term form thm conv
 
 type goal = form list * form
 type validation = thm list -> thm
@@ -146,5 +146,10 @@ fun try tac:tactic = tac Orelse all_tac
 
 fun repeat tac g = ((tac >> (repeat tac)) Orelse all_tac) g
 
+fun fconv_tac fc (fl,f) = 
+    ([(fl, (snd o dest_iff) (concl (fc f)))],
+     fn [th] => dimp_mp_r2l (fc f) th
+     | _ => raise ERR "incorrect number of list items")
+ 
 
 end

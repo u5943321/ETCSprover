@@ -16,6 +16,13 @@ Pred of string * term list
 | Quant of string * string * sort * form
 | fVar of string;
 exception ERR of string
+
+val is_conj: form -> bool
+val is_dimp: form -> bool
+val is_neg: form -> bool
+val is_all: form -> bool
+val is_eqn: form -> bool
+
 val TRUE: form
 val FALSE: form
 val mk_ob: string -> term
@@ -27,11 +34,15 @@ val mk_disj: form -> form -> form
 val mk_imp: form -> form -> form
 val mk_dimp: form -> form -> form
 val mk_fun: string -> sort -> term list -> term
+
+
+
 val dest_eq: form -> term * term
 val dest_imp: form -> form * form
-val dest_iff: form -> form * form
-val is_all: form -> bool
-val is_eqn: form -> bool
+val dest_dimp: form -> form * form
+val dest_conj: form -> form * form
+val dest_pred: form -> string * term list
+
 val eq_form: form * form -> bool
 val substt: (string * sort) * term -> term -> term
 val substs: (string * sort) * term -> sort -> sort
@@ -54,8 +65,7 @@ val match_term: term -> term -> menv -> menv
 val match_sort: sort -> sort -> menv -> menv
 val match_tl: term list -> term list -> menv -> menv
 val match_form: form -> form -> menv -> menv
-val strip_all: form -> form
-val strip_ALL: form -> form * (string * sort) list
+val strip_all: form -> form * (string * sort) list
 val pvariantt: (string * sort) set -> term -> term
 val fVarinf: form -> string list
 val inst_fVar: string * form -> form -> form

@@ -3,6 +3,8 @@ sig
 datatype psort = datatype pterm_dtype.psort   
 datatype pterm = datatype pterm_dtype.pterm
 datatype pform = datatype pterm_dtype.pform
+type sort = term.sort
+type term = term.term
 structure Env: sig 
     type env
     val empty : env
@@ -16,8 +18,13 @@ structure Env: sig
 end
 val read_pt : string -> pterm * Env.env
 val read_pf : string -> pform * Env.env
-val read_t : string -> term.term * (string list * string list * string list * int)
-val read_f : string -> form.form * (string list * string list * string list * int)
+val read_t : string -> term.term * (string list * string list * string list * string list * int)
+val read_f : string -> form.form * (string list * string list * string list * string list * int)
 val readf: string -> form.form
 val readt: string -> term.term
+type psymd
+type fsymd
+val lookup_pred: psymd -> string -> ((string * sort) list) option
+val psyms0: psymd
+val new_pred: string -> ((string * sort) list) -> psymd
 end
