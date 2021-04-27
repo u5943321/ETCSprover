@@ -23,6 +23,11 @@ val is_neg: form -> bool
 val is_all: form -> bool
 val is_eqn: form -> bool
 
+val is_var: term -> bool
+
+val dest_fun: term -> string * sort * term list
+val dest_var: term -> string * sort
+
 val TRUE: form
 val FALSE: form
 val mk_ob: string -> term
@@ -47,6 +52,8 @@ val eq_form: form * form -> bool
 val substt: (string * sort) * term -> term -> term
 val substs: (string * sort) * term -> sort -> sort
 val substf: (string * sort) * term -> form -> form
+val fvt: term -> (string * sort) set
+val fvs: sort -> (string * sort) set
 val fvf: form -> (string * sort) set
 val fvfl: form list -> (string * sort) set
 val subst_bound: term -> form -> form
@@ -74,5 +81,7 @@ val inst_fVare: menv -> form -> form
 val string_of_sort: sort -> string
 val string_of_term: term -> string
 val string_of_form: form -> string
+val fsymsf: form -> string set
+val psymsf: form -> string set
 end
 

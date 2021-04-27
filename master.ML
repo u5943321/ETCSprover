@@ -11,12 +11,12 @@ use "thm.sig";
 use "thm.sml";
 use "drule.sig";
 use "drule.sml";
-open pterm term form thm drule; 
-(*
+open pterm term form thm drule;
+
 use "conv.sig"; 
 use "conv.sml";
 use "tactic.sig";
 use "tactic.sml"
-
+(*
 open pterm term form thm conv tactic;
 *) 

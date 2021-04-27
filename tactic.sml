@@ -147,9 +147,22 @@ fun try tac:tactic = tac Orelse all_tac
 fun repeat tac g = ((tac >> (repeat tac)) Orelse all_tac) g
 
 fun fconv_tac fc (fl,f) = 
-    ([(fl, (snd o dest_iff) (concl (fc f)))],
-     fn [th] => dimp_mp_r2l (fc f) th
-     | _ => raise ERR "incorrect number of list items")
+    ([(fl, (snd o dest_dimp) (concl (fc f)))],
+     (fn [th] => dimp_mp_r2l (fc f) th
+     | _ => raise ERR "incorrect number of list items"))
  
 
+fun rw_tac thl = 
+    let val thms = flatten (List.map imp_canon thl)
+        val conv = first_conv (mapfilter rewr_conv thms)
+        val fconv = first_fconv (mapfilter rewr_fconv thms)
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+
+
+fun by_tac na (fl,f) = 
+    ([(fl,na),(na::fl,f)],
+     fn [th1,th2] => prove_hyp th1 th2
+     | _ => raise ERR "incorrect length of list")
+              
 end

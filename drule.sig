@@ -6,12 +6,16 @@ type sort = term.sort
 type menv = form.menv
 type thm = thm.thm
 val simple_exists: (string  * sort) -> thm -> thm
+val prove_hyp: thm -> thm -> thm
 val imp_trans: thm -> thm -> thm
 val frefl: form -> thm
 val dimpl2r: thm -> thm
 val dimpr2l: thm -> thm
 val iff_trans: thm -> thm -> thm
 val equivT: thm -> thm
+
+val eqT_intro: thm -> thm
+val eqF_intro: thm -> thm
 
 val dimp_mp_l2r: thm -> thm -> thm
 val dimp_mp_r2l: thm -> thm -> thm

@@ -24,6 +24,8 @@ val s = Fun ("s",ar (N,N),[])
 
 exception no_sort 
 
+
+
 fun dest_pair (Fun ("po",s,[A,B])) = (A,B)
   | dest_pair _ =  raise Fail "dest_pair : Error"
 

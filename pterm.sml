@@ -246,7 +246,7 @@ fun lookup_fun (fd:fsymd) f = Binarymap.peek (fd,f)
 val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
                                   Binarymap.insert (d,p,l)) 
                         (Binarymap.mkDict String.compare)
-                        [("ismono",[("a",ar(mk_ob "A",mk_ob "B"))]),
+                        [(*("ismono",[("a",ar(mk_ob "A",mk_ob "B"))]),*)
                          ("isgroup",[("G",ob),
                                      ("m",ar (mk_fun "*" ob [mk_ob "G",mk_ob "G"],
                                               mk_ob "G")),
@@ -259,6 +259,7 @@ fun mk_ar_sort t1 t2 = ar(t1,t2)
 
 fun mk_const n s = mk_fun n s []
 
+type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
 val fsyms0:fsymd = 
     List.foldr 
@@ -271,6 +272,8 @@ val fsyms0:fsymd =
          ("id",(ar(mk_ob "A",mk_ob "A"),[("A",ob)])),
          ("to1",(ar(mk_ob "X",mk_const "1" ob),[("X",ob)])),
          ("from0",(ar(mk_const "0" ob,mk_ob "X"),[("X",ob)])),
+         ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
+                                        ("g",ar(mk_ob "A",mk_ob "B"))])),
          ("*",(ob,[("A",ob),("B",ob)])),
          ("+",(ob,[("A",ob),("B",ob)])),
          ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
@@ -307,11 +310,13 @@ val fsyms0:fsymd =
                    ("t",ar(mk_ob "X",mk_ob "X"))]))
         ]
 
-type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
+
 
 (*should we allow definition to take only function terms?*)
 
 fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
+
+fun new_fun f (s,tl) = Binarymap.insert (fsyms0,f,(s,tl))
 
 (*
 val n2u0:uvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
@@ -408,6 +413,14 @@ fun mk_pob A = pVar(A,pob)
 fun type_infer_pfun env t ty = 
     case t of 
         pFun(f,ps,ptl) =>
+        let 
+            val env = 
+                foldr (fn (pt,env) => 
+                          let val (ps,env1) = ps_of_pt pt env 
+                          in type_infer env1 pt ps
+                          end)
+                      env ptl
+        in
         (case lookup_fun fsyms0 f of 
              SOME (s,l) => 
              let val (uvs,nd,env1) = npsl2ptUVarl (map ns2nps l) env 
@@ -419,12 +432,8 @@ fun type_infer_pfun env t ty =
              in
                  unify_ps (unify_ps env3 ty s1) ty ps
              end
-           | _ => foldr (fn (pt,env) => 
-                            let val (ps,env1) = ps_of_pt pt env 
-                            in type_infer env1 pt ps
-                            end)
-                        env
-                        ptl)
+           | _ => env)
+        end
       | _ => raise ERR ("not a function term" ^ (stringof_pt t))
 and type_infer env t ty = 
     case t of 
@@ -488,6 +497,12 @@ fun type_infer_pf env pf =
         in
             type_infer_args env1 pf
         end
+
+(*delete one of the repeated code in type_infer_pf and args!
+
+let pred and function type-infer share common function*)
+
+(*topological order add edge for dependency for dependency of sorts*)
 
 
 fun apfst f (x,tl,env) = (f x, tl,env);
@@ -709,7 +724,7 @@ and parsefix prec (pf,tl,env) =
                              (parsefix (prec_of co) 
                                        (parse_pf tl1 env)))
       | _ => (pf,tl,env) 
-and parse_atom tl env =
+and parse_atom tl env (*unkw*) =
     case tl of 
         (Key"~"::tl1) => apfst mk_pneg (parse_atom tl1 env)
       | (Key"("::tl1) =>
@@ -732,7 +747,9 @@ and parse_atom tl env =
                        (rightparen 
                             (parse_repeat1 (",",parse_pt) tl2 env)))
               | _ => raise ERROR "bracket expected")
-        else let val (pt1,tl1,env1) = parse_pt tl env 
+        else 
+            (*if is_fun*)
+let val (pt1,tl1,env1) = parse_pt tl env 
              in (case tl1 of 
                      (Key(p)::tl2) => 
                      (*check p is a pred sy here and perhaps an error message?*)
@@ -741,7 +758,25 @@ and parse_atom tl env =
                      end
                    | _ => raise ERROR "Pred expected")
              end
+      (* else case unkw of 
+       error => raise ERROR "unknown name"
+        | asfun  => fun code 
+| aspred =>      pred code *)
       | _ => raise ERROR "Syntax of formula"
+
+datatype unkh = error | asfun | aspred
+
+
+(*can ask the user to give the name of pred/type*)
+
+(*if is_pred ...
+else if is_fun
+else "consult handling of unknown name" unknown 
+
+parser take an extra parameter unkw 
+
+ERR 
+ *)
 
 
 

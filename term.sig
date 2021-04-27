@@ -9,5 +9,6 @@ and term =
     | Fun of string * sort * term list;
 
 val sort_of: term -> sort
+
 end
 

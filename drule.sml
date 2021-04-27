@@ -572,7 +572,7 @@ fun eqT_intro_form f =
         dimpI f2feqT feqT2f
     end
                            
-fun eqT_intro th = dimp_mp_l2r (eqT_intro_form (concl th)) th
+fun eqT_intro th = dimp_mp_l2r th (eqT_intro_form (concl th)) 
 
 fun eqF_intro_form f = 
     let 
@@ -588,7 +588,7 @@ fun eqF_intro_form f =
 
 fun eqF_intro th = 
     case (concl th) of
-        Conn("~",[f]) => dimp_mp_l2r (eqF_intro_form f) th
+        Conn("~",[f]) => dimp_mp_l2r th (eqF_intro_form f)
       | _ => raise 
                  ERR ("eqF_intro: conclusion " ^ (string_of_form (concl th)) ^ " is not a negation") 
     

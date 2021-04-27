@@ -1,29 +1,21 @@
 structure form :> form = 
 struct
-open term
-(*datatype sort = ob 
-               | ar of term * term 
-and term =
-    Var of string * sort
-    | Param of string * sort * (string * sort) list
-    | Bound of int
-    | Fun of string * sort * term list;
-*)
+open term 
+
 datatype form =
 Pred of string * term list
 | Conn of string * form list
 | Quant of string * string * sort * form
 | fVar of string;   
 
-
-exception ERR of string 
+exception ERR of string
 
 
 fun replacet (u,new) t = 
     if t=u then new else 
     case t 
      of Fun(f,s,tl) => 
-        Fun(f,replaces (u,new) s, map (replacet(u,new)) tl) 
+        Fun(f,replaces (u,new) s, List.map (replacet(u,new)) tl) 
       | _=> t
 and replaces (u,new) s = 
     case s of 
@@ -58,8 +50,8 @@ fun substf (V,t2) f =
       | _ => f
 
 fun abstract t = 
-    let fun abs i (Pred(a,ts)) = Pred(a, map (substt (t, Bound i)) ts) 
-          | abs i (Conn(b,As)) = Conn(b, map (abs i) As) 
+    let fun abs i (Pred(a,ts)) = Pred(a, List.map (substt (t, Bound i)) ts) 
+          | abs i (Conn(b,As)) = Conn(b, List.map (abs i) As) 
           | abs i (Quant(q,b,s,A)) = 
             Quant(q, b, substs (t, Bound (i + 1)) s, abs (i+1) A)
           | abs i (fVar fm) = fVar fm 
@@ -77,30 +69,6 @@ fun conc_list1 sep l =
     case l of [] => ""
             | h :: t => h  ^ (conc_list sep t);
 
-
-(* with sorts
-fun string_of_tl l = 
-    case l of
-        [] => ""
-      | h :: t => 
-        enclose (conc_list1 ","
-                            (List.map string_of_term (h :: t)))
-and string_of_term t = 
-    case t of
-        Var(n,s) => n ^ ":" ^ string_of_sort s
-      | Fun(f,s,[t1,t2]) => 
-        enclose 
-            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
-             (string_of_term t2)) ^ 
-        ":" ^ string_of_sort s
-      | Fun(f,s,l) => 
-        f ^ (string_of_tl l) ^ ":" ^ string_of_sort s
-      | _ => " "
-and string_of_sort s = 
-    case s of 
-        ob => "ob"
-      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
-*)
 
 fun string_of_tl l = 
     case l of
@@ -139,6 +107,21 @@ fun string_of_form f =
             (subst_bound (Var(n,s)) b)
       | fVar fm => "fV" ^ enclose fm
       | _ => raise ERR "bad formula"
+
+
+fun is_var t = 
+    case t of Var _ => true
+            | _ => false
+
+fun dest_var t = 
+    case t of Var(n,s) => (n,s)
+            | _ => raise ERR ("not a variable: " ^ (string_of_term t))
+
+fun dest_fun t = 
+    case  t of 
+        Fun(n,s,l) => (n,s,l)
+      | _ => raise ERR ("not a function: " ^ (string_of_term t))
+
 
 
 fun is_dimp f = 
@@ -429,37 +412,6 @@ and match_fl l1 l2 env =
         match_fl t1 t2 (match_form h1 h2 env)
       | _ => raise ERR "incorrect length of list"
 
-(*
-fun inst_term env t = 
-    case t of
-        Var(n,s) => 
-        (case (lookup_t env (n,s)) of  
-            SOME tm => tm
-          | _ => t)
-      | Fun(f,s,l) => 
-        Fun(f,inst_sort env s,List.map (inst_term env) l)
-      | _ => t
-and inst_sort env s = 
-    case s of 
-        ob => ob
-      | ar(d,c) => ar(inst_term env d,inst_term env c)
-
-fun inst_form env f = 
-    case f of
-        Pred(P,tl) => Pred(P,List.map (inst_term env) tl)
-      | Conn(co,l) => Conn(co,List.map (inst_form env) l)
-      | Quant(q,n,s,b) =>
-        Quant(q,n,inst_sort env s, inst_form env b) 
-*)
-(*
-fun strip_all f = 
-    case f of 
-        Quant("ALL",n,s,b) => strip_all (subst_bound (Var(n,s)) b)
-      | _ => f
-(*very naive, trying to do the spec stuff*)
-
-*)
-
 
 fun strip_all f = 
     case f of 
@@ -483,17 +435,6 @@ and pvariants vl s =
         ob => ob
       | ar(t1,t2) => ar(pvariantt vl t1,pvariantt vl t2)
 
-(*
-fun fVarinf f = 
-    case f of
-        Pred _ => 
-        HOLset.empty (pair_compare String.compare sort_compare)
-      | Conn(co,[f1,f2]) => 
-        HOLset.union (fVarinf f1,fVarinf f2)
-      | Conn(co,[f0]) => fVarinf f0
-      | Quant(_,_,_,b) => fVarinf b
-      | _ => raise ERR "ill-formed formula"
-*)
 
 fun fVarinf f = 
     case f of
@@ -527,19 +468,43 @@ fun inst_fVare (env:menv) f =
     end
 
 
-(*basic_fconv c basic_taut_fconv (Quant ("ALL", "x", ob, Conn ("|", [Pred ("T", []), Pred ("F", [])])));*)
-  
+fun psymsf f = 
+    case f of 
+        Pred(p,_) => HOLset.add(HOLset.empty String.compare,p)
+      | Conn("~",[A]) => psymsf A
+      | Conn(_,[A,B]) => HOLset.union(psymsf A,psymsf B)
+      | Quant(_,_,_,b) => psymsf b
+      | _ => raise ERR 
+                   ("formula: " ^ (string_of_form f) ^ " is not well-formed")
 
-(*Variables To Be Specialized*)
+fun fsymss s = 
+    case s of
+        ob => HOLset.empty String.compare
+      | ar(d,c) => HOLset.union(fsymst d,fsymst c)
+and fsymst t = 
+    case t of
+        Var(n,s) => fsymss s
+      | Fun(_,s,l) => 
+        let val argfs = List.foldr 
+                            (fn (t,fs) => HOLset.union (fsymst t,fs))
+                            (HOLset.empty String.compare)
+                            l
+        in HOLset.union(argfs,fsymss s)
+        end
+      | _ => HOLset.empty String.compare
 
+fun fsymsf f = 
+    case f of 
+        Pred(_,l) => 
+        List.foldr 
+            (fn (t,fs) => HOLset.union (fsymst t,fs))
+            (HOLset.empty String.compare)
+            l
+      | Conn("~",[A]) => fsymsf A
+      | Conn(_,[A,B]) => HOLset.union(fsymsf A,fsymsf B)
+      | Quant(_,_,_,b) => fsymsf b
+      | _ => raise ERR 
+                   ("formula: " ^ (string_of_form f) ^ " is not well-formed")
 
-(*
-fun part_tmatch pfn th t = 
-    let
-        val env = match_term0 (pfn th) t (Binarymap.mkDict String.compare)
-    in
-        (List.map (inst_form env) (ant th), inst_form env (concl th))
-    end
-*)
 
 end
