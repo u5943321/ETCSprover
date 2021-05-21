@@ -6,6 +6,29 @@ type goal = form list * form
 type validation = thm list -> thm
 type tactic = goal -> goal list * validation
 
+fun assume_tac th (fl,f) = 
+    ([(concl th:: fl,f)], fn _ => raise ERR "")
+
+
+
+fun drule0 th (fl,f) = 
+    let 
+        val c = concl th
+        val (b,vs) = strip_all c
+        val (ant,con) = dest_imp b
+        fun mfn _ asm = 
+            let 
+                val menv = match_form ant asm mempty
+                val ith = inst_thm th menv
+            in
+                SOME (mp ith (assume asm))
+            end
+            handle ERR _ => NONE
+    in
+        case (first_opt mfn fl) of 
+            NONE => raise ERR "no match"
+          | SOME th => assume_tac th (fl,f)
+    end
 
 fun conj_tac ((fl,f):goal):goal list * validation = 
     case f of 
@@ -164,5 +187,20 @@ fun by_tac na (fl,f) =
     ([(fl,na),(na::fl,f)],
      fn [th1,th2] => prove_hyp th1 th2
      | _ => raise ERR "incorrect length of list")
-              
+
+fun mp_tac thb (asl,w) = 
+    ([(asl, mk_imp (concl thb) w)], fn [th] => mp th thb)
+
+local
+  fun find ttac name goal [] = raise ERR name 
+    | find ttac name goal (a :: L) =
+      ttac (assume a) goal handle ERR _ => find ttac name goal L
+in
+  fun first_assum ttac (a, g) =
+      (find ttac "first_assum" (a, g)) a
+  fun last_assum ttac (a, g) =
+      (find ttac "last_assum" (a, g)) (List.rev a)
+end
+
+             
 end

@@ -502,7 +502,7 @@ fun type_infer_pf env pf =
 
 let pred and function type-infer share common function*)
 
-(*topological order add edge for dependency for dependency of sorts*)
+(*topological order add edge for dependency for dependency*)
 
 
 fun apfst f (x,tl,env) = (f x, tl,env);
@@ -545,8 +545,14 @@ fun mk_pt_conn env co s1 s2 =
     end
 
 
-val cdict0:(string,psort) dict = insert(insert(insert(insert(Binarymap.mkDict String.compare,"N",pob),"z",par(pFun("1",pob,[]),pFun("N",pob,[]))),"s",par(pFun("N",pob,[]),pFun("N",pob,[]))),"1",pob)
-
+val cdict0:(string,psort) dict =
+    List.foldr (fn ((n,s),d) => (insert(d,n,s))) 
+               (Binarymap.mkDict String.compare) 
+               [("N",pob),("0",pob),("1",pob),("z",par(pFun("1",pob,[]),pFun("N",pob,[]))),
+                ("s",par(pFun("N",pob,[]),pFun("N",pob,[])))]
+(*
+ insert(insert(insert(insert(Binarymap.mkDict String.compare,"N",pob),"z",par(pFun("1",pob,[]),pFun("N",pob,[]))),"s",par(pFun("N",pob,[]),pFun("N",pob,[]))),"1",pob)
+*)
 
 
 (*
@@ -740,6 +746,7 @@ and parse_atom tl env (*unkw*) =
                       | _ => raise ERROR "Pred expected")
                 end)
       | (Id(a)::tl1) => 
+        if a = "T" orelse a = "F" then (pPred(a,[]),tl1,env) else
         if is_pred a then
             (case tl1 of 
                 (Key"("::tl2) =>

@@ -5,6 +5,8 @@ type term = term.term
 type sort = term.sort
 type menv = form.menv
 type thm = thm.thm
+
+(*
 val simple_exists: (string  * sort) -> thm -> thm
 val prove_hyp: thm -> thm -> thm
 val imp_trans: thm -> thm -> thm
@@ -20,11 +22,15 @@ val eqF_intro: thm -> thm
 val dimp_mp_l2r: thm -> thm -> thm
 val dimp_mp_r2l: thm -> thm -> thm
 
-
+*)
 val abstl: thm -> (string * sort) list -> thm
 val spec_all: thm -> thm
 val specl: thm -> term list -> thm
 
+val undisch: thm -> thm
+val add_assum: form -> thm -> thm
+
+(*
 val conj_iff: thm -> thm -> thm
 val disj_iff: thm -> thm -> thm
 val imp_iff: thm -> thm -> thm
@@ -65,7 +71,7 @@ val exists_false_ob: thm
 
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list
-
+*)
 (*type thm*)
 (*rules for inference*) 
 end

@@ -2,183 +2,321 @@ structure thm :> thm =
 struct
 open token pterm_dtype form pterm term
 
-datatype thm = thm of form list * form 
+datatype thm = thm of ((string * sort) set * form list * form) 
+
+fun ant (thm(_,A,_)) = A
+
+fun concl (thm(_,_,C)) = C 
+
+fun cont (thm(G,_,_)) = G
+
+fun unionList sl = 
+    case sl of 
+        [] => essps
 
 
-(*destructor functions*)
-
-fun ant (thm(G,C)) = G
-
-fun concl (thm(G,C)) = C
+fun inst_thm env th = 
+    let
+        val G0 = HOLset.listItems (cont th)
+        val G = List.foldr 
+                    (fn s => fn s' => HOLset.union(s,s'))
+                    essps
+                    (List.map (fvt o (inst_term env) o Var) G0)
+(*
+HOLset.addList(essps,List.map (fvt o (inst_term env) o Var) G0)*)
+        val A = List.map (inst_form env) (ant th)
+        val C = inst_form env (concl th)
+    in
+        thm(G,A,C)
+    end
 
 fun ril i l = 
     case l of [] => []
             | h :: t => 
               if h = i then t else h :: (ril i t)
 
-val assum_U = op_union (fn f1 => fn f2 => eq_form (f1,f2))
+fun asm_U (A1:form list) (A2:form list) = 
+    op_union (fn f1 => fn f2 => eq_form (f1,f2)) A1 A2
+
+fun asml_U (asml:(form list) list) = 
+    case asml of 
+        [] => []
+      | h :: t => h @ asml_U t
+
+fun contl_U contl = 
+    case contl of 
+        [] => HOLset.empty (pair_compare String.compare sort_compare)
+      | h :: t => HOLset.union(h,contl_U t)
 
 (*primitive inference rules*)
 
-fun inst1 (thm(G,C)) (fm,f0) = thm(List.map (inst_fVar (fm,f0)) G,inst_fVar (fm,f0) C)
+(*
+fun inst (thm(G,A,C)) (env:menv) = 
+    thm(fvf (inst_fVare env C),List.map (inst_fVare env) A,inst_fVare env C)
+*)
 
-fun inst (thm(G,C)) (env:menv) = thm(List.map (inst_fVare env) G,inst_fVare env C)
+fun assume f = thm (fvf f,[f],f)
 
-fun assume f = thm ([f],f)
+fun conjI (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
+    thm (contl_U [G1,G2],asml_U [A1,A2],Conn ("&",[C1,C2]))
+   
+fun conjE1 (thm(G,A,C)) = 
+    let 
+        val (C1,_) = dest_conj C
+    in 
+        thm (G,A,C1)
+    end
 
-fun conjI (thm (G1,C1)) (thm (G2,C2)) = thm ((op_union (fn f1 => fn f2 => eq_form (f1,f2)) G1 G2),Conn ("&",[C1,C2]))
+fun conjE2 (thm(G,A,C)) = 
+    let 
+        val (_,C2) = dest_conj C
+    in 
+        thm (G,A,C2)
+    end
 
-fun conjE1 (thm(G,C)) = 
-    case C of 
-        Conn("&",[C1,C2]) => thm (G,C1)
-               | _ => raise ERR ("not a conjunction" ^ " " ^ string_of_form C)
+fun disjI1 (thm (G,A,C)) f = thm (G,A,Conn ("|",[C,f]))
 
-fun conjE2 (thm(G,C)) = 
-    case C of 
-        Conn("&",[C1,C2]) => thm (G,C2)
-               | _ => raise ERR ("not a conjunction" ^ " " ^ string_of_form C)
+fun disjI2 f (thm (G,A,C)) = thm (G,A,Conn ("|",[f,C]))
 
+fun disjE A B C (thm (G1,A1,AorB)) (thm (G2,A2,C1)) (thm (G3,A3,C2)) = 
+    let 
+        val _ = (AorB = Conn("|",[A,B])) orelse 
+                raise ERR "theorem #1 unexpected"
+        val _ = (C1 = C) orelse 
+                raise ERR "theorem #2 unexpected"
+        val _ = (C2 = C) orelse 
+                raise ERR "theorem #3 unexpected"
+        val _ = mem A A2 orelse
+                raise ERR "first disjunct not in theorem #2"
+        val _ = mem B A3 orelse
+                raise ERR "first disjunct not in theorem #3"
+    in
+        thm (contl_U [G1,G2,G3], asml_U [ril A A2, ril B A3, A1],C)
+    end
 
-fun disjI1 (thm (G,C)) f = thm (G,Conn ("|",[C,f]))
+fun is_eq th = 
+    case (concl th) of
+        Pred("=",[t1,t2]) => true
+      | _ => false
 
-fun disjI2 f (thm (G,C)) = thm (G,Conn ("|",[f,C]))
-
-fun disjE A B C (thm (G1,AorB)) (thm (G2,C1)) (thm (G3,C2)) = 
-    if AorB = (Conn("|",[A,B])) andalso C1 = C andalso C2 = C 
-       andalso mem A G2 andalso mem B G3 then 
-        (thm (assum_U (ril A G2) (assum_U (ril B G3) G1),C))
-    else raise ERR ("not sufficient for elimination"
-              ^ " " ^ (string_of_form AorB) ^ " , " ^ string_of_form C1 ^
-              " " ^ (string_of_form C2))
+fun thml_eq_pairs (th:thm,(ll,rl,asml)) = 
+    if is_eq th then  
+        let 
+            val (l,r) = dest_eq (concl th)
+            val asm = ant th
+        in 
+            (l::ll,r::rl,asml_U [asm,asml])
+        end
+    else 
+        raise ERR "input theorem is not an equality" 
 
 fun EQ_fsym f s thml = 
-    let fun is_eq (thm(G,C),(ll,rl,assuml)) = 
-            case C of Pred("=",[t1,t2]) => 
-                      (t1::ll,t2::rl,op_union (fn f1 => fn f2 => eq_form (f1,f2)) G assuml)
-                    | _ => raise ERR ("not an equality" 
-                           ^ " " ^ (string_of_form C))
-        val (ll,rl,assuml) = List.foldr is_eq ([],[],[]) thml 
+    let 
+        val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
     in 
-        thm(assuml,Pred("=",[Fun(f,s,ll),Fun(f,s,rl)]))
+        thm (contl_U (List.map cont thml),asml,
+             Pred("=",[Fun(f,s,ll),Fun(f,s,rl)]))
     end
 
 fun EQ_psym p thml = 
-    let fun is_eq (thm(G,C),(ll,rl,assuml)) = 
-            case C of Pred("=",[t1,t2]) => 
-                      (t1::ll,t2::rl,op_union (fn f1 => fn f2 => eq_form (f1,f2)) G assuml)
-                    | _ => raise ERR ("not an equality" ^ " " ^ string_of_form C)
-        val (ll,rl,assuml) = List.foldr is_eq ([],[],[]) thml 
+    let 
+        val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
     in 
-        thm(assuml,Conn("<=>",[Pred(p,ll),Pred(p,rl)]))
+        thm (contl_U (List.map cont thml),asml,
+             Conn("<=>",[Pred(p,ll),Pred(p,rl)]))
     end
 
-fun tautI f = thm([],Conn("|",[f,mk_neg f]))
+fun tautI f = thm(fvf f,[],Conn("|",[f,mk_neg f]))
 
-fun negI (thm (G,C)) f = 
-    if C = FALSE andalso mem f G then 
-        (thm (ril f G, (Conn("~",[f]))))
-    else raise ERR ("conclusion is not a FALSE" ^ " " ^ string_of_form C)
+fun negI (thm (G,A,C)) f = 
+    let 
+        val _ = (C = FALSE) orelse 
+                raise ERR "conclusion is not FALSE"
+        val _ = mem f A orelse
+                raise ERR "formula to be negated not in assumption"
+    in
+        thm (G,ril f A, (Conn("~",[f])))
+    end
 
-fun negE (thm (G1,A1)) (thm (G2,A2)) = 
-    if A2 = (Conn("~",[A1])) orelse A1 = (Conn("~",[A2]))
-    then (thm (assum_U G1 G2,FALSE))
-    else raise ERR ("not a contradiction" 
-         ^ " " ^ (string_of_form A1)  ^ " , " ^ string_of_form A2)
+fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
+    let 
+        val _ = (C2 = Conn("~",[C1])) orelse 
+                raise ERR "not a pair of contradiction"
+    in
+        thm (contl_U [G1,G2],asml_U [A1,A2],FALSE)
+    end
 
-(*should I have the orelse in above?*)
+fun falseE fl f = 
+    let val _ = mem FALSE fl orelse 
+                raise ERR "FALSE is not in the list"
+    in
+        thm(fvfl fl,[FALSE],f)
+    end
 
-fun falseE f = thm([FALSE],f)
+fun trueI A = thm (fvfl A,A,TRUE)
 
-fun trueI G = thm (G,TRUE)
+fun dimpI (thm (G1,A1,I1)) (thm (G2,A2,I2)) =
+    let 
+        val (f1,f2) = dest_imp I1
+        val (f3,f4) = dest_imp I2
+        val _ = (f1 = f4 andalso f2 = f3) orelse
+                raise ERR "no match"
+    in
+        thm (contl_U[G1,G2],asml_U[A1,A2],Conn("<=>",[f1,f2]))
+    end
 
-fun dimpI (thm (G1,I1)) (thm (G2,I2)) = 
-    case (I1,I2) of 
-        (Conn("==>",[f1,f2]),Conn("==>",[f3,f4])) =>
-        if f1 = f4 andalso f2 = f3 
-        then (thm (assum_U G1 G2,Conn("<=>",[f1,f2])))
-        else raise ERR ("implications are not inverse of each other"
-              ^ " " ^ (string_of_form I1) ^ " , " ^ string_of_form I2)
-      | _ => raise ERR ("not a pair of implications"
-              ^ " " ^ (string_of_form I1) ^ " , " ^ string_of_form I2)
-
-fun dimpE (thm(G,A)) = 
-    case A of
-        Conn("<=>",[f1,f2]) => 
-        thm(G,Conn("&", 
+fun dimpE (thm(G,A,C)) = 
+    let
+        val (f1,f2) = dest_dimp C
+    in
+        thm(G,A,Conn("&", 
              [Conn("==>",[f1,f2]),Conn("==>",[f2,f1])]))
-      | _ => raise ERR ("not an iff" ^ " " ^ string_of_form A)
+    end
 
-fun allI (n,s) (thm(G,C)) = 
-    if HOLset.member (fvfl G,(n,s))
-    then raise ERR ("term occurs free on assumption" ^
-         " " ^ string_of_term (Var(n,s)))
-    else thm(G,Quant("ALL",n,s,abstract (n,s) C))
+(*A ⊆ Γ by induction, so I think no need to check a notin A*)
 
-fun allE (thm(G,C)) t = 
-    case C of
-        (Quant("ALL",n,s,b)) => 
-        if sort_of t = s then thm(G,subst_bound t b)
-        else raise ERR ("sort inconsistant"
-             ^ (string_of_sort (sort_of t)) ^ " " ^ string_of_sort s)
-      | _ => raise ERR ("not an ALL" ^ string_of_form C)
+fun allI (a,s) (thm(G,A,C)) = 
+    let (*val _ = HOLset.member(G,(a,s)) orelse 
+                raise ERR "variable to be abstract is not currently in the context" *)
+        val G0 = HOLset.delete(G,(a,s)) 
+                 handle _ => G
+        val _ = HOLset.isSubset(fvs s,G0) orelse 
+                raise ERR "sort of the variable to be abstract has extra variable(s)"
+        val _ = HOLset.isSubset(fvfl A,G0) orelse
+                raise ERR "variable to be abstract occurs in assumption"
+    in thm(G0,A,mk_all a s C)
+    end
 
+fun dest_all f = 
+    case f of 
+        Quant("ALL",n,s,b) => ((n,s),b)
+      | _ => raise ERR "not a universal"
 
-(*change to eq_form in some proper way?*)
-fun existsI (thm(G,C)) (n,s) t f = 
-    if C = substf ((n,s),t) f then 
-        thm(G,Quant("EXISTS",n,s,abstract (n,s) f))
-    else raise ERR ("formula has the wrong form" ^ string_of_form C)
+(*--------------------------------------------
+allE:
 
+A,Γ |- !x:s. ϕ(s)
+-----------------  sort of t is s
+A,Γ ∪ (Var(t)) |- ϕ(t)
 
+----------------------------------------------*)
 
-fun existsE (thm(G,C)) (n,s) = 
-    case C of 
-        Quant("EXISTS",n1,s1,b) => 
-        if HOLset.member(fvfl G,(n,s)) then raise ERR "term occurs free in assumption"
-        else if s = s1 
-        then thm(G,subst_bound (Var (n,s)) b)
-        else raise ERR ("inconsist sorts" ^ (string_of_sort s) ^ " " ^ string_of_sort s1)
-      | _ => raise ERR ("not an EXISTS"  ^ string_of_form C) 
+fun allE (thm(G,A,C)) t = 
+    let 
+        val ((_,s),b) = dest_all C
+        val _ = (sort_of t = s) orelse 
+                raise ERR ("sort inconsistant"
+                           ^ (string_of_sort (sort_of t)) ^ " " ^ 
+                           string_of_sort s)
+    in
+        thm(contl_U [G,fvt t],A,subst_bound t b)
+    end
 
-(*refl, sym, trans of equalities*)
+(*by induction, already  have Var(s), Var(t) is subset of G*)
 
-fun refl t = thm ([],(Pred("=",[t,t]))) 
+fun existsI (thm(G,A,C)) (a,s) t f = 
+    let 
+        val _ = (sort_of t = s) orelse 
+                raise ERR "term and variable to be abstract of different sorts"
+        val _ = (C = substf ((a,s),t) f) orelse
+                raise ERR ("formula has the wrong form" ^ string_of_form C)
+    in
+        thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))
+    end
+
+fun dest_exists f = 
+    case f of 
+        Quant("EXISTS",n,s,b) => ((n,s),b)
+      | _ => raise ERR "not an existential"
+
+(*--------------------------------------------------
+existsE:
+
+X, Γ1 |- ?x. ϕ(x)        Y, ϕ(a),Γ2 ∪ {a:s0} |- B
+----------------------------------------- a not in Y and not in B
+X,Y, Γ1 ∪ Γ2 |- B
+
+---------------------------------------------------*)
+
+fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
+    let 
+        val ((n,s),b) = dest_exists C1
+        val _ = mem (subst_bound (Var(a,s0)) b) A2
+        val _ = (s = s0) orelse 
+                raise ERR "the given variable has unexpected sort"
+        val _ = (HOLset.member
+                     (HOLset.union(fvfl A2,fvf C2),(a,s0)) = false) orelse
+                raise ERR "the given variable occurs unexpectedly"
+    in
+        thm(contl_U[G1,HOLset.delete(G2,(a,s0))],asml_U[A1,A2],C2)
+    end
+
+fun refl t = thm (fvt t,[],(Pred("=",[t,t]))) 
 
 fun sym th = 
-    if is_eqn (concl th)
-    then let val (l,r) = dest_eq (concl th)
-         in thm(ant th,Pred("=",[r,l]))
-         end
+    if is_eqn (concl th) then 
+        let 
+            val (l,r) = dest_eq (concl th)
+        in thm(cont th,ant th,Pred("=",[r,l]))
+        end
     else raise ERR ("not an equality" ^ string_of_form (concl th))
 
 fun trans th1 th2 = 
-    if is_eqn (concl th1) andalso is_eqn (concl th2)
-    then let val (t1,t2) = dest_eq ((fst o strip_all) (concl th1))
-             val (t3,t4) = dest_eq ((fst o strip_all) (concl th2))
-         in 
-             (if t2 = t3 then 
-                  thm(assum_U (ant th1) (ant th2),Pred("=",[t1,t4]))
-              else raise ERR ("equalities do not  match" ^ 
-                   (string_of_form (concl th1)) ^ " " ^ string_of_form (concl th2)))
-         end
-    else raise ERR ("not an equality" ^ 
-         (string_of_form (concl th1)) ^ " " ^ string_of_form (concl th2))
+    let 
+        val _ = is_eqn (concl th1) orelse 
+                raise ERR "first theorem not an equality"
+        val _ = is_eqn (concl th2) orelse
+                raise ERR "second thoerem not an equality"
+        val (t1,t2) = dest_eq ((fst o strip_all) (concl th1))
+        val (t3,t4) = dest_eq ((fst o strip_all) (concl th2))
+        val _ = (t2 = t3) orelse
+                raise ERR ("equalities do not match" ^ 
+                           (string_of_form (concl th1)) ^ " " ^ 
+                           string_of_form (concl th2))
+    in 
+        thm(contl_U[cont th1,cont th2],
+            asml_U[ant th1,ant th2],Pred("=",[t1,t4]))
+    end
 
-(*derived rules*)
 
-fun disch f1 (thm(G,f2)) = thm (ril f1 G,Conn ("==>",[f1,f2]))
+(*---------------------------------------------------------------------------*
+ * DISCH                                                                     *
+ *                                                                           *
+ *    A ,f1 ,Γ |- f2                                                         *
+ *  -----------------                                                        *
+ *   A,Γ |- f1 ==> f2                                                 *
+ *---------------------------------------------------------------------------*)
 
-fun mp (thm (G1,f1)) (thm (G2,f2)) = 
-    case f1 of 
-        Conn ("==>",[A,B]) =>
-        if eq_form(f2,A) then (thm (assum_U G1 G2,B)) 
-        else raise ERR ("no match" ^ (string_of_form f1) ^ " " ^ string_of_form f2)
-      | _ => raise ERR ("no match" ^ (string_of_form f1) ^ " " ^ string_of_form f2)
+fun disch f1 (thm(G,A,f2)) =
+    let 
+        val _ = HOLset.isSubset(fvf f1,G) orelse
+                raise ERR "formula to be disch has extra variable(s)"
+    in
+        thm (G,ril f1 A,Conn ("==>",[f1,f2]))
+    end
 
-fun undisch th = mp th (assume (#1(dest_imp (concl th))))
 
-fun add_assum f th = mp (disch f th) (assume f)
+fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
+    let
+        val (A,B) = dest_imp C1
+        val _ = eq_form(C2,A) orelse 
+                raise ERR 
+                      ("no match" ^ (string_of_form C1) ^ " " ^ 
+                       string_of_form C2)
+    in
+        thm (contl_U [G1,G2],asml_U[A1,A2],B) 
+    end
 
+
+(*---------------------------------------------------------------------------*
+ * ADD_CONT                                                                  *
+ *                                                                           *
+ *    A ,Γ |- B                                                       *
+ *  -----------------                                                        *
+ *   A ,Γ ∪ Γ'|- B                                             *
+ *---------------------------------------------------------------------------*)
+
+fun add_cont th nss = thm(HOLset.union(cont th,nss),ant th,concl th)
 
 
 
@@ -188,23 +326,17 @@ fun all_distinct l =
             | h :: ts => if List.exists (fn t => t = h) ts then false
                          else true
 
-
-
-fun ukn_psym p = lookup_pred psyms0 p = NONE
-
+fun ukn_psym p = Binarymap.peek (!fpdict,p) = NONE
 
 fun no_ukn_psym f = HOLset.isEmpty (HOLset.filter ukn_psym (psymsf f))
 
 fun ctn_ukn_psym f = (no_ukn_psym f = false)
 
-
-fun ukn_fsym p = lookup_fun fsyms0 p = NONE
-
+fun ukn_fsym f = Binarymap.peek (!fpdict,f) = NONE
 
 fun no_ukn_fsym f = HOLset.isEmpty (HOLset.filter ukn_fsym (fsymsf f))
 
 fun ctn_ukn_fsym f = (no_ukn_fsym f = false)
-
 
 fun define_pred f = 
     let val fvs = fvf f
@@ -224,7 +356,7 @@ fun define_pred f =
         (*check arguments are all distinct*)
         (*store P in psymd*)
         val psymd0 = new_pred P (List.map dest_var args)
-    in thm([],f)
+    in thm(essps,[],f)
     end
 (*check that R does not contain any unknown predicate symbols/fun syms*)
 
@@ -241,49 +373,83 @@ fun define_fun f =
         val _ = (lookup_fun fsyms0 nf = NONE) orelse raise ERR ("redefining predicate: " ^ nf)
         val _ = all_distinct args orelse raise ERR "input arguments are not all distinct"
         val fsymd0 = new_fun nf (sf,(List.map dest_var args))
-    in thm([],f)
+    in thm(essps,[],f)
     end
-
-
 
 (*definition database*)
 
 (*ETCS axioms*)
 
-val idL = thm([], #1 (read_f "ALL f. id (A) o f = f"))
+fun read_thm thstr = 
+    let
+        val f = readf thstr
+        val _ = HOLset.equal(fvf f,essps) orelse
+                raise ERR "formula has free variables"
+    in
+        thm(essps,[],f)
+    end
 
-val idR = thm([], #1 (read_f "ALL f. f o id(A) = f"))
+val idL = read_thm "ALL B. ALL A. ALL f:B -> A. id (A) o f = f"
 
-val o_assoc = thm([], #1 (read_f "(f o g) o h = f o g o h"))
+val idR = read_thm "ALL A. ALL B. ALL f: A -> B. f o id(A) = f"
 
-val ax1_1 = thm([],#1 (read_f "ALL X. ALL tx. tx = to1(X)"))
+val o_assoc = read_thm "ALL A. ALL B. ALL C. ALL D. ALL f: A -> B. ALL g:B -> C. ALL h: C -> D.(h o g) o f = h o g o f"
 
-val ax1_2 = thm([],#1 (read_f "ALL X. ALL ix. ix = from0(X)"))
+val ax1_1 = read_thm "ALL X. ALL tx: X -> 1. tx = to1(X)"
 
-val ax1_3 = thm([],#1 (read_f "ALL fg. p1(A,B) o fg = f &  p2(A,B) o fg = g <=> fg = pa(f,g)"))
+val ax1_2 = read_thm "ALL X. ALL ix: 0 -> X. ix = from0(X)"
 
+val ax1_3 = read_thm "ALL A. ALL B. ALL X. ALL fg: X -> A * B. ALL f: X -> A. ALL g: X -> B. p1(A,B) o fg = f & p2(A,B) o fg = g <=> fg = pa(f,g)"
 
-val ax1_4 = thm([],#1 (read_f "ALL fg. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"))
-
-val ax1_5 = thm([],#1 (read_f "g o eqa(f,g) = f o eqa(f,g) & (f o h = g o h ==> (eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"))
-
-
-val ax1_6 = thm([],#1 (read_f "coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"))
-
-
-val ax2 = thm([],#1 (read_f "ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"))
-
-val ax3 = thm([],#1 (read_f "x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"))
-
-val ax4 = thm([], #1 (read_f "~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)")) 
-
-val ax5 = thm([],#1 (read_f "ALL f: A -> B. ALL a: 1 -> A. EXISTS g : B -> A. f o g o f = f"))
+(*
+read_f 
+"ALL A. ALL B. ALL X. ALL fg: X -> A * B. p1(A,B) o fg = f & p2(A,B) o fg = g <=> fg = pa(f,g)"
 
 
+readf 
+"ALL A.ALL fg: X -> A * B. p1(A,B) o fg = f"
+
+read_f 
+"ALL A.ALL fg: X -> A * B. p1(A,B) o fg = f"
+
+just fixed
+
+*)
+
+val ax1_4 = read_thm "ALL A. ALL B. ALL X. ALL fg: A + B -> X. ALL f: A -> X. ALL g. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"
+
+val ax1_5 = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. ALL X. ALL x0: X -> eqo(f,g).ALL h: X -> A. g o eqa(f,g) = f o eqa(f,g) & (f o h = g o h ==> (eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
+
+val ax1_6 = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. ALL X. ALL x0:coeqo(f,g) -> X. ALL h: B -> X. coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
+
+val ax2 = read_thm "ALL A. ALL B. ALL X. ALL f: A * X -> B.ALL h: X -> exp(A,B). ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"
+
+val ax3 = read_thm "ALL X. ALL x0: 1 -> X. ALL x: N -> X. ALL t: X -> X. x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"
+
+val ax4 = read_thm "ALL A. ALL B.ALL f: A -> B. ALL g:A ->B.~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)"
+
+val ax5 = read_thm "ALL A. ALL a: 1 -> A. ALL B. ALL f: A -> B. EXISTS g : B -> A. f o g o f = f"
+
+val psyms0 = insert_psym "ismono";
  
 val ismono_def = define_pred (readf "ALL A. ALL B. ALL  f: A -> B. ismono(f) <=> ALL X.ALL g:X -> A. ALL h. f o g = f o h ==> h = g")
 
-(*val isiso_def = define_pred (readf "") *)
+val psyms0 = insert_psym "areiso";
 
+val areiso_def = define_pred (readf "ALL A. ALL B. areiso(A,B) <=> EXISTS f: A -> B. EXISTS g: B -> A. f o g = id(B) & g o f = id(A)") 
+
+val ax6 = read_thm "ALL X. ~ areiso(X,0) ==> EXISTS x: 1 -> X. T"
+
+val psyms0 = insert_psym "issubset";
+
+val issubset_def = define_pred (readf "ALL X. ALL A. ALL a: X -> A. issubset(a,A) <=> ismono(a)")
+
+val psyms0 = insert_psym "ismem"
+
+val ismem_def = define_pred (readf "ALL A. ALL A0. ALL a:A0 -> A. ALL x:1 -> A. ismem(x,a,A) <=> issubset(a,A) & EXISTS x0:1 -> A0. a o x0 = x")
+
+val ax7 = read_thm "ALL A. ALL B. ALL f: 1 -> A + B. ismem(f,i1(A,B),A + B) | ismem(f,i2(A,B),A + B)"
+
+val ax8 = read_thm "EXISTS X. EXISTS x1: 1 -> X. EXISTS x2: 1 -> X. ~ x1 = x2"
 
 end

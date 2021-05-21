@@ -33,7 +33,9 @@ fun subst_bound t =
 
 fun substt (V as (m,s),t2) t = 
     case t of
-        Var(n,s') => if m = n andalso s = s' then t2 else t
+        Var(n,s') => 
+        if m = n andalso s = s' then t2 
+        else Var(n,substs (V,t2) s')
       | Fun(f,s',tl) => Fun(f,substs (V,t2) s',List.map (substt (V,t2)) tl)
       | _ => t
 and substs (V,t2) s = 
@@ -341,6 +343,8 @@ and match_tl l1 l2 env =
 
 type menv = ((string * sort),term)Binarymap.dict * (string,form)Binarymap.dict
 
+(*matching environment: records where are term variables and formula variables matched to*)
+
 val emptyvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
 
 val mempty : menv = (emptyvd, Binarymap.mkDict String.compare)
@@ -360,6 +364,7 @@ fun lookup_f ((vd,fvd):menv) fm = Binarymap.peek (fvd,fm)
 
 fun mk_menv tenv fenv :menv = (tenv,fenv)
 
+fun pmenv (env:menv) = (Binarymap.listItems (vd_of env),Binarymap.listItems (fvd_of env))
 
 fun match_term pat ct (env:menv) = 
     case (pat,ct) of 
@@ -438,13 +443,45 @@ and pvariants vl s =
 
 fun fVarinf f = 
     case f of
-        Pred _ => []
-      | Conn(co,[f1,f2]) => (fVarinf f1) @ (fVarinf f2)
+        Pred _ => HOLset.empty String.compare
+      | Conn(co,[f1,f2]) => HOLset.union(fVarinf f1,fVarinf f2)
       | Conn(co,[f0]) => fVarinf f0
       | Quant(_,_,_,b) => fVarinf b
-      | fVar fm => [fm]
+      | fVar fm => HOLset.add(HOLset.empty String.compare, fm)
       | _ => raise ERR "ill-formed formula"
 
+
+fun inst_term (env:menv) t = 
+    case t of 
+        Var(n,s) => 
+        (case lookup_t env (n,s) of 
+             SOME t' => t'
+           | _ => Var(n,inst_sort env s))
+      | Fun(f,s,tl) => Fun(f, inst_sort env s, List.map (inst_term env) tl)
+      | _ => t
+and inst_sort env s = 
+    case s of
+        ob => s
+      | ar(t1,t2) => ar(inst_term env t1,inst_term env t2)
+
+
+fun inst_form env f = 
+    case f of
+        Pred(P,tl) => Pred(P,List.map (inst_term env) tl)
+      | Conn(co,fl) => Conn(co,List.map (inst_form env) fl)
+      | Quant(q,n,s,b) => 
+        let 
+            val s' = inst_sort env s
+            val b' = inst_form env b
+        in 
+            Quant(q,n,s',b')
+        end
+      | fVar fvn => 
+        (case lookup_f env fvn of
+             SOME f' => f'
+           | NONE => f)
+
+(*
 fun inst_fVar (fm,f0) f = 
     case f of 
         Pred(_,_) => f
@@ -466,6 +503,9 @@ fun inst_fVare (env:menv) f =
     let val fVs = Binarymap.listItems (fvd_of env)
     in inst_fVarl fVs f
     end
+
+*)
+(*thinking about if I should delete the above three...*)
 
 
 fun psymsf f = 

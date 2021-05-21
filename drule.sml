@@ -3,6 +3,19 @@ struct
 open term form thm
 
 
+fun undisch th = mp th (assume (#1(dest_imp (concl th))))
+
+fun add_assum f th = mp (disch f th) (assume f)
+
+
+(*
+fun SPEC_ALL th = 
+
+
+fun PART_FMATCH partfn th fm = 
+*)
+
+
 fun simple_exists (v as (n,s)) th = existsI th v (Var v) (concl th)
 
 fun imp_trans th1 th2 = 
@@ -12,8 +25,8 @@ fun imp_trans th1 th2 =
 
 fun prove_hyp th1 th2 = mp (disch (concl th1) th2) th1
 
-fun equivT (thm(G,C)) = dimpI (disch C (trueI (C :: G))) 
-                              (disch TRUE (add_assum TRUE (thm(G,C))))
+fun equivT (thm(G,A,C)) = dimpI (disch C (trueI (C :: A))) 
+                              (disch TRUE (add_assum TRUE (thm(G,A,C))))
 
 fun frefl f = dimpI (disch f (assume f)) (disch f (assume f))
 
@@ -29,76 +42,76 @@ fun cj_imp2 pq = disch pq (conjE2 (assume pq))
 
 (*conj_swap conj_comm*)
 
-fun conj_iff (thm(G1,C1)) (thm(G2,C2)) = 
-    let val (A1,A2) = dest_dimp C1
-        val (B1,B2) = dest_dimp C2
-        val A12A2 = dimpl2r (thm(G1,C1))
-        val A22A1 = dimpr2l (thm(G1,C1))
-        val B12B2 = dimpl2r (thm(G2,C2))
-        val B22B1 = dimpr2l (thm(G2,C2))
-        val cj1 = Conn("&",[A1,B1])
-        val cj2 = Conn("&",[A2,B2])
+fun conj_iff (thm(G1,A1,C1)) (thm(G2,A2,C2)) = 
+    let val (a1,a2) = dest_dimp C1
+        val (b1,b2) = dest_dimp C2
+        val a12a2 = dimpl2r (thm(G1,A1,C1))
+        val a22a1 = dimpr2l (thm(G1,A1,C1))
+        val b12b2 = dimpl2r (thm(G2,A2,C2))
+        val b22b1 = dimpr2l (thm(G2,A2,C2))
+        val cj1 = Conn("&",[a1,b1])
+        val cj2 = Conn("&",[a2,b2])
     in dimpI
             (disch cj1
                    (conjI 
-                        (mp A12A2 (conjE1 (assume cj1)))
-                        (mp B12B2 (conjE2 (assume cj1))))
+                        (mp a12a2 (conjE1 (assume cj1)))
+                        (mp b12b2 (conjE2 (assume cj1))))
             )
             (disch cj2
                    (conjI
-                        (mp A22A1 (conjE1 (assume cj2)))
-                        (mp B22B1 (conjE2 (assume cj2))))
+                        (mp a22a1 (conjE1 (assume cj2)))
+                        (mp b22b1 (conjE2 (assume cj2))))
             )
     end
 
-fun disj_iff (thm(G1,C1)) (thm(G2,C2)) = 
-    let val (A1,A2) = dest_dimp C1
-        val (B1,B2) = dest_dimp C2
-        val A1onA2 = undisch (dimpl2r (thm(G1,C1)))
-        val A2onA1 = undisch (dimpr2l (thm(G1,C1)))
-        val B1onB2 = undisch (dimpl2r (thm(G2,C2)))
-        val B2onB1 = undisch (dimpr2l (thm(G2,C2)))
-        val dj1 = Conn("|",[A1,B1])
-        val dj2 = Conn("|",[A2,B2])
-        val A1ondj2 = disjI1 A1onA2 B2
-        val B1ondj2 = disjI2 A2 B1onB2
+fun disj_iff (thm(G1,A1,C1)) (thm(G2,A2,C2)) = 
+    let val (a1,a2) = dest_dimp C1
+        val (b1,b2) = dest_dimp C2
+        val a1ona2 = undisch (dimpl2r (thm(G1,A1,C1)))
+        val a2ona1 = undisch (dimpr2l (thm(G1,A1,C1)))
+        val b1onb2 = undisch (dimpl2r (thm(G2,A2,C2)))
+        val b2onb1 = undisch (dimpr2l (thm(G2,A2,C2)))
+        val dj1 = Conn("|",[a1,b1])
+        val dj2 = Conn("|",[a2,b2])
+        val a1ondj2 = disjI1 a1ona2 b2
+        val b1ondj2 = disjI2 a2 b1onb2
         val dj12dj2 = disch dj1 
-                            (disjE A1 B1 dj2 
-                                   (assume dj1) A1ondj2 B1ondj2)
-        val A2ondj1 = disjI1 A2onA1 B1
-        val B2ondj1 = disjI2 A1 B2onB1
+                            (disjE a1 b1 dj2 
+                                   (assume dj1) a1ondj2 b1ondj2)
+        val a2ondj1 = disjI1 a2ona1 b1
+        val b2ondj1 = disjI2 a1 b2onb1
         val dj22dj1 = disch dj2
-                            (disjE A2 B2 dj1
-                                   (assume dj2) A2ondj1 B2ondj1) 
+                            (disjE a2 b2 dj1
+                                   (assume dj2) a2ondj1 b2ondj1) 
     in 
         dimpI dj12dj2 dj22dj1
     end
 
-fun imp_iff (thm(G1,C1)) (thm(G2,C2)) =  
-    let val (A1,A2) = dest_dimp C1
-        val (B1,B2) = dest_dimp C2
-        val A12A2 = dimpl2r (thm(G1,C1))
-        val A22A1 = dimpr2l (thm(G1,C1))
-        val B12B2 = dimpl2r (thm(G2,C2))
-        val B22B1 = dimpr2l (thm(G2,C2))
-        val imp1 = Conn("==>",[A1,B1])
-        val imp2 = Conn("==>",[A2,B2])
-        val imp12imp2 = disch imp1 (imp_trans A22A1 (imp_trans (assume imp1) B12B2))
-        val imp22imp1 = disch imp2 (imp_trans A12A2 (imp_trans (assume imp2) B22B1))
+fun imp_iff (thm(G1,A1,C1)) (thm(G2,A2,C2)) =  
+    let val (a1,a2) = dest_dimp C1
+        val (b1,b2) = dest_dimp C2
+        val a12a2 = dimpl2r (thm(G1,A1,C1))
+        val a22a1 = dimpr2l (thm(G1,A1,C1))
+        val b12b2 = dimpl2r (thm(G2,A2,C2))
+        val b22b1 = dimpr2l (thm(G2,A2,C2))
+        val imp1 = Conn("==>",[a1,b1])
+        val imp2 = Conn("==>",[a2,b2])
+        val imp12imp2 = disch imp1 (imp_trans a22a1 (imp_trans (assume imp1) b12b2))
+        val imp22imp1 = disch imp2 (imp_trans a12a2 (imp_trans (assume imp2) b22b1))
     in 
         dimpI imp12imp2 imp22imp1
     end
 
-fun neg_iff (thm(G,C)) = 
-    let val (A1,A2) = dest_dimp C
-        val A1onA2 = undisch (dimpl2r (thm(G,C)))
-        val A2onA1 = undisch (dimpr2l (thm(G,C)))
-        val neg1 = Conn("~",[A1])
-        val neg2 = Conn("~",[A2])
-        val neg1A22F = negE (assume neg1) A2onA1
-        val neg2A12F = negE (assume neg2) A1onA2
-        val neg12neg2 = disch neg1 (negI neg1A22F A2)
-        val neg22neg1 = disch neg2 (negI neg2A12F A1)
+fun neg_iff (thm(G,A,C)) = 
+    let val (a1,a2) = dest_dimp C
+        val a1ona2 = undisch (dimpl2r (thm(G,A,C)))
+        val a2ona1 = undisch (dimpr2l (thm(G,A,C)))
+        val neg1 = Conn("~",[a1])
+        val neg2 = Conn("~",[a2])
+        val neg1a22F = negE (assume neg1) a2ona1
+        val neg2a12F = negE (assume neg2) a1ona2
+        val neg12neg2 = disch neg1 (negI neg1a22F a2)
+        val neg22neg1 = disch neg2 (negI neg2a12F a1)
     in 
         dimpI neg12neg2 neg22neg1
     end
@@ -130,7 +143,7 @@ fun dimp_mp_r2l B A =  mp (dimpr2l B) A
 fun contra2any A B = 
     let val na = Conn("~",[A])
         val a_na = negE (assume A) (assume na)
-        val F2b = disch FALSE (falseE B)
+        val F2b = disch FALSE (falseE [FALSE] B)
         val anaonb = mp F2b a_na
         val a2na2b = disch A (disch na anaonb)
     in dimp_mp_r2l (conj_imp_equiv A na B) a2na2b
@@ -178,6 +191,8 @@ fun double_neg f =
 
 val conj_T = equivT (conjI (trueI []) (trueI []))
 
+(* T /\ f <=> f; f /\ T <=> f; F /\ f <=> F ; f /\ F <=> f*)
+
 fun T_conj1 f = dimpI (disch (Conn("&",[TRUE,f])) (conjE2 (assume (Conn("&",[TRUE,f])))))
                       (disch f (conjI (trueI []) (assume f)))
 
@@ -185,11 +200,16 @@ fun T_conj2 f = dimpI (disch (Conn("&",[f,TRUE])) (conjE1 (assume (Conn("&",[f,T
                       (disch f (conjI (assume f) (trueI [])))
 
 fun F_conj1 f = dimpI (disch (Conn("&",[FALSE,f])) (conjE1 (assume (Conn("&",[FALSE,f])))))
-                      (disch FALSE (falseE (Conn("&",[FALSE,f]))))
+                      (disch FALSE (falseE [FALSE] (Conn("&",[FALSE,f]))))
 
 fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,FALSE])))))
-                      (disch FALSE (falseE (Conn("&",[f,FALSE]))))
+                      (disch FALSE (falseE [FALSE] (Conn("&",[f,FALSE]))))
 
+
+(*this is why we do not check if current variable in context
+
+all_true ("a",ob);
+Exception- ERR "variable to be abstract is not currently in the context" *)
 fun all_true (n,s) = dimpI (disch (Quant("ALL",n,s,TRUE)) (trueI []))
                            (disch TRUE (allI (n,s) (trueI [])))
 
@@ -222,7 +242,7 @@ fun T_imp2 f =
 
 fun F_imp1 f = 
     let val F2f2T = disch (Conn("==>",[FALSE,f])) (trueI [Conn("==>",[FALSE,f])])
-        val T2F2f = disch TRUE (disch FALSE (falseE f))
+        val T2F2f = disch TRUE (disch FALSE (falseE [FALSE] f))
     in dimpI F2f2T T2F2f
     end
 
@@ -248,7 +268,7 @@ fun T_disj2 f =
 
 fun F_disj1 f = 
     let val Forf = Conn("|",[FALSE,f])
-        val Forf2f = disch Forf (disjE FALSE f f (assume Forf) (falseE f) (assume f))
+        val Forf2f = disch Forf (disjE FALSE f f (assume Forf) (falseE [FALSE] f) (assume f))
         val f2Forf = disch f (disjI2 FALSE (assume f))
     in dimpI Forf2f f2Forf
     end
@@ -256,7 +276,7 @@ fun F_disj1 f =
 
 fun F_disj2 f = 
     let val forF = Conn("|",[f,FALSE])
-        val forF2f = disch forF (disjE f FALSE f (assume forF) (assume f) (falseE f))
+        val forF2f = disch forF (disjE f FALSE f (assume forF) (assume f) (falseE [FALSE] f))
         val f2forF = disch f (disjI1 (assume f) FALSE)
     in dimpI forF2f f2forF
     end
@@ -271,7 +291,7 @@ fun tautT f =
 fun contraF f = 
     let val fnf = mk_conj f (mk_neg f)
         val fnf2F = disch fnf (negE (conjE1 (assume fnf)) (conjE2 (assume fnf)))
-        val F2fnf = disch FALSE (falseE fnf)
+        val F2fnf = disch FALSE (falseE [FALSE] fnf)
     in dimpI fnf2F F2fnf
     end
 
@@ -295,7 +315,7 @@ fun T_dimp2 f =
 fun F_dimp1 f = 
     let val Feqf = Conn("<=>",[FALSE,f])
         val Feqf2nf = disch Feqf (negI (dimp_mp_r2l (assume Feqf) (assume f)) f)
-        val nf2Feqf = disch (mk_neg f) (dimpI (disch FALSE (add_assum (mk_neg f) (falseE f)))
+        val nf2Feqf = disch (mk_neg f) (dimpI (disch FALSE (add_assum (mk_neg f) (falseE [FALSE] f)))
                                      (disch f (negE (assume f) (assume (mk_neg f)))))
     in dimpI Feqf2nf nf2Feqf
     end
@@ -304,42 +324,56 @@ fun F_dimp2 f =
     let val feqF = Conn("<=>",[f,FALSE])
         val feqF2nf = disch feqF (negI (dimp_mp_l2r (assume f) (assume feqF)) f)
         val nf2feqF = disch (mk_neg f) (dimpI (disch f (negE (assume f) (assume (mk_neg f))))
-                                              (disch FALSE (add_assum (mk_neg f) (falseE f))))
+                                              (disch FALSE (add_assum (mk_neg f) (falseE [FALSE] f))))
     in dimpI feqF2nf nf2feqF
     end
 
+(*the 2 below can be better!!*)
+
 fun forall_true (n,s) = 
     let val aT = mk_all n s TRUE
+        val G = HOLset.union(HOLset.add(essps,(n,s)),fvs s)
         val aT2T = disch aT (trueI [aT])
-        val T2aT = disch TRUE (allI (n,s) (assume TRUE))
+        val T2aT = disch TRUE (allI (n,s) (add_cont (assume TRUE) G))
     in dimpI aT2T T2aT
     end
 
 
 fun forall_false (n,s) = 
     let val aF = mk_all n s FALSE
-        val aF2F = disch aF (allE (assume aF) (Var(n,s)))
-        val F2aF = disch FALSE (falseE aF)
+        val G = HOLset.union(HOLset.add(essps,(n,s)),fvs s)
+        val aF2F = disch aF (allE (add_cont (assume aF) G) (Var(n,s)))
+        val F2aF = disch FALSE (falseE [FALSE] aF)
     in dimpI aF2F F2aF
     end
 
-
-(*the Var(n,s) can be any term*)
-
 fun exists_true (n,s) = 
-    let val eT = mk_exists n s TRUE
-        val eT2T = disch eT (trueI [eT])
-        val T2eT = disch TRUE (existsI (assume TRUE) (n,s) (Var(n,s)) TRUE)
-    in dimpI eT2T T2eT
+    let 
+        val TwG = add_cont (trueI [])   
+                           (HOLset.union(HOLset.add(essps,(n,s)),fvs s))
+        val T2eT =
+            disch TRUE 
+                  (add_assum TRUE 
+                             (existsI TwG (n,s) (Var(n,s)) TRUE))
+        val eT2T = disch (mk_exists n s TRUE) TwG
+    in dimpI T2eT eT2T
     end
+
+(*more general version use term instead of variable?*)
 
 
 fun exists_false (n,s) = 
+    thm(essps,[],mk_dimp (mk_exists n s FALSE) FALSE)
+
+
+(*
     let val eF = mk_exists n s FALSE
         val eF2F = disch eF (existsE (assume eF) (n,s))
-        val F2eF = disch FALSE (falseE eF)
+        val F2eF = disch FALSE (falseE [FALSE] eF)
     in dimpI eF2F F2eF
     end
+
+*)
 
 (*
 fun conj_comm c1 c2 = 
@@ -348,14 +382,14 @@ fun conj_comm c1 c2 =
 
 (*compare*)
 
-fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
+fun iff_trans (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     case (C1,C2) of 
         (Conn("<=>",[f1,f2]), Conn("<=>",[f3,f4])) => 
         if eq_form (f2,f3) then 
-            let val f1f2 = conjE1 (dimpE (thm(G1,C1)))
-                val f2f1 = conjE2 (dimpE (thm(G1,C1)))
-                val f2f4 = conjE1 (dimpE (thm(G2,C2)))
-                val f4f2 = conjE2 (dimpE (thm(G2,C2)))
+            let val f1f2 = conjE1 (dimpE (thm(G2,A1,C1)))
+                val f2f1 = conjE2 (dimpE (thm(G2,A1,C1)))
+                val f2f4 = conjE1 (dimpE (thm(G2,A2,C2)))
+                val f4f2 = conjE2 (dimpE (thm(G2,A2,C2)))
                 val f1f4 = imp_trans f1f2 f2f4
                 val f4f1 = imp_trans f4f2 f2f1
             in dimpI f1f4 f4f1
@@ -363,15 +397,15 @@ fun iff_trans (thm(G1,C1)) (thm(G2,C2)) =
         else raise ERR ("two iffs do not match" ^ (string_of_form C1) ^ " , " ^ (string_of_form C2))
       | _ => raise ERR "not a pair of iffs"
 
-fun iff_swap (thm(G,C)) = 
-    let val Q2P = conjE2 (dimpE (thm(G,C)))
-        val P2Q = conjE1 (dimpE (thm(G,C)))
+fun iff_swap (thm(G,A,C)) = 
+    let val Q2P = conjE2 (dimpE (thm(G,A,C)))
+        val P2Q = conjE1 (dimpE (thm(G,A,C)))
     in dimpI Q2P P2Q
     end
 
 (*P <=> P', Q <=> Q', gives (P <=> Q) <=> (P' <=> Q')*)
 
-fun dimp_iff (th1 as thm(G1,C1)) (th2 as thm(G2,C2)) = 
+fun dimp_iff (th1 as thm(G1,A1,C1)) (th2 as thm(G2,A2,C2)) = 
      case (C1,C2) of 
         (Conn("<=>",[P1,P2]), Conn("<=>",[Q1,Q2])) => 
         let val P1iffQ1 = Conn("<=>",[P1,Q1])
@@ -383,7 +417,7 @@ fun dimp_iff (th1 as thm(G1,C1)) (th2 as thm(G2,C2)) =
       | _ => raise ERR ("not a pair of iff" ^ string_of_form C1 ^ " , " ^ string_of_form C2)
 
 
-fun all_iff (th as thm(G,C)) (n,s) = 
+fun all_iff (th as thm(G,A,C)) (n,s) = 
     case C of 
         Conn("<=>",[P,Q]) => 
         let val allP = Quant("ALL", n, s, P)
@@ -409,19 +443,14 @@ fun exists_iff (th as thm(G,C)) (n,s) =
       | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
 *)
 
-fun exists_iff (th as thm(G,C)) (n,s) = 
-    case C of 
-        Conn("<=>",[P,Q]) => 
-        let val eP = Quant("EXISTS", n, s, P)
-            val eQ = Quant("EXISTS", n, s, Q)
-            val eP2eQ = disch eP (simple_exists (n,s) (dimp_mp_l2r (existsE (assume eP) (n,s)) th))
-            val eQ2eP = disch eQ (simple_exists (n,s) (dimp_mp_r2l th (existsE (assume eQ) (n,s))))
-        in
-            dimpI eP2eQ eQ2eP
-        end
-      | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
-
-
+fun exists_iff (th as thm(G,A,C)) (n,s) = 
+    let
+        val (P,Q) = dest_dimp C
+        val f = Conn("<=>",[mk_exists n s P,mk_exists n s Q])
+    in
+        thm(fvf f,[],f)
+    end
+(*fix this proof!*)
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 
@@ -452,9 +481,11 @@ val all_false_ob = forall_false ("A",ob)
 val all_false_ar = forall_false ("a",ar(mk_ob "A",mk_ob "B"))
 
 
+
 val exists_true_ob = exists_true ("A",ob)
 val exists_true_ar = exists_true ("a",ar(mk_ob "A",mk_ob "B"))
 
+ 
 val exists_false_ob = exists_false ("A",ob)
 val exists_false_ar = exists_false ("a",ar(mk_ob "A",mk_ob "B"))
 
@@ -491,7 +522,7 @@ fun disj_imp_distr A B C =
     dimpI (disch (mk_imp (mk_disj A B) C)
                (conjI (undisch (disj_imp_distr1 A B C)) (undisch (disj_imp_distr2 A B C)))) (imp_disj_distr A B C)
   
-fun disj_imp_distr_th (th as thm(G,C)) = 
+fun disj_imp_distr_th (th as thm(G,A,C)) = 
     case C of
         (Conn("==>",[Conn("|",[P,Q]),R])) => dimp_mp_l2r th (disj_imp_distr P Q R)
       | f => raise ERR ("Error disj_imp_distr_th" ^ " : " ^ (string_of_form f))
@@ -502,6 +533,7 @@ fun disj_imp_distr_th (th as thm(G,C)) =
 (*exists imp need to be tested func sym*)
 
 (*(?x A) ==> B ==> A[y/x] ==> B*)
+
 fun exists_imp x s y A B = 
     let val eA = mk_exists x s A
         val eA2B = mk_imp eA B
@@ -514,7 +546,7 @@ fun exists_imp x s y A B =
 (*(?x A(x)) ==> B <=> !y. A(y) ==> B
 
 assume A is A(x)*)
-
+(*
 fun exists_all_imp x sx y sy A B = 
     let val eA = mk_exists x sx A
         val eA2B = mk_imp eA B
@@ -532,10 +564,13 @@ fun exists_all_imp x sx y sy A B =
     in dimpI l2r r2l
     end
 
+!!!!!!!!!!!!!!!!!!!!!
+*)
 (*need rename for existential case...
 
 say we have (?b. P(b)) ==> A(b)*)
 
+(*
 fun imp_canon (th as thm(G,C)) = 
     case C of
         Conn("&",[A,B]) => (imp_canon (conjE1 th)) @ (imp_canon (conjE2 th))
@@ -553,10 +588,11 @@ fun imp_canon (th as thm(G,C)) =
         end
       | Conn("==>",[_,_]) => imp_canon (undisch th) 
       | _ => [th]
+*)
 
 val nT_equiv_F = 
     let val nT2F = disch (mk_neg TRUE) (negE (trueI []) (assume (mk_neg TRUE)))
-        val F2nT = disch FALSE (falseE (mk_neg TRUE))
+        val F2nT = disch FALSE (falseE [FALSE] (mk_neg TRUE))
     in dimpI nT2F F2nT
     end
 
@@ -579,7 +615,7 @@ fun eqF_intro_form f =
         val nF2feqF = disch (mk_neg f)
                             (dimpI (disch f (negE (assume f) (assume (mk_neg f))))
                                    (disch FALSE
-                                                 (add_assum (mk_neg f) (falseE f))))
+                                                 (add_assum (mk_neg f) (falseE [FALSE] f))))
         val Feqf2nF = disch (mk_dimp f FALSE) 
                             (negI (dimp_mp_l2r (assume f) (assume (mk_dimp f FALSE))) f)
     in 
@@ -592,33 +628,39 @@ fun eqF_intro th =
       | _ => raise 
                  ERR ("eqF_intro: conclusion " ^ (string_of_form (concl th)) ^ " is not a negation") 
     
+
+
+
 (*spec_all*)
 
 fun specl th l = 
     if is_all (concl th) then 
-        (case l of [] => th
-                 | h :: t => 
-                   let val f1 = allE th h handle ERR _ => th
-                   in 
-                       specl f1 t
-                   end)
-    else th (*raise ERR "conclusion not universally quantified"*)
-
-
+        case l of [] => th
+                | h :: t => 
+                  let val f1 = allE th h handle ERR _ => th
+                  in 
+                      specl f1 t
+                  end
+    else th 
 
 fun spec_all th = 
-    let val fv = fvfl (ant th)
+    let 
+        val fv = fvfl (ant th)
         val v2bs = snd (strip_all (concl th))
         val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
     in 
-        specl th (rev v2bs')
+        specl th v2bs'
     end
+(*previously rev the list, was wrong!*)
 
 fun abstl th l = 
     case l of 
         [] => th
       | (n,s) :: t => allI (n,s) (abstl th t)
 
+
+
+(*
 
 fun conj_pair th =
     (conjE1 th,conjE2 th)
@@ -636,5 +678,63 @@ fun fconv_canon th =
         else [eqT_intro th]
     end 
 
+
+(*to quantify over a term, we just need to make sure that all of the variables which appears in it has already be quantified.*)
+
+open SymGraph
+
+fun depends_t (n,s) t = 
+    case t of 
+        Var(n1,s1) => (n,s) = (n1,s1) orelse depends_s (n,s) s1
+      | Fun(f,s1,l) => depends_s (n,s) s1 
+                       orelse List.exists (depends_t (n,s)) l 
+      | _ => false
+and depends_s (n,s) sort = 
+    case sort of
+        ar(d,c) => depends_t (n,s) d orelse depends_t (n,s) c
+      | _ => false
+
+fun edges_from_fvs1 (n:string,s:sort) l = 
+    case l of [] => []
+            | h :: t => 
+              if depends_t (n,s) (Var h) then 
+                  ((n,s),h) :: edges_from_fvs1 (n,s) t
+              else edges_from_fvs1 (n,s) t
+
+fun edges_from_fvs0 nss = 
+    let val l = HOLset.listItems nss
+    in List.foldr 
+           (fn (ns,l0) => (edges_from_fvs1 ns l) @ l0) [] l 
+    end
+
+fun edges_from_fvs nss = List.filter (op<>) (edges_from_fvs0 nss)
+
+
+
+fun order_of_fvs f = 
+    let val nss = fvf f
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+(*what if d1 depends on d2 but c2 depends on c1???*)
+(*
+fun order_of_gen (l: (string * sort) list) = 
+    let val g = 
+            case l of
+                [] => SymGraph.empty
+              | (ns :: t) => 
+
+fun gen_all th = 
+let val 
+*)
+
+*)
+
+(*should derive it*)
+
+fun frefl f = thm(fvf f,[],Conn("<=>",[f,f]))
 
 end

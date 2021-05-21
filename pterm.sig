@@ -30,4 +30,10 @@ val psyms0: psymd
 val fsyms0: fsymd
 val new_pred: string -> ((string * sort) list) -> psymd
 val new_fun: string -> (sort * (string * sort) list) -> fsymd
+
+datatype ForP = fsym | psym
+val fpdict0:(string,ForP) Binarymap.dict
+val fpdict: ((string,ForP) Binarymap.dict) ref
+val insert_fsym: string -> unit
+val insert_psym: string -> unit
 end
