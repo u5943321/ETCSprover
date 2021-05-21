@@ -679,6 +679,9 @@ fun fconv_canon th =
     end 
 
 
+*)
+
+
 (*to quantify over a term, we just need to make sure that all of the variables which appears in it has already be quantified.*)
 
 open SymGraph
@@ -719,6 +722,39 @@ fun order_of_fvs f =
     in topological_order g
     end
 
+fun order_of nss = 
+    let 
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+fun abstl th l = 
+    case l of 
+        [] => th
+      | (n,s) :: t => allI (n,s) (abstl th t)
+
+fun find_var l n = 
+    case l of 
+        [] => raise ERR "variable name not found"
+      | h :: t => 
+        if fst h = n then h 
+        else find_var t n
+
+
+fun gen_all th = 
+    let 
+        val vs = HOLset.difference
+                     (fvf (concl th), fvfl (ant th))
+        val vsl = HOLset.listItems vs
+        val ovs = order_of vs
+        val vl = List.map (find_var vsl) ovs
+    in 
+        abstl th vl
+    end
+
+
 (*what if d1 depends on d2 but c2 depends on c1???*)
 (*
 fun order_of_gen (l: (string * sort) list) = 
@@ -731,7 +767,6 @@ fun gen_all th =
 let val 
 *)
 
-*)
 
 (*should derive it*)
 

@@ -19,7 +19,7 @@ fun inst_thm env th =
     let
         val G0 = HOLset.listItems (cont th)
         val G = List.foldr 
-                    (fn s => fn s' => HOLset.union(s,s'))
+                    HOLset.union
                     essps
                     (List.map (fvt o (inst_term env) o Var) G0)
 (*

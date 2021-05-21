@@ -11,11 +11,11 @@ use "pterm.sml";
 
 use "thm.sig";
 use "thm.sml";
-(*
+
 use "drule.sig";
 use "drule.sml";
-*)
-open term form pterm thm;
+
+open term form pterm thm drule;
 (*
 use "conv.sig"; 
 use "conv.sml";

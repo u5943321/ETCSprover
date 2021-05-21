@@ -11,7 +11,7 @@ fun assume_tac th (fl,f) =
 
 
 
-fun drule0 th (fl,f) = 
+fun drule0 th (fl:form list,f) = 
     let 
         val c = concl th
         val (b,vs) = strip_all c
@@ -19,7 +19,7 @@ fun drule0 th (fl,f) =
         fun mfn _ asm = 
             let 
                 val menv = match_form ant asm mempty
-                val ith = inst_thm th menv
+                val ith = inst_thm menv th
             in
                 SOME (mp ith (assume asm))
             end
@@ -174,11 +174,19 @@ fun fconv_tac fc (fl,f) =
      (fn [th] => dimp_mp_r2l (fc f) th
      | _ => raise ERR "incorrect number of list items"))
  
-
+(*
 fun rw_tac thl = 
     let val thms = flatten (List.map imp_canon thl)
         val conv = first_conv (mapfilter rewr_conv thms)
         val fconv = first_fconv (mapfilter rewr_fconv thms)
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+*)
+
+fun rw_tac thl = 
+    let 
+        val conv = first_conv (mapfilter rewr_conv thl)
+        val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (basic_fconv conv fconv) 
     end
 
