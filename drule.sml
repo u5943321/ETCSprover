@@ -360,7 +360,7 @@ fun exists_true (n,s) =
                   (add_assum TRUE 
                              (existsI TwG (n,s) (Var(n,s)) TRUE))
         val eT2T = disch (mk_exists n s TRUE) TwG
-    in dimpI T2eT eT2T
+    in dimpI eT2T T2eT
     end
 
 (*more general version use term instead of variable?*)
@@ -760,6 +760,14 @@ fun find_var l n =
       | h :: t => 
         if fst h = n then h 
         else find_var t n
+
+fun genl vsl th = 
+    let
+        val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vsl)
+        val vl = List.map (find_var vsl) ovs
+    in 
+        abstl th vl
+    end
 
 
 fun gen_all th = 

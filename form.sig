@@ -69,6 +69,7 @@ val essps: (string * sort) set
 val vd_of: menv -> (string * sort,term)Binarymap.dict
 val fvd_of: menv -> (string,form)Binarymap.dict
 val mempty: menv
+val pmenv: menv -> ((string * sort) * term) list * (string * form) list
 val emptyvd: (string * sort,term)Binarymap.dict
 val match_term: term -> term -> menv -> menv
 val match_sort: sort -> sort -> menv -> menv

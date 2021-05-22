@@ -1,37 +1,49 @@
 structure conv :> conv = 
 struct
-open term form thm 
+open term form thm drule
 type conv = term -> thm
 
 exception unchanged
 
+(*think about inst_thm when names clash!!!!!!!!!!!*)
+
 fun specl th l = 
     if is_all (concl th) then 
-        (case l of [] => th
-                 | h :: t => 
-                   let val f1 = allE th h handle ERR _ => th
-                   in 
-                       specl f1 t
-                   end)
-    else th (*raise ERR "conclusion not universally quantified"*)
-
-
+        case l of [] => th
+                | h :: t => 
+                  let val f1 = allE th h handle ERR _ => th
+                  in 
+                      specl f1 t
+                  end
+    else th 
 
 fun spec_all th = 
-    let val fv = fvfl (ant th)
-        val v2bs = snd (strip_ALL (concl th))
+    let 
+        val fv = fvfl (ant th)
+        val v2bs = snd (strip_all (concl th))
         val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
     in 
-        specl th (rev v2bs')
+        specl th v2bs'
     end
 
 fun abstl th l = 
     case l of 
         [] => th
       | (n,s) :: t => allI (n,s) (abstl th t)
-         
 
+val o0 = 
+    let val f = readf "((h:C -> D) o (g: B -> C)) o (f: A -> B) = h o g o f"
+        val c = fvf f
+    in thm(c,[],f)
+    end
 
+val ot1 = readt "(f4 o f3) o f2 o f1"
+
+val ot2 = readt "f4 o (f3 o f2) o f1"
+
+val ot3 = readt "(((f6 o f5 o f4) o f3) o f2) o f1"
+
+(*
 fun part_tmatch partfn A t = 
     let 
         val env = 
@@ -41,6 +53,19 @@ fun part_tmatch partfn A t =
     in specl A' (List.map (fn (a,b) => b) env)
     end
 
+*)
+
+
+fun part_tmatch partfn th t = 
+    let 
+        val env = match_term (partfn th) t mempty
+    in 
+        inst_thm env th
+    end
+
+(*
+inst_form env (concl th)
+*)
 val rewr_conv = part_tmatch (fst o dest_eq o concl)
 
 
@@ -100,17 +125,26 @@ fun top_depth_conv c t =
 
 (*fconvs*)
 
+(*
 fun part_fmatch partfn A f = 
     let 
         val fvd = (match_form (partfn A) f mempty)
         val vd = Binarymap.listItems 
-                     (vd_of (match_form (partfn A) f mempty))
-        val A0 = inst A fvd
-        val A' = abstl A0 (List.map (fn (a,b) => a) vd)
+                     (vd_of fvd)
+        val A0 = inst_thm fvd A
+        val A' = genl (List.map (fn (a,b) => b) vd) A0
     in specl A' (List.map (fn (a,b) => b) vd)
     end
 
-val rewr_fconv = part_fmatch (fst o dest_iff o concl)
+*)
+
+fun part_fmatch partfn A f = 
+    let 
+        val fvd = (match_form (partfn A) f mempty)
+    in inst_thm fvd A
+    end
+
+val rewr_fconv = part_fmatch (fst o dest_dimp o concl)
 
 (*operation on fconvs*)
 
@@ -120,7 +154,7 @@ fun thenfc (fc1,fc2) f =
     let 
         val th1 = fc1 f 
     in 
-        iff_trans th1 (fc2 (snd (dest_iff (concl th1))))
+        iff_trans th1 (fc2 (snd (dest_dimp (concl th1))))
     end
 
 
@@ -138,8 +172,11 @@ fun first_fconv fcl =
 
 fun try_fconv fc = fc orelsefc all_fconv
 
-fun changed_fconv fc f = 
-    if fc f =  frefl f then raise unchanged 
+fun thm_eq th1 th2 = 
+    HOLset.equal(cont th1,cont th2) andalso (ant th1 = ant th2) andalso (concl th1 = concl th2)
+
+fun changed_fconv (fc:form -> thm) f = 
+    if thm_eq (fc f) (frefl f) then raise unchanged 
     else fc f
 
 fun repeatfc fc f = 
@@ -191,9 +228,18 @@ fun qexists_fconv fc f =
         exists_iff (try_fconv fc b) (n,s)
       | _ => raise ERR "not an exists"
 
+val reflTob = equivT (refl (Var("a",ob)))
+
+val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
+
+
+val refl_fconv = 
+    first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
+     
+
+
 fun sub_fconv c fc = 
-    first_fconv (List.map changed_fconv
-                [conj_fconv fc,
+    try_fconv (first_fconv [conj_fconv fc,
                  disj_fconv fc,
                  imp_fconv fc,
                  dimp_fconv fc,
@@ -202,13 +248,7 @@ fun sub_fconv c fc =
                  pred_fconv c])
 
 
-val reflTob = equivT (refl (Var("a",ob)))
 
-val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
-
-val refl_fconv = 
-    first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
-     
 
 fun depth_fconv c fc f =
     (sub_fconv c (depth_fconv c fc) thenfc
@@ -241,6 +281,7 @@ val taut_dimp_fconv =
                   [T_dimp_1,T_dimp_2,F_dimp_1,F_dimp_2])
 
 
+
 val taut_forall_fconv = 
     first_fconv 
         (List.map rewr_fconv 
@@ -248,85 +289,41 @@ val taut_forall_fconv =
                    all_false_ar,all_false_ob])
 
 
-    
-(*               
-fun tautT_fconv f = 
-    case f of
-        Conn("|",[c1,c2]) =>
-        if c2 = mk_neg c1 then tautT f 
-        else if c1 = mk_neg c2 then disj
 
- orelse c2 = mk_neg c1 then
-*)
-(*fun taut_disj_fconv f = *)
+val taut_exists_fconv = 
+    first_fconv 
+        (List.map rewr_fconv 
+                  [exists_true_ar,exists_true_ob,
+                   exists_false_ar,exists_false_ob])
 
-(*above wrong should all be matching*)
 
 val basic_taut_fconv = 
     first_fconv [taut_conj_fconv,
                  taut_disj_fconv,
                  taut_imp_fconv,
                  taut_dimp_fconv,
-                 taut_forall_fconv]
+                 taut_forall_fconv,
+                 taut_exists_fconv]
 
-
+val taut_fconv = basic_taut_fconv orelsec refl_fconv 
 
 fun top_depth_fconv c fc f =
     (repeatfc fc thenfc
-             (try_fconv (sub_fconv (top_depth_conv c) fc)) thenfc
+             (sub_fconv c (top_depth_fconv c fc)) thenfc
              ((fc thenfc (top_depth_fconv c fc)) 
                   orelsefc all_fconv))
         f
 
-
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
-                    (fc orelsefc basic_taut_fconv)
+                    (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
-val oc = rewr_conv o_assoc
+(* fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th *)
 
-val roc = redepth_conv oc
-
-val ttest = #1  (read_t "f o (g o h) o k")
-
-val ftest = #1 (read_f "id(A) = id(A) & f o (g o h) o k = ((f o g) o h) o k")
-
-val ftest' =  #1 (read_f "f o (g o h) o k = ((f o g) o h) o k")
-
-val fc = conj_conv (pred_conv roc)
-
-val rth = refl (#1 (read_t "a: A -> B"))
-
-val rtht = equivT rth
-
-val refl_fconv = rewr_fconv rtht 
-
-val readf = fst o read_f
-
-(*
-
-fun imp_chain_tac tac (fl,f) = 
-    case f of 
-        Conn("==>",[A,B]) => 
-        if tac (fl,A) = (_,TRUE) then
-            let val (B',func) = imp_chain_tac tac (fl,B)
-            in
-            ((fl,B'),
-             fn [th] => dimp_mp_r2l (T_imp1 (concl th)) th)
-            end
-*)
-(*currently wrong *)
+fun conv_rule c th = dimp_mp_r2l th (c (concl th))
 
 
-(*
-fun rewr_conv th t = 
-    let val (lhs,rhs) = dest_eq (concl th)
-        val env = match_term0 lhs t (Binarymap.mkDict String.compare)
-    in thm(ant th, Pred("=",[t,inst_term env rhs]))
-    end
-*)
-
-fun assum_list aslfun (g as (asl, _)) = aslfun (map assume asl) g
+fun assum_list aslfun (g as (asl, _)) = aslfun (List.map assume asl) g
 
 
 
