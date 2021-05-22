@@ -203,6 +203,11 @@ fun dest_pred f =
         Pred(p,l) => (p,l)
       | _ => raise ERR ((string_of_form f) ^ " is not a predicate")
 
+fun dest_exists f = 
+    case f of 
+        Quant("EXISTS",n,s,b) => ((n,s),b)
+      | _ => raise ERR "not an existential"
+
 
 (*predicate functions*)
 

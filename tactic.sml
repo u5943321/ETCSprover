@@ -30,6 +30,41 @@ fun drule0 th (fl:form list,f) =
           | SOME th => assume_tac th (fl,f)
     end
 
+fun existsE1 (n,s) f = existsE n s f 
+
+fun efn (n,s) (f,th) = 
+    let 
+        val ef = mk_exists n s f
+    in
+        (ef,existsE (n,s) (assume ef) th)
+    end
+
+fun genl nsl th = 
+    case nsl of 
+        [] => th
+      | h :: t => allI h (genl t th)
+
+fun match_mp_tac th (A,g) = 
+    let
+        val (imp,gvs) = strip_all (concl th)
+        val (ant,conseq) = dest_imp imp
+        val (con,cvs) = strip_all (conseq)
+        val th1 = specl (undisch (specl th (List.map Var gvs))) (List.map Var cvs) 
+        val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
+        val th2 = uncurry disch (itlist efn evs (ant, th1))
+        val (gl,vs) = strip_all g
+        val env = match_form con gl mempty
+        val ith = inst_thm env th2
+        val gth = genl vs (undisch ith)
+                          (*should be genl! need fix this*)
+        val ant = fst (dest_imp (concl ith))
+    in
+        ([(A, ant)], fn thl => mp (disch ant gth) (hd thl))
+    end
+
+
+
+
 fun conj_tac ((fl,f):goal):goal list * validation = 
     case f of 
         (Conn("&",[f1,f2])) =>

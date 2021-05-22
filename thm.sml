@@ -224,10 +224,7 @@ fun existsI (thm(G,A,C)) (a,s) t f =
         thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))
     end
 
-fun dest_exists f = 
-    case f of 
-        Quant("EXISTS",n,s,b) => ((n,s),b)
-      | _ => raise ERR "not an existential"
+
 
 (*--------------------------------------------------
 existsE:
@@ -238,6 +235,8 @@ X,Y, Γ1 ∪ Γ2 |- B
 
 ---------------------------------------------------*)
 
+fun delete'(s,e) = HOLset.delete(s,e) handle _ => s 
+ 
 fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     let 
         val ((n,s),b) = dest_exists C1
@@ -248,7 +247,7 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
                      (HOLset.union(fvfl A2,fvf C2),(a,s0)) = false) orelse
                 raise ERR "the given variable occurs unexpectedly"
     in
-        thm(contl_U[G1,HOLset.delete(G2,(a,s0))],asml_U[A1,A2],C2)
+        thm(contl_U[G1,delete'(G2,(a,s0))],asml_U[A1,A2],C2)
     end
 
 fun refl t = thm (fvt t,[],(Pred("=",[t,t]))) 

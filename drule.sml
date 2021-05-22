@@ -210,6 +210,8 @@ fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,
 
 all_true ("a",ob);
 Exception- ERR "variable to be abstract is not currently in the context" *)
+
+(*
 fun all_true (n,s) = dimpI (disch (Quant("ALL",n,s,TRUE)) (trueI []))
                            (disch TRUE (allI (n,s) (trueI [])))
 
@@ -221,6 +223,8 @@ val all_true_ob = all_true ("A",ob)
 fun all_false (n,s) = dimpI (disch (Quant("ALL",n,s,FALSE)) 
                                    (allE (assume (Quant("ALL",n,s,FALSE))) (Var (n,s))))
                             (disch FALSE (allI (n,s) (assume FALSE)))
+*)
+
 
 (*
 val all_false_ar = all_false ("a",ar(Var("A",ob),Var("B",ob)))
@@ -477,12 +481,27 @@ val F_dimp_2 = F_dimp2 (fVar "f0")
 val all_true_ob = forall_true ("A",ob)
 val all_true_ar = forall_true ("a",ar(mk_ob "A",mk_ob "B"))
 
-val all_false_ob = forall_false ("A",ob)
+val all_false_ob = 
+    let 
+        val f0 = assume (mk_all "A" ob FALSE)
+        val L2R = disch (mk_all "A" ob FALSE) (allE f0 (Fun("N",ob,[])))
+        val R2L = disch FALSE (falseE [FALSE] (mk_all "A" ob FALSE))
+    in
+        dimpI L2R R2L
+    end
+
 val all_false_ar = forall_false ("a",ar(mk_ob "A",mk_ob "B"))
 
 
 
-val exists_true_ob = exists_true ("A",ob)
+val exists_true_ob = 
+    let
+        val L2R = disch (mk_exists "A" ob TRUE) (trueI [mk_exists "A" ob TRUE])
+        val R2L = disch TRUE (existsI (trueI []) ("A",ob) (Fun("N",ob,[])) TRUE)
+    in
+        dimpI L2R R2L
+    end
+
 val exists_true_ar = exists_true ("a",ar(mk_ob "A",mk_ob "B"))
 
  
