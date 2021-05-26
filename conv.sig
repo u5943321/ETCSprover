@@ -38,8 +38,6 @@ val imp_fconv: (form -> thm) -> form -> thm
 val no_fconv: 'a -> 'b
 val orelsefc: ('a -> 'b) * ('a -> 'b) -> 'a -> 'b
 val pred_fconv: (term -> thm) -> form -> thm
-val qall_fconv: (form -> thm) -> form -> thm
-val qexists_fconv: (form -> thm) -> form -> thm
 val redepth_fconv: (term -> thm) -> (form -> thm) -> form -> thm
 val refl_fconv: form -> thm
 val repeatfc: (form -> thm) -> form -> thm

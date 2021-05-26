@@ -8,10 +8,15 @@ datatype thm = thm of (string * sort) set * form list * form
 val ant: thm -> form list
 val cont: thm -> (string * sort) set
 val assume: form -> thm
-val refl: term -> thm
 val concl: thm -> form
+
+val eq_thm: thm -> thm -> bool
+
+val refl: term -> thm
+
 val trans: thm -> thm -> thm
 val sym: thm -> thm
+val mk_sss: (string * sort) set list -> (string * sort) set
 val inst_thm: menv -> thm -> thm
 val conjI: thm  -> thm -> thm
 val disjI1: thm -> form -> thm

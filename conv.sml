@@ -7,42 +7,6 @@ exception unchanged
 
 (*think about inst_thm when names clash!!!!!!!!!!!*)
 
-fun specl th l = 
-    if is_all (concl th) then 
-        case l of [] => th
-                | h :: t => 
-                  let val f1 = allE th h handle ERR _ => th
-                  in 
-                      specl f1 t
-                  end
-    else th 
-
-fun spec_all th = 
-    let 
-        val fv = fvfl (ant th)
-        val v2bs = snd (strip_all (concl th))
-        val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
-    in 
-        specl th v2bs'
-    end
-
-fun abstl th l = 
-    case l of 
-        [] => th
-      | (n,s) :: t => allI (n,s) (abstl th t)
-
-val o0 = 
-    let val f = readf "((h:C -> D) o (g: B -> C)) o (f: A -> B) = h o g o f"
-        val c = fvf f
-    in thm(c,[],f)
-    end
-
-val ot1 = readt "(f4 o f3) o f2 o f1"
-
-val ot2 = readt "f4 o (f3 o f2) o f1"
-
-val ot3 = readt "(((f6 o f5 o f4) o f3) o f2) o f1"
-
 (*
 fun part_tmatch partfn A t = 
     let 
@@ -63,9 +27,7 @@ fun part_tmatch partfn th t =
         inst_thm env th
     end
 
-(*
-inst_form env (concl th)
-*)
+
 val rewr_conv = part_tmatch (fst o dest_eq o concl)
 
 
@@ -138,10 +100,15 @@ fun part_fmatch partfn A f =
 
 *)
 
-fun part_fmatch partfn A f = 
+val simp_trace = ref false
+
+fun part_fmatch partfn th f = 
     let 
-        val fvd = (match_form (partfn A) f mempty)
-    in inst_thm fvd A
+        val fvd = (match_form (partfn th) f mempty)
+        val th' = inst_thm fvd th
+        val _ = if !simp_trace then th' else ()
+    in 
+        th'
     end
 
 val rewr_fconv = part_fmatch (fst o dest_dimp o concl)
@@ -172,11 +139,8 @@ fun first_fconv fcl =
 
 fun try_fconv fc = fc orelsefc all_fconv
 
-fun thm_eq th1 th2 = 
-    HOLset.equal(cont th1,cont th2) andalso (ant th1 = ant th2) andalso (concl th1 = concl th2)
-
 fun changed_fconv (fc:form -> thm) f = 
-    if thm_eq (fc f) (frefl f) then raise unchanged 
+    if eq_thm (fc f) (frefl f) then raise unchanged 
     else fc f
 
 fun repeatfc fc f = 
@@ -222,12 +186,16 @@ fun qall_fconv fc f =
         all_iff (try_fconv fc b) (n,s)
       | _ => raise ERR "not a forall"
 
+(*
 fun qexists_fconv fc f = 
     case f of 
         Quant("EXISTS",n,s,b) => 
         exists_iff (try_fconv fc b) (n,s)
       | _ => raise ERR "not an exists"
 
+need to fix exists_iff
+
+*)
 val reflTob = equivT (refl (Var("a",ob)))
 
 val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
@@ -244,7 +212,7 @@ fun sub_fconv c fc =
                  imp_fconv fc,
                  dimp_fconv fc,
                  qall_fconv fc,
-                 qexists_fconv fc,
+                (* qexists_fconv fc, *)
                  pred_fconv c])
 
 
@@ -324,8 +292,6 @@ fun conv_rule c th = dimp_mp_r2l th (c (concl th))
 
 
 fun assum_list aslfun (g as (asl, _)) = aslfun (List.map assume asl) g
-
-
 
 
 end

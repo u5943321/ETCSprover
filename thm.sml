@@ -1,6 +1,6 @@
 structure thm :> thm = 
 struct
-open token pterm_dtype form pterm term
+open token pterm_dtype term form pterm
 
 datatype thm = thm of ((string * sort) set * form list * form) 
 
@@ -10,20 +10,42 @@ fun concl (thm(_,_,C)) = C
 
 fun cont (thm(G,_,_)) = G
 
-fun unionList sl = 
-    case sl of 
-        [] => essps
+fun eq_forml (l1:form list) (l2:form list) = 
+    case (l1,l2) of 
+        ([],[]) => true
+      | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
+      | _ => raise ERR "incorrect length of list"
 
+fun eq_thm th1 th2 = 
+    HOLset.equal(cont th1,cont th2) andalso
+    eq_forml (ant th1) (ant th2) andalso
+    eq_form (concl th1, concl th2)
+
+(*
+INST_THM: 
+A, Γ |- C
+------------- INST_THM env
+A', Γ' |- C'
+
+A',C' is obtained by pluging in variables recorded in env
+Γ' is obtained by collecting all variables in substituted Γ.
+
+name clash with bound variable is treated by specl:
+
+If we have f = ALL a. Bound 0 o a: A ->B = b
+
+then specl on f will give a' o a: A -> B = b
+
+*)
+
+fun mk_sss l = List.foldr HOLset.union essps l
+
+(*make (string * sort) set*)
 
 fun inst_thm env th = 
     let
         val G0 = HOLset.listItems (cont th)
-        val G = List.foldr 
-                    HOLset.union
-                    essps
-                    (List.map (fvt o (inst_term env) o Var) G0)
-(*
-HOLset.addList(essps,List.map (fvt o (inst_term env) o Var) G0)*)
+        val G = mk_sss (List.map (fvt o (inst_term env) o Var) G0)
         val A = List.map (inst_form env) (ant th)
         val C = inst_form env (concl th)
     in
@@ -35,13 +57,11 @@ fun ril i l =
             | h :: t => 
               if h = i then t else h :: (ril i t)
 
-fun asm_U (A1:form list) (A2:form list) = 
-    op_union (fn f1 => fn f2 => eq_form (f1,f2)) A1 A2
 
 fun asml_U (asml:(form list) list) = 
     case asml of 
         [] => []
-      | h :: t => h @ asml_U t
+      | h :: t => op_union (curry eq_form) h (asml_U t)
 
 fun contl_U contl = 
     case contl of 
@@ -49,11 +69,6 @@ fun contl_U contl =
       | h :: t => HOLset.union(h,contl_U t)
 
 (*primitive inference rules*)
-
-(*
-fun inst (thm(G,A,C)) (env:menv) = 
-    thm(fvf (inst_fVare env C),List.map (inst_fVare env) A,inst_fVare env C)
-*)
 
 fun assume f = thm (fvf f,[f],f)
 
@@ -176,8 +191,7 @@ fun dimpE (thm(G,A,C)) =
 (*A ⊆ Γ by induction, so I think no need to check a notin A*)
 
 fun allI (a,s) (thm(G,A,C)) = 
-    let (*val _ = HOLset.member(G,(a,s)) orelse 
-                raise ERR "variable to be abstract is not currently in the context" *)
+    let 
         val G0 = HOLset.delete(G,(a,s)) 
                  handle _ => G
         val _ = HOLset.isSubset(fvs s,G0) orelse 
@@ -187,10 +201,7 @@ fun allI (a,s) (thm(G,A,C)) =
     in thm(G0,A,mk_all a s C)
     end
 
-fun dest_all f = 
-    case f of 
-        Quant("ALL",n,s,b) => ((n,s),b)
-      | _ => raise ERR "not a universal"
+
 
 (*--------------------------------------------
 allE:
@@ -212,10 +223,18 @@ fun allE (thm(G,A,C)) t =
         thm(contl_U [G,fvt t],A,subst_bound t b)
     end
 
-(*by induction, already  have Var(s), Var(t) is subset of G*)
+(*by induction, already  have Var(s), Var(t) is subset of G? No, say:
+
+EXISTS a:ob. TRUE
+
+A,Γ |- f[t/Var(a,s)]
+---------------- sort_of t = s, Var(t) ⊆ Γ
+A,Γ |- EXISTS a: s. f
+*)
 
 fun existsI (thm(G,A,C)) (a,s) t f = 
     let 
+        val _ = HOLset.isSubset(fvt t,G)
         val _ = (sort_of t = s) orelse 
                 raise ERR "term and variable to be abstract of different sorts"
         val _ = (C = substf ((a,s),t) f) orelse
@@ -243,10 +262,13 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
         val _ = (s = s0) orelse 
                 raise ERR "the given variable has unexpected sort"
         val _ = (HOLset.member
-                     (HOLset.union(fvfl A2,fvf C2),(a,s0)) = false) orelse
+                     (HOLset.union
+                          (fvfl (ril (subst_bound (Var(a,s0)) b) A2),
+                           fvf C2),(a,s0)) = false) orelse
                 raise ERR "the given variable occurs unexpectedly"
     in
-        thm(contl_U[G1,delete'(G2,(a,s0))],asml_U[A1,A2],C2)
+        thm(contl_U[G1,delete'(G2,(a,s0))],
+            asml_U[A1,(ril (subst_bound (Var(a,s0)) b) A2)],C2)
     end
 
 fun refl t = thm (fvt t,[],(Pred("=",[t,t]))) 
@@ -281,8 +303,10 @@ fun trans th1 th2 =
  * DISCH                                                                     *
  *                                                                           *
  *    A ,f1 ,Γ |- f2                                                         *
- *  -----------------                                                        *
- *   A,Γ |- f1 ==> f2                                                 *
+ *  -----------------                                               *
+ *   A,Γ |- f1 ==> f2  
+
+do not require f1 in assumption, if not, add its variables into the context. *
  *---------------------------------------------------------------------------*)
 
 fun disch f1 (thm(G,A,f2)) =
@@ -290,8 +314,17 @@ fun disch f1 (thm(G,A,f2)) =
         val _ = HOLset.isSubset(fvf f1,G) orelse
                 raise ERR "formula to be disch has extra variable(s)"
     in
-        thm (G,ril f1 A,Conn ("==>",[f1,f2]))
+        thm (HOLset.union(G,fvf f1),ril f1 A,Conn ("==>",[f1,f2]))
     end
+
+
+(*-------------------------------------
+MP: 
+
+A1, Γ1 |- A ==> B           A2, Γ2|- A
+-------------------------------------
+A1 ∪ A2, Γ1 ∪ Γ2 |- B
+---------------------------------------*)
 
 
 fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
@@ -398,21 +431,6 @@ val ax1_1 = read_thm "ALL X. ALL tx: X -> 1. tx = to1(X)"
 val ax1_2 = read_thm "ALL X. ALL ix: 0 -> X. ix = from0(X)"
 
 val ax1_3 = read_thm "ALL A. ALL B. ALL X. ALL fg: X -> A * B. ALL f: X -> A. ALL g: X -> B. p1(A,B) o fg = f & p2(A,B) o fg = g <=> fg = pa(f,g)"
-
-(*
-read_f 
-"ALL A. ALL B. ALL X. ALL fg: X -> A * B. p1(A,B) o fg = f & p2(A,B) o fg = g <=> fg = pa(f,g)"
-
-
-readf 
-"ALL A.ALL fg: X -> A * B. p1(A,B) o fg = f"
-
-read_f 
-"ALL A.ALL fg: X -> A * B. p1(A,B) o fg = f"
-
-just fixed
-
-*)
 
 val ax1_4 = read_thm "ALL A. ALL B. ALL X. ALL fg: A + B -> X. ALL f: A -> X. ALL g. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"
 

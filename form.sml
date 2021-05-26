@@ -8,8 +8,6 @@ Pred of string * term list
 | Quant of string * string * sort * form
 | fVar of string;   
 
-exception ERR of string
-
 
 fun replacet (u,new) t = 
     if t=u then new else 
@@ -60,40 +58,6 @@ fun abstract t =
     in abs 0 end;
 
 
-fun enclose a = "(" ^ a ^ ")";
-
-fun conc_list sep l = 
-    case l of 
-        [] => ""
-      | h :: t => sep ^ h ^ conc_list sep t
-
-fun conc_list1 sep l = 
-    case l of [] => ""
-            | h :: t => h  ^ (conc_list sep t);
-
-
-fun string_of_tl l = 
-    case l of
-        [] => ""
-      | h :: t => 
-        enclose (conc_list1 ","
-                            (List.map string_of_term (h :: t)))
-and string_of_term t = 
-    case t of
-        Var(n,s) => n
-      | Fun(f,s,[t1,t2]) => 
-        enclose 
-            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
-             (string_of_term t2)) 
-      | Fun(f,s,l) => 
-        f ^ (string_of_tl l)
-      | _ => ""
-and string_of_sort s = 
-    case s of 
-        ob => "ob"
-      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
-
-
 
 fun string_of_form f = 
     case f of
@@ -111,20 +75,7 @@ fun string_of_form f =
       | _ => raise ERR "bad formula"
 
 
-fun is_var t = 
-    case t of Var _ => true
-            | _ => false
-
-fun dest_var t = 
-    case t of Var(n,s) => (n,s)
-            | _ => raise ERR ("not a variable: " ^ (string_of_term t))
-
-fun dest_fun t = 
-    case  t of 
-        Fun(n,s,l) => (n,s,l)
-      | _ => raise ERR ("not a function: " ^ (string_of_term t))
-
-
+(*predicate functions*)
 
 fun is_dimp f = 
     case f of
@@ -142,18 +93,19 @@ fun is_neg f =
       | _ => false
 
 
+fun is_eqn f = 
+    case f of Pred("=",[t1,t2]) => true
+            | _ => false
+
+fun is_all f = 
+    case f of 
+        Quant("ALL",_,_,_) => true
+      | _ => false
+
 
 val TRUE = Pred("T",[])
+
 val FALSE = Pred("F",[])
-
-fun mk_ob a = Var(a,ob)
-fun mk_ar a t1 t2 = Var(a,ar(t1,t2))
-
-fun mk_ar0 a A B = Var(a,ar(mk_ob A,mk_ob B))
-
-fun mk_var n s = Var(n,s)
-
-fun mk_fun f s l = Fun(f,s,l)
 
 fun mk_neg f = Conn("~",[f])
 
@@ -164,19 +116,13 @@ fun mk_disj f1 f2 = Conn("|",[f1,f2])
 fun mk_imp f1 f2 = Conn("==>",[f1,f2])
 
 fun mk_dimp f1 f2 = Conn("<=>",[f1,f2])
+
 fun mk_all n s b = Quant("ALL",n,s,abstract (n,s) b)
 
 fun mk_exists n s b = Quant("EXISTS",n,s,abstract (n,s) b)
 
-
-
-
 (*destructor functions*)
 
-fun dest_fun t = 
-    case t of
-        Fun(f,s,l) => (f,s,l)
-      | _ => raise ERR "not a function term"
 
 fun dest_eq f = 
     case f of
@@ -208,18 +154,10 @@ fun dest_exists f =
         Quant("EXISTS",n,s,b) => ((n,s),b)
       | _ => raise ERR "not an existential"
 
-
-(*predicate functions*)
-
-fun is_eqn f = 
-    case f of Pred("=",[t1,t2]) => true
-            | _ => false
-
-fun is_all f = 
+fun dest_all f = 
     case f of 
-        Quant("ALL",_,_,_) => true
-      | _ => false
-
+        Quant("ALL",n,s,b) => ((n,s),b)
+      | _ => raise ERR "not a universal"
 
 fun eq_form fp = 
     case fp of 
@@ -232,13 +170,12 @@ fun eq_form fp =
       | (fVar fm1,fVar fm2)  => fm1 = fm2
       | _ => false
 
-
+(*compare functions which help produces HOLsets.*)
 
 fun pair_compare ac bc ((a1,b1),(a2,b2)) = 
     case (ac (a1,a2)) of 
         EQUAL => bc (b1,b2)
       | x => x
-
 
 fun inv_image_compare f c (x,y) = 
     c (f x, f y)
@@ -295,7 +232,6 @@ and fvtl tl =
         [] => essps
       | h :: t => HOLset.union (fvt h,fvtl t)
 
-
 fun fvf f = 
     case f of 
         Pred(P,tl) => fvtl tl
@@ -306,51 +242,13 @@ and fvfl G =
     case G of [] => essps
             | h :: t => HOLset.union (fvf h,fvfl t)
 
-
-
-
-
-
-fun lookup_t env n = Binarymap.peek(env,n)
-
-
-
-fun match_term pat ct env = 
-    case (pat,ct) of 
-        (Fun(f1,s1,l1),Fun(f2,s2,l2)) => 
-        if f1 <> f2 then raise ERR "different function names"
-        else match_sort s1 s2 (match_tl l1 l2 env)  
-      | (Var(n1,s1),_) => 
-        (case (lookup_t env (n1,s1)) of
-            SOME t => if t = ct then env else
-                      raise ERR "double bind"
-          | _ => 
-            Binarymap.insert 
-                (match_sort s1 (sort_of ct) env,(n1,s1),ct))
-      | (Bound i1,Bound i2) => 
-        if i1 <> i2 then 
-            raise ERR "bounded variable cannot be unified"
-        else env
-      | _ => raise Fail "unexpected term constructor"
-and match_sort sp cs env = 
-    case (sp,cs) of 
-        (ob,ob) => env
-      | (ar(d1,c1),ar(d2,c2)) => 
-        match_term c1 c2 (match_term d1 d2 env)
-      | _ => raise ERR "cannot match ob with ar"
-and match_tl l1 l2 env =
-    case (l1,l2) of 
-        ([],[]) => env
-      | (h1 :: t1,h2 :: t2) => 
-        match_tl t1 t2 (match_term h1 h2 env)
-      | _ => raise ERR "incorrect length of list"
-
-
 type menv = ((string * sort),term)Binarymap.dict * (string,form)Binarymap.dict
 
 (*matching environment: records where are term variables and formula variables matched to*)
 
-val emptyvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
+val emptyvd:(string * sort,term)Binarymap.dict = Binarymap.mkDict (pair_compare String.compare sort_compare)
+
+val emptyfvd:(string,form)Binarymap.dict = Binarymap.mkDict String.compare
 
 val mempty : menv = (emptyvd, Binarymap.mkDict String.compare)
 
@@ -368,6 +266,18 @@ fun lookup_t ((vd,fvd):menv) V = Binarymap.peek (vd,V)
 fun lookup_f ((vd,fvd):menv) fm = Binarymap.peek (fvd,fm)
 
 fun mk_menv tenv fenv :menv = (tenv,fenv)
+
+fun mk_tenv l = 
+    case l of 
+        [] => emptyvd
+      | ((n,s),t) :: l0 => Binarymap.insert(mk_tenv l0,(n,s),t)
+
+fun mk_fenv l = 
+    case l of 
+        [] => emptyfvd
+      | (n:string,f:form) :: l0 => Binarymap.insert(mk_fenv l0,n,f)
+
+fun mk_inst tl fl = mk_menv (mk_tenv tl) (mk_fenv fl)
 
 fun pmenv (env:menv) = (Binarymap.listItems (vd_of env),Binarymap.listItems (fvd_of env))
 
@@ -430,8 +340,6 @@ fun strip_all f =
             (b1,(n,s) :: l) end
       | _ => (f,[])
 
-
-
 fun pvariantt vd t = 
     case t of 
         Var(n,s) => 
@@ -445,17 +353,6 @@ and pvariants vl s =
         ob => ob
       | ar(t1,t2) => ar(pvariantt vl t1,pvariantt vl t2)
 
-
-fun fVarinf f = 
-    case f of
-        Pred _ => HOLset.empty String.compare
-      | Conn(co,[f1,f2]) => HOLset.union(fVarinf f1,fVarinf f2)
-      | Conn(co,[f0]) => fVarinf f0
-      | Quant(_,_,_,b) => fVarinf b
-      | fVar fm => HOLset.add(HOLset.empty String.compare, fm)
-      | _ => raise ERR "ill-formed formula"
-
-
 fun inst_term (env:menv) t = 
     case t of 
         Var(n,s) => 
@@ -468,7 +365,6 @@ and inst_sort env s =
     case s of
         ob => s
       | ar(t1,t2) => ar(inst_term env t1,inst_term env t2)
-
 
 fun inst_form env f = 
     case f of
@@ -485,32 +381,6 @@ fun inst_form env f =
         (case lookup_f env fvn of
              SOME f' => f'
            | NONE => f)
-
-(*
-fun inst_fVar (fm,f0) f = 
-    case f of 
-        Pred(_,_) => f
-      | Conn(co,fl) => Conn(co,List.map (inst_fVar (fm,f0)) fl)
-      | Quant(q,n,s,b) =>
-        let val n0 = 
-                if mem n (fVarinf f0) then n ^ "'" else n
-        in Quant(q,n ^ "'",s,inst_fVar (fm,f0) b)
-        end
-      | fVar ff => if ff = fm then f0 else f
-
-fun inst_fVarl l f = 
-    case l of 
-        [] => f
-      | (nh,fh) :: t =>
-        inst_fVar (nh,fh) (inst_fVarl t f)
-
-fun inst_fVare (env:menv) f = 
-    let val fVs = Binarymap.listItems (fvd_of env)
-    in inst_fVarl fVs f
-    end
-
-*)
-(*thinking about if I should delete the above three...*)
 
 
 fun psymsf f = 

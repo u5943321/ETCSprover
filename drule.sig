@@ -34,8 +34,12 @@ val conj_iff: thm -> thm -> thm
 val disj_iff: thm -> thm -> thm
 val imp_iff: thm -> thm -> thm
 val dimp_iff: thm -> thm -> thm
-val all_iff: thm -> (string * sort) -> thm
-val exists_iff: thm -> (string * sort) -> thm
+
+val all_iff: thm -> string * sort -> thm
+(*
+val exists_iff: thm -> string * sort -> thm 
+*)
+
 
 val T_conj_1: thm
 val T_conj_2: thm 

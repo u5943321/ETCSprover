@@ -7,7 +7,7 @@ type validation = thm list -> thm
 type tactic = goal -> goal list * validation
 
 fun assume_tac th (fl,f) = 
-    ([(concl th:: fl,f)], fn _ => raise ERR "")
+    ([(concl th:: fl,f)], fn [a] => prove_hyp th)
 
 
 
@@ -29,8 +29,6 @@ fun drule0 th (fl:form list,f) =
             NONE => raise ERR "no match"
           | SOME th => assume_tac th (fl,f)
     end
-
-fun existsE1 (n,s) f = existsE n s f 
 
 fun efn (n,s) (f,th) = 
     let 
@@ -177,8 +175,8 @@ fun then1_tac ((tac1:tactic),(tac2:tactic)) (fl,f) =
         val gl' = gl1 @ (tl gl)
         fun func' l = 
             (if length l = length gl' then
-                 case (func1 (List.take (l,length gl1))) of thm(G,C) =>
-                 func (thm(G,C) :: (List.drop (l,length gl1)))
+                 case (func1 (List.take (l,length gl1))) of thm(G,A,C) =>
+                 func (thm(G,A,C) :: (List.drop (l,length gl1)))
              else raise ERR "incorrect number of list items")
     in (gl',func')
     end
@@ -224,6 +222,11 @@ fun rw_tac thl =
         val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (basic_fconv conv fconv) 
     end
+(*
+
+val simp_trace = ref false
+*)
+
 
 
 fun by_tac na (fl,f) = 
@@ -234,16 +237,6 @@ fun by_tac na (fl,f) =
 fun mp_tac thb (asl,w) = 
     ([(asl, mk_imp (concl thb) w)], fn [th] => mp th thb)
 
-local
-  fun find ttac name goal [] = raise ERR name 
-    | find ttac name goal (a :: L) =
-      ttac (assume a) goal handle ERR _ => find ttac name goal L
-in
-  fun first_assum ttac (a, g) =
-      (find ttac "first_assum" (a, g)) a
-  fun last_assum ttac (a, g) =
-      (find ttac "last_assum" (a, g)) (List.rev a)
-end
 
              
 end

@@ -64,15 +64,6 @@ end
 open Binarymap List Env
 
 
-fun conc_list sep [] = ""
-  | conc_list sep (b::bs) = (sep ^ b) ^ (conc_list sep bs);
-
-fun conc_list1 sep [] = " "
-  | conc_list1 sep (b::bs) = b ^ (conc_list sep bs);
-
-
-fun enclose a = "(" ^ a ^ ")"
-
 fun stringof_pt pt = 
     case pt of 
         pVar (name,ps) => "pv" ^ " " ^ name ^ " : " ^ stringof_ps ps
@@ -255,9 +246,6 @@ val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
                          ("=",[("A",ob),("B",ob)]),
                          ("=",[("a",ar(mk_ob "A",mk_ob "B")),("b",ar(mk_ob "A",mk_ob "B"))])]
 
-fun mk_ar_sort t1 t2 = ar(t1,t2)
-
-fun mk_const n s = mk_fun n s []
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
@@ -311,24 +299,9 @@ val fsyms0:fsymd =
         ]
 
 
-
-(*should we allow definition to take only function terms?*)
-
 fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
 
 fun new_fun f (s,tl) = Binarymap.insert (fsyms0,f,(s,tl))
-
-(*
-val n2u0:uvd = Binarymap.mkDict (pair_compare String.compare sort_compare)
-*)
-
-(*clause for pFun/pAnno : do type_infer for fun sym first?
-do not do type_infer for other clauses because on pFun/pAnno gives information*)
-
-(*do chase somewhere?*)
-
-
-(*define chase which chase the var and convert it to a pt for others*)
 
 fun t2pt t = 
     case t of 
@@ -388,11 +361,8 @@ and fgt_name_ps ps nd env =
             (par(t1',t2'),nd2,env2)
         end
       | _ => raise ERR "unexpected presort variable"
-            
 
 fun nps2ptUVar (n,ps) nd env = fgt_name_pt (pVar(n,ps)) nd env
-
- 
 
 fun npsl2ptUVarl l env = 
     foldr (fn (p,(l,nd,env)) => 
@@ -402,13 +372,7 @@ fun npsl2ptUVarl l env =
           ([],essd,env)
           l
 
-
 fun mk_pob A = pVar(A,pob)
-
-
-
-
-
 
 fun type_infer_pfun env t ty = 
     case t of 
@@ -451,8 +415,6 @@ and type_infer env t ty =
         (case lookup_us env name of
              SOME ps => unify_ps env ps ty
           | _ => insert_us name ty env)
-
-
 
 fun type_infer_args env pf = 
     case pf of
@@ -502,9 +464,6 @@ fun type_infer_pf env pf =
 
 let pred and function type-infer share common function*)
 
-(*topological order add edge for dependency for dependency*)
-
-
 fun apfst f (x,tl,env) = (f x, tl,env);
 
 fun cons x xs = x::xs;
@@ -525,13 +484,6 @@ exception ERROR of string
 fun rightparen (x, Key")"::toks,env) = (x, toks,env)
   | rightparen _ = raise ERROR "Symbol ) expected";
 
-(*really parse pob/par because they are actually doing type-infer. ?*)
-
-(*type inference during parsing : 
-from f: A -> B, know that f is an arrow and A and B are objects
-
-use pAnno for this type-infer?
-*)
 
 fun fprec_of "*" = 2
   | fprec_of "+" = 1
@@ -550,17 +502,148 @@ val cdict0:(string,psort) dict =
                (Binarymap.mkDict String.compare) 
                [("N",pob),("0",pob),("1",pob),("z",par(pFun("1",pob,[]),pFun("N",pob,[]))),
                 ("s",par(pFun("N",pob,[]),pFun("N",pob,[])))]
-(*
- insert(insert(insert(insert(Binarymap.mkDict String.compare,"N",pob),"z",par(pFun("1",pob,[]),pFun("N",pob,[]))),"s",par(pFun("N",pob,[]),pFun("N",pob,[]))),"1",pob)
-*)
 
-
-(*
-
-val cdict0 = foldr 
-
-*)
 val cdict = ref cdict0
+
+
+
+datatype ast = 
+         aId of string 
+         | aApp of string * ast list
+         | aInfix of ast * string * ast
+         | aBinder of string * ast(*variable and sort*) * ast (*body*)
+
+(*all it have to do is to turn a token list into a tree, do not need add interesting sort/term/form*)
+
+(*fixity table*)
+
+fun fxty i = 
+    case i of 
+        ":" => 1
+      | "->" => 2
+      | "=" => 1
+      | "==>" => 1
+      | "<=>" => 1
+      | "~" => 4
+      | "&" => 3
+      | "|" => 2
+      | "*" => 5
+      | "+" => 4
+      | "^" => 6
+      | _ => 0
+
+
+ 
+fun parse_arepeat (a,parsefn) tl = 
+    case tl of 
+        (Key(b)::tl1) => if b = a then 
+                             parse_arepeat1 (a,parsefn) tl1
+                         else ([],tl)
+      | _ => ([],tl)
+and parse_arepeat1 (a,parsefn) tl =
+    let val (u,tl1) = parsefn tl
+        val (asts,tl2) =  (parse_arepeat (a,parsefn) tl1)
+    in (u::asts,tl2)
+    end
+
+exception ERROR of string
+
+fun rparen (x, Key")"::toks) = (x, toks)
+  | rparen _ = raise ERROR "Symbol ) expected";
+(*
+fun parse_ast tl =
+    case tl of
+        Key"ALL"::tl =>
+        let 
+            val (ns,tl1) = parse_ast tl
+            val (b,tl2) = parse_ast tl1
+        in
+            (aBinder ("ALL",ns,b), tl2)
+        end
+      | Key"EXISTS"::tl =>
+        let 
+            val (ns,tl1) = parse_ast tl
+            val (b,tl2) = parse_ast tl1
+        in
+            (aBinder ("EXISTS",ns,b), tl2)
+        end 
+      | Key"("::tl => rparen (parse_ast tl)
+      | _ => parse_ast_fix 0 (parse_ast_atom tl)
+and parse_ns tl = 
+    case tl of
+        Id(a) => 
+and parse_ast_fix n (ast,tl) = 
+    case tl of 
+        Key(k) :: tl =>
+        if fxty k < n then (ast,Key(k) :: tl)
+        else
+            let
+                val (ast1,tl1) = parse_ast_atom tl
+                val (ast2,tl2) = parse_ast_fix (fxty k) (ast1,tl1)
+                val ast' = aInfix (ast,k,ast2)
+            in parse_ast_fix n (ast',tl2)
+            end
+      | _ => (ast,tl)
+and parse_ast_atom tl = 
+    case tl of
+        (Key"~"::tl1) =>
+        let val (ast,tl2) = parse_ast_atom tl1
+        in (aApp("~",[ast]),tl2)
+        end
+     | Id(a)::Key"("::tl1 => 
+       let 
+           val (astl,tl2) = rparen (parse_arepeat1 (",",parse_ast_atom) tl1)
+       in (aApp(a,astl),tl2)
+       end
+     | Id(a)::tl => (aId(a),tl)
+*)
+
+fun ast2pf ast = 
+    case ast of 
+        aId(a) => 
+        if a = "T" then pPred("T",[]) else 
+        if a = "F" then pPred("F",[]) else
+        raise ERR ("variable:" ^ a ^ " is parsed as a predicate")
+      | aApp(str,astl) => 
+        if is_pred str then 
+            pPred(str,List.map ast2pt astl)
+        else raise ERR "not a predicate symbole"
+      | aInfix(ast1,str,ast2) => 
+        if mem str ["&","|","<=>","==>"] then
+            pConn(str,[ast2pf ast1,ast2pf ast2])
+        else raise ERR "not an infix operator" (*add case of equality!*)
+      | aBinder(str,ns,b) => 
+        if str = "ALL" orelse str = "EXISTS" then
+            let 
+                val (n,s) = 
+                    case ast2pt ns of 
+                        pVar(n0,s0) => (n0,s0)
+                      | _ => raise ERR "err in parsing bound variable"
+            in
+                pQuant(str,n,s,ast2pf b)
+            end
+        else raise ERR "not a quantifier"
+and ast2pt ast = 
+    case ast of 
+        aId(a) => pVar(a,pob) 
+      | aApp(str,astl) => 
+        if is_fun str then 
+            pFun(str,pob,List.map ast2pt astl)
+        else raise ERR "not a function symbol"
+      | aInfix(ast1,str,ast2) => 
+        if mem str ["*","+","^"] then
+            pFun(str,pob,[ast2pt ast1,ast2pt ast2])
+        else raise ERR "not an infix operator"
+      (*need to generate type-inference/u vars*)
+      | aBinder(str,ns,b) => 
+        raise ERR "quantified formula parsed as a term!"
+
+
+
+(*generate the unification variables on a later step after obtaining a ast*)
+
+(*and turn the ast into a pterm*)
+
 
 fun is_const sr = 
     case (peek (!cdict,sr)) of 
@@ -571,7 +654,6 @@ fun ps_of_const c =
     case (peek (!cdict,c)) of 
         SOME ps => ps 
       | _ => raise ERROR "not a constant"
-
 
 
 fun parse_pt tl env = parse_pt_fix 0 (parse_pt_atom tl env)
@@ -636,11 +718,11 @@ and parse_pob tl env =
     in (pAnno (pt,pob),tl1,env1)
     end
  
-fun mk_quant q n ps pf = pQuant (q,n,ps,pf)
+fun mk_pQuant q n ps pf = pQuant (q,n,ps,pf)
 
 fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
 
-fun mk_pneg pf = pConn("~",[pf])
+fun mk_pNeg pf = pConn("~",[pf])
 
 fun mk_pPred P ptl = pPred(P,ptl)
 
@@ -686,7 +768,7 @@ fun parse_pf tl env =
              let val (n,env1) = fresh_var env
                  val env2 = record_ps a (psvar n) env1
                  val (pb,tl2,env3) = parse_pf tl1 env2
-             in (mk_quant "ALL" a (psvar n) pb,tl2,clear_ps a env3)
+             in (mk_pQuant "ALL" a (psvar n) pb,tl2,clear_ps a env3)
              end
            | (Key":"::tl1) => 
              let val (ps,tl2,env1) = parse_par tl1 env
@@ -695,7 +777,7 @@ fun parse_pf tl env =
                     let  val env2 = record_ps a ps env1
                          val (pb,tl3,env3) = parse_pf tl3 env2
                     in
-                        (mk_quant "ALL" a ps pb,tl3,clear_ps a env3) 
+                        (mk_pQuant "ALL" a ps pb,tl3,clear_ps a env3) 
                     end
                   | _ => raise ERROR "Expected dot"
              end
@@ -706,7 +788,7 @@ fun parse_pf tl env =
              let val (n,env1) = fresh_var env
                  val env2 = record_ps a (psvar n) env1
                  val (pb,tl2,env3) = parse_pf tl1 env2
-             in (mk_quant "EXISTS" a (psvar n) pb,tl2,clear_ps a env3)
+             in (mk_pQuant "EXISTS" a (psvar n) pb,tl2,clear_ps a env3)
              end
            | (Key":"::tl1) => 
              let val (ps,tl2,env1) = parse_par tl1 env
@@ -715,7 +797,7 @@ fun parse_pf tl env =
                     let  val env2 = record_ps a ps env1
                          val (pb,tl3,env3) = parse_pf tl3 env2
                     in
-                        (mk_quant "EXISTS" a ps pb,tl3,clear_ps a env3) 
+                        (mk_pQuant "EXISTS" a ps pb,tl3,clear_ps a env3) 
                     end
                   | _ => raise ERROR "Expected dot"
              end
@@ -732,7 +814,7 @@ and parsefix prec (pf,tl,env) =
       | _ => (pf,tl,env) 
 and parse_atom tl env (*unkw*) =
     case tl of 
-        (Key"~"::tl1) => apfst mk_pneg (parse_atom tl1 env)
+        (Key"~"::tl1) => apfst mk_pNeg (parse_atom tl1 env)
       | (Key"("::tl1) =>
         (rightparen (parse_pf tl1 env)
          handle ERROR _ => 
@@ -771,20 +853,9 @@ let val (pt1,tl1,env1) = parse_pt tl env
 | aspred =>      pred code *)
       | _ => raise ERROR "Syntax of formula"
 
-datatype unkh = error | asfun | aspred
+(*parser may have another flag: parse as fun, as pred
 
-
-(*can ask the user to give the name of pred/type*)
-
-(*if is_pred ...
-else if is_fun
-else "consult handling of unknown name" unknown 
-
-parser take an extra parameter unkw 
-
-ERR 
- *)
-
+datatype unkh = error | asfun | aspred *)
 
 
 fun parse_end (x, l, env) =
@@ -805,9 +876,6 @@ fun print_read_pf a =
     let val (pf,env) = parse_end (parse_pf (lex a) empty)
     in (pf,pdict env)
     end
-
-
-(*do we really need to change the env so it records ptUVars -> pob?*)
 
 fun term_from_pt env pt = 
     case (chasevart pt env) of 

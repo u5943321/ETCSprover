@@ -7,15 +7,6 @@ fun undisch th = mp th (assume (#1(dest_imp (concl th))))
 
 fun add_assum f th = mp (disch f th) (assume f)
 
-
-(*
-fun SPEC_ALL th = 
-
-
-fun PART_FMATCH partfn th fm = 
-*)
-
-
 fun simple_exists (v as (n,s)) th = existsI th v (Var v) (concl th)
 
 fun imp_trans th1 th2 = 
@@ -205,32 +196,6 @@ fun F_conj1 f = dimpI (disch (Conn("&",[FALSE,f])) (conjE1 (assume (Conn("&",[FA
 fun F_conj2 f = dimpI (disch (Conn("&",[f,FALSE])) (conjE2 (assume (Conn("&",[f,FALSE])))))
                       (disch FALSE (falseE [FALSE] (Conn("&",[f,FALSE]))))
 
-
-(*this is why we do not check if current variable in context
-
-all_true ("a",ob);
-Exception- ERR "variable to be abstract is not currently in the context" *)
-
-(*
-fun all_true (n,s) = dimpI (disch (Quant("ALL",n,s,TRUE)) (trueI []))
-                           (disch TRUE (allI (n,s) (trueI [])))
-
-(*
-val all_true_ar = all_true ("a",ar(Var("A",ob),Var("B",ob)))
-val all_true_ob = all_true ("A",ob)
-*)
-
-fun all_false (n,s) = dimpI (disch (Quant("ALL",n,s,FALSE)) 
-                                   (allE (assume (Quant("ALL",n,s,FALSE))) (Var (n,s))))
-                            (disch FALSE (allI (n,s) (assume FALSE)))
-*)
-
-
-(*
-val all_false_ar = all_false ("a",ar(Var("A",ob),Var("B",ob)))
-val all_false_ob = all_false ("A",ob)
-*)
-
 fun T_imp1 f =
     let val Timpf2f = disch (Conn("==>",[TRUE,f])) (mp (assume (Conn("==>",[TRUE,f]))) (trueI []))
         val f2Timpf = disch f (disch TRUE (add_assum TRUE (assume f)))
@@ -370,28 +335,13 @@ fun exists_false (n,s) =
     thm(essps,[],mk_dimp (mk_exists n s FALSE) FALSE)
 
 
-(*
-    let val eF = mk_exists n s FALSE
-        val eF2F = disch eF (existsE (assume eF) (n,s))
-        val F2eF = disch FALSE (falseE [FALSE] eF)
-    in dimpI eF2F F2eF
-    end
-
-*)
-
-(*
-fun conj_comm c1 c2 = 
-
-*)
-
-(*compare*)
 
 fun iff_trans (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     case (C1,C2) of 
         (Conn("<=>",[f1,f2]), Conn("<=>",[f3,f4])) => 
         if eq_form (f2,f3) then 
-            let val f1f2 = conjE1 (dimpE (thm(G2,A1,C1)))
-                val f2f1 = conjE2 (dimpE (thm(G2,A1,C1)))
+            let val f1f2 = conjE1 (dimpE (thm(G1,A1,C1)))
+                val f2f1 = conjE2 (dimpE (thm(G1,A1,C1)))
                 val f2f4 = conjE1 (dimpE (thm(G2,A2,C2)))
                 val f4f2 = conjE2 (dimpE (thm(G2,A2,C2)))
                 val f1f4 = imp_trans f1f2 f2f4
@@ -421,6 +371,7 @@ fun dimp_iff (th1 as thm(G1,A1,C1)) (th2 as thm(G2,A2,C2)) =
       | _ => raise ERR ("not a pair of iff" ^ string_of_form C1 ^ " , " ^ string_of_form C2)
 
 
+
 fun all_iff (th as thm(G,A,C)) (n,s) = 
     case C of 
         Conn("<=>",[P,Q]) => 
@@ -434,27 +385,29 @@ fun all_iff (th as thm(G,A,C)) (n,s) =
       | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
 (*
-fun exists_iff (th as thm(G,C)) (n,s) = 
-    case C of 
-        Conn("<=>",[P,Q]) => 
-        let val eP = Quant("EXISTS", n, s, P)
-            val eQ = Quant("EXISTS", n, s, Q)
-            val eP2eQ = disch eP (simple_exists (n,s) (dimp_mp_l2r (existsE (assume eP) (n,s)) th))
-            val eQ2eP = disch eQ (existsI (dimp_mp_r2l th (existsE (assume eQ) (n,s))) (n,s))
-        in
-            dimpI eP2eQ eQ2eP
-        end
-      | _ => raise ERR ("conclusion of theorem is not an iff"  ^ " " ^ string_of_form C)
-*)
-
 fun exists_iff (th as thm(G,A,C)) (n,s) = 
     let
         val (P,Q) = dest_dimp C
+        val P2Q = undisch (conjE1 (dimpE th))
+        val Q2P = undisch (conjE2 (dimpE th))
+        val L2R = disch (mk_exists n s P)
+                        (existsI
+                             (existsE (n,s) (assume (mk_exists n s P)) P2Q)
+                             (n,s) (Var(n,s)) Q)
+        val R2L = disch (mk_exists n s Q) 
+                        (existsI
+                             (existsE (n,s) (assume (mk_exists n s Q)) Q2P)
+                             (n,s) (Var(n,s)) P)
+    in
+        dimpI L2R R2L
+    end
         val f = Conn("<=>",[mk_exists n s P,mk_exists n s Q])
     in
         thm(fvf f,[],f)
     end
-(*fix this proof!*)
+
+*)
+
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 
@@ -664,18 +617,13 @@ fun specl th l =
 
 fun spec_all th = 
     let 
-        val fv = fvfl (ant th)
+        val fv = fvfl ((concl th) ::ant th)
+        (*maybe use cont instead of fvfl?*)
         val v2bs = snd (strip_all (concl th))
         val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
     in 
         specl th v2bs'
     end
-(*previously rev the list, was wrong!*)
-
-fun abstl th l = 
-    case l of 
-        [] => th
-      | (n,s) :: t => allI (n,s) (abstl th t)
 
 
 
@@ -782,21 +730,8 @@ fun gen_all th =
     end
 
 
-(*what if d1 depends on d2 but c2 depends on c1???*)
-(*
-fun order_of_gen (l: (string * sort) list) = 
-    let val g = 
-            case l of
-                [] => SymGraph.empty
-              | (ns :: t) => 
-
-fun gen_all th = 
-let val 
-*)
 
 
-(*should derive it*)
 
-fun frefl f = thm(fvf f,[],Conn("<=>",[f,f]))
 
 end

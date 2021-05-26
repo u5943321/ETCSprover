@@ -5,9 +5,47 @@ datatype sort = ob
                | ar of term * term 
 and term =
     Var of string * sort
- (*   | Param of string * sort * (string * sort) list*)
     | Bound of int
     | Fun of string * sort * term list;
+
+(*string_of stuff should be at very begining to help producing helpful error message*)
+
+exception ERR of string
+
+fun enclose a = "(" ^ a ^ ")";
+
+fun conc_list sep l = 
+    case l of 
+        [] => ""
+      | h :: t => sep ^ h ^ conc_list sep t
+
+fun conc_list1 sep l = 
+    case l of [] => ""
+            | h :: t => h  ^ (conc_list sep t);
+
+
+fun string_of_tl l = 
+    case l of
+        [] => ""
+      | h :: t => 
+        enclose (conc_list1 ","
+                            (List.map string_of_term (h :: t)))
+and string_of_term t = 
+    case t of
+        Var(n,s) => n
+      | Fun(f,s,[t1,t2]) => 
+        enclose 
+            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
+             (string_of_term t2)) 
+      | Fun(f,s,l) => 
+        f ^ (string_of_tl l)
+      | _ => ""
+and string_of_sort s = 
+    case s of 
+        ob => "ob"
+      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+
+
 
 fun dest_arrow (ar (S,T)) = (S,T)
   | dest_arrow _  = raise Fail "dest_arrow : Error"
@@ -33,6 +71,36 @@ fun sort_of t =
     case t of Var (_,s) => s
             | Fun (_,s,_) => s 
             | _ => ob 
+
+
+fun is_var t = 
+    case t of Var _ => true
+            | _ => false
+
+
+fun dest_var t = 
+    case t of Var(n,s) => (n,s)
+            | _ => raise ERR ("not a variable: " ^ (string_of_term t))
+
+fun dest_fun t = 
+    case  t of 
+        Fun(n,s,l) => (n,s,l)
+      | _ => raise ERR ("not a function: " ^ (string_of_term t))
+
+
+fun mk_ar_sort t1 t2 = ar(t1,t2)
+
+fun mk_ob a = Var(a,ob)
+
+fun mk_ar a t1 t2 = Var(a,ar(t1,t2))
+
+fun mk_ar0 a A B = Var(a,ar(mk_ob A,mk_ob B))
+
+fun mk_var n s = Var(n,s)
+
+fun mk_fun f s l = Fun(f,s,l)
+
+fun mk_const n s = mk_fun n s []
 
 fun id A = if sort_of A = ob then Fun("id",ar(A,A),[A])
            else raise no_sort
