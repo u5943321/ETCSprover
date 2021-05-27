@@ -530,6 +530,7 @@ fun fxty i =
       | "*" => 5
       | "+" => 4
       | "^" => 6
+      | "o" => 3
       | _ => ~1
 
 
@@ -564,7 +565,8 @@ fun parse_ast tl =
       | Key"EXISTS"::tl =>
         let 
             val (ns,tl1) = parse_ast tl
-            val (b,tl2) = parse_ast tl1
+            val tl1' = List.tl tl1
+            val (b,tl2) = parse_ast tl1'
         in
             (aBinder ("EXISTS",ns,b), tl2)
         end 
@@ -576,7 +578,7 @@ and parse_ast_fix n (ast,tl) =
         if fxty k < n then (ast,Key(k) :: tl)
         else
             let
-                val (ast1,tl1) = parse_ast_atom tl
+                val (ast1,tl1) = parse_ast tl
                 val (ast2,tl2) = parse_ast_fix (fxty k) (ast1,tl1)
                 val ast' = aInfix (ast,k,ast2)
             in parse_ast_fix n (ast',tl2)
@@ -585,7 +587,7 @@ and parse_ast_fix n (ast,tl) =
 and parse_ast_atom tl = 
     case tl of
         (Key"~"::tl1) =>
-        let val (ast,tl2) = parse_ast_atom tl1
+        let val (ast,tl2) = parse_ast tl1
         in (aApp("~",[ast]),tl2)
         end
      | Id(a)::Key"("::tl1 => 
@@ -594,6 +596,10 @@ and parse_ast_atom tl =
        in (aApp(a,astl),tl2)
        end
      | Id(a)::tl => (aId(a),tl)
+
+
+
+(*need dict of infixes*)
 
 
 fun ast2pf ast = 
@@ -629,7 +635,7 @@ and ast2pt ast =
             pFun(str,pob,List.map ast2pt astl)
         else raise ERR "not a function symbol"
       | aInfix(ast1,str,ast2) => 
-        if mem str ["*","+","^"] then
+        if mem str ["*","+","^","o"] then
             pFun(str,pob,[ast2pt ast1,ast2pt ast2])
         else raise ERR "not an infix operator"
       (*need to generate type-inference/u vars*)
