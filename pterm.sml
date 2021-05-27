@@ -530,7 +530,7 @@ fun fxty i =
       | "*" => 5
       | "+" => 4
       | "^" => 6
-      | _ => 0
+      | _ => ~1
 
 
  
@@ -550,13 +550,14 @@ exception ERROR of string
 
 fun rparen (x, Key")"::toks) = (x, toks)
   | rparen _ = raise ERROR "Symbol ) expected";
-(*
+
 fun parse_ast tl =
     case tl of
         Key"ALL"::tl =>
         let 
             val (ns,tl1) = parse_ast tl
-            val (b,tl2) = parse_ast tl1
+            val tl1' = List.tl tl1
+            val (b,tl2) = parse_ast tl1'
         in
             (aBinder ("ALL",ns,b), tl2)
         end
@@ -569,9 +570,6 @@ fun parse_ast tl =
         end 
       | Key"("::tl => rparen (parse_ast tl)
       | _ => parse_ast_fix 0 (parse_ast_atom tl)
-and parse_ns tl = 
-    case tl of
-        Id(a) => 
 and parse_ast_fix n (ast,tl) = 
     case tl of 
         Key(k) :: tl =>
@@ -592,11 +590,11 @@ and parse_ast_atom tl =
         end
      | Id(a)::Key"("::tl1 => 
        let 
-           val (astl,tl2) = rparen (parse_arepeat1 (",",parse_ast_atom) tl1)
+           val (astl,tl2) = rparen (parse_arepeat1 (",",parse_ast) tl1)
        in (aApp(a,astl),tl2)
        end
      | Id(a)::tl => (aId(a),tl)
-*)
+
 
 fun ast2pf ast = 
     case ast of 
