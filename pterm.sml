@@ -602,41 +602,110 @@ and parse_ast_atom tl =
 (*need dict of infixes*)
 
 
-fun ast2pf ast = 
+
+datatype aterm = 
+         aVar of string * ((aterm * aterm) option)
+         | aFun of string * aterm list
+
+datatype aform = 
+         aPred of aterm list 
+         | aConn of aform list
+         | aQuant of string * ((aterm * aterm) option) * aform
+
+fun pPred_cons pf pt = 
+    case pf of 
+        pPred(p,tl) => pPred(p,pt :: tl)
+      | _ => raise ERR "not a pPred"
+
+fun pFun_cons pt0 pt = 
+    case pt0 of 
+        pFun(f,ps,tl) => pFun(f,ps,pt :: tl)
+      | _ => raise ERR "not a pFun"
+
+fun ast2pf ast (env:env) = 
     case ast of 
         aId(a) => 
-        if a = "T" then pPred("T",[]) else 
-        if a = "F" then pPred("F",[]) else
+        if a = "T" then (pPred("T",[]),env) else 
+        if a = "F" then (pPred("F",[]),env) else
         raise ERR ("variable:" ^ a ^ " is parsed as a predicate")
+      | aApp("~",[ast]) => 
+        let val (pf,env1) = ast2pf ast env in
+            (pConn("~",[pf]),env)
+        end
       | aApp(str,astl) => 
-        if is_pred str then 
-            pPred(str,List.map ast2pt astl)
-        else raise ERR "not a predicate symbole"
+        if mem str ["P","Q"] then 
+            case astl of
+                [] => (pPred(str,[]),env)
+              | h :: t => 
+                let val (pf,env1) = ast2pf (aApp(str,t)) env
+                    val (pt,env2) = ast2pt h env1
+                in (pPred_cons pf pt,env2)
+                end
+        else raise ERR "not a predicate symbol" 
       | aInfix(ast1,str,ast2) => 
         if mem str ["&","|","<=>","==>"] then
-            pConn(str,[ast2pf ast1,ast2pf ast2])
-        else raise ERR "not an infix operator" (*add case of equality!*)
+            let
+                val (pf1,env1) = ast2pf ast1 env
+                val (pf2,env2) = ast2pf ast2 env1
+            in
+                (pConn(str,[pf1,pf2]),env2)
+            end else 
+        if mem str ["="] then
+            let
+                val (pt1,env1) = ast2pt ast1 env
+                val (pt2,env2) = ast2pt ast2 env1
+            in
+                (pPred(str,[pt1,pt2]),env2)
+            end else
+        raise ERR "not an infix operator" (*add case of equality!*)
       | aBinder(str,ns,b) => 
         if str = "ALL" orelse str = "EXISTS" then
-            let 
-                val (n,s) = 
-                    case ast2pt ns of 
-                        pVar(n0,s0) => (n0,s0)
-                      | _ => raise ERR "err in parsing bound variable"
-            in
-                pQuant(str,n,s,ast2pf b)
+            let val (pt,env1) = ast2pt ns env in 
+                case pt of 
+                    pVar(n,s) => 
+                    let val (pf,env2) = ast2pf b env1 in
+                        (pQuant(str,n,s,pf),env2)
+                    end
+                  | _ => raise ERR "err in parsing bound variable"
             end
         else raise ERR "not a quantifier"
-and ast2pt ast = 
+and ast2pt ast env = 
     case ast of 
-        aId(a) => pVar(a,pob) 
+        aId(a) =>
+        (case ps_of env a of 
+             NONE => let val (Av,env1) = fresh_var env 
+                         val env2 = record_ps a (psvar Av) env1
+                     in (pVar(a,psvar Av),env2)
+                     end
+           | SOME ps => (pVar(a,ps),env))
       | aApp(str,astl) => 
         if is_fun str then 
-            pFun(str,pob,List.map ast2pt astl)
-        else raise ERR "not a function symbol"
+            case astl of
+                [] => 
+                let val (Av,env1) = fresh_var env
+                in (pFun(str,psvar Av,[]),env1)
+                end
+              | h :: t => 
+                let val (pt0,env1) = ast2pt (aApp(str,t)) env
+                    val (pt,env2) = ast2pt h env1
+                in (pFun_cons pt0 pt,env2)
+                end
+        else raise ERR "not a predicate symbol" 
+      | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) => 
+        let 
+            val (pt1,env1) = ast2pt ast1 env
+            val (pt2,env2) = ast2pt ast2 env1
+            val (Av,env3) = fresh_var env2
+        in (pAnno(pVar(n,psvar Av),par(pt1,pt2)),env3)
+        end
       | aInfix(ast1,str,ast2) => 
         if mem str ["*","+","^","o"] then
-            pFun(str,pob,[ast2pt ast1,ast2pt ast2])
+            let val (pt1,env1) = ast2pt ast1 env
+                val (pt2,env2) = ast2pt ast2 env1
+                val (Av,env3) = fresh_var env2
+            in
+                (pFun(str,psvar Av,[pt1,pt2]),env3)
+            end
         else raise ERR "not an infix operator"
       (*need to generate type-inference/u vars*)
       | aBinder(str,ns,b) => 
