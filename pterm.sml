@@ -1,6 +1,10 @@
 structure pterm :> pterm = 
 struct
-open token pterm_dtype term form
+open token pterm_dtype term form symbols
+
+
+
+(*TODO: let the parse parse " ' ". *)
 
 structure Env = 
 struct
@@ -221,88 +225,6 @@ and unify_pt env pt1 pt2: env=
       | _ => raise (UNIFY "terms cannot be unified")
 
 
-
-(*working on pred type inference*)
-
-type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
-
-type psymd = (string, (string * sort) list) Binarymap.dict
-
-
-fun lookup_pred (pd:psymd) p = Binarymap.peek (pd,p)
-
-fun lookup_fun (fd:fsymd) f = Binarymap.peek (fd,f)
-
-
-val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
-                                  Binarymap.insert (d,p,l)) 
-                        (Binarymap.mkDict String.compare)
-                        [(*("ismono",[("a",ar(mk_ob "A",mk_ob "B"))]),*)
-                         ("isgroup",[("G",ob),
-                                     ("m",ar (mk_fun "*" ob [mk_ob "G",mk_ob "G"],
-                                              mk_ob "G")),
-                                     ("i",ar (mk_fun "1" ob [],mk_ob "G")),
-                                     ("inv",ar (mk_ob "G",mk_ob "G"))]),
-                         ("=",[("A",ob),("B",ob)]),
-                         ("=",[("a",ar(mk_ob "A",mk_ob "B")),("b",ar(mk_ob "A",mk_ob "B"))])]
-
-
-type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
-
-val fsyms0:fsymd = 
-    List.foldr 
-        (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
-            Binarymap.insert (d,p,(s,l)))
-        (Binarymap.mkDict String.compare)
-        [("N",(ob,[])),
-         ("0",(ob,[])),
-         ("1",(ob,[])),
-         ("id",(ar(mk_ob "A",mk_ob "A"),[("A",ob)])),
-         ("to1",(ar(mk_ob "X",mk_const "1" ob),[("X",ob)])),
-         ("from0",(ar(mk_const "0" ob,mk_ob "X"),[("X",ob)])),
-         ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
-                                        ("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("*",(ob,[("A",ob),("B",ob)])),
-         ("+",(ob,[("A",ob),("B",ob)])),
-         ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
-         ("p2",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
-         ("i1",(ar(mk_ob "A",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("i2",(ar(mk_ob "B",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("pa",(ar(mk_ob "X",mk_fun "*" ob [mk_ob "A",mk_ob "B"]),
-                [("f",ar(mk_ob "X",mk_ob "A")),("g",ar(mk_ob "X",mk_ob "B"))])),
-         ("copa",(ar(mk_fun "+" ob [mk_ob "A",mk_ob "B"],mk_ob "X"),
-                [("f",ar(mk_ob "A",mk_ob "X")),("g",ar(mk_ob "B",mk_ob "X"))])),
-         ("eqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("coeqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqa",(ar(mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "A"),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("coeqa",(ar(mk_ob "B",mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqinduce",(ar(mk_ob "X",mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
-                  ("h",ar(mk_ob "X",mk_ob "A"))])),
-         ("coeqinduce",(ar(mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "X"),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
-                  ("h",ar(mk_ob "B",mk_ob "X"))])),
-         ("exp",(ob,[("A",ob),("B",ob)])),
-         ("tp",(mk_ar_sort (mk_ob "B") (mk_fun "exp" ob [mk_ob "A", mk_ob "C"]),
-                [("f",ar(mk_fun "*" ob [mk_ob "A", mk_ob "B"],mk_ob "C"))])),
-         ("ev",(mk_ar_sort 
-                    (mk_fun "*" ob [mk_ob "A",mk_fun "exp" ob [mk_ob "A",mk_ob "B"]]) 
-                    (mk_ob "B"),
-                [("A",ob),("B",ob)])),
-         ("s",(ar(mk_ob "N",mk_ob "N"),[])),
-         ("z",(ar(mk_const "1" ob,mk_ob "N"),[])),
-         ("Nind",(ar(mk_const "N" ob,mk_ob "X"),
-                  [("x0",ar(mk_const "1" ob,mk_ob "X")),
-                   ("t",ar(mk_ob "X",mk_ob "X"))]))
-        ]
-
-
-fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
-
-fun new_fun f (s,tl) = Binarymap.insert (fsyms0,f,(s,tl))
-
 fun t2pt t = 
     case t of 
         Var(n,s) => pVar(n,s2ps s)
@@ -316,6 +238,9 @@ and s2ps s =
 val ns2nps =  (fn (a,b) => (a,s2ps b))
 
 val essd:(string , string) dict = Binarymap.mkDict String.compare
+
+
+(*the name in the dictionary does not matter, what does matter is that different name corresponds to different unification variables. fgt name functions forgets the name strings and turns them into unification variables which corresponds to natural numbers.*)
 
 fun fgt_name_pt pt (nd:(string , string) dict) env = 
     case pt of
@@ -497,16 +422,6 @@ fun mk_pt_conn env co s1 s2 =
     end
 
 
-val cdict0:(string,psort) dict =
-    List.foldr (fn ((n,s),d) => (insert(d,n,s))) 
-               (Binarymap.mkDict String.compare) 
-               [("N",pob),("0",pob),("1",pob),("z",par(pFun("1",pob,[]),pFun("N",pob,[]))),
-                ("s",par(pFun("N",pob,[]),pFun("N",pob,[])))]
-
-val cdict = ref cdict0
-
-
-
 datatype ast = 
          aId of string 
          | aApp of string * ast list
@@ -515,24 +430,25 @@ datatype ast =
 
 (*all it have to do is to turn a token list into a tree, do not need add interesting sort/term/form*)
 
-(*fixity table*)
+(*fixity table, to be ordered according to the numbers*)
 
 fun fxty i = 
     case i of 
-        ":" => 1
-      | "->" => 2
-      | "=" => 1
-      | "==>" => 1
-      | "<=>" => 1
-      | "~" => 4
-      | "&" => 3
-      | "|" => 2
-      | "*" => 5
-      | "+" => 4
-      | "^" => 6
-      | "o" => 3
+        ":" => 460
+      | "->" => 470
+      | "=" => 450
+      | "==>" => 200
+      | "<=>" => 100
+      | "~" => 900
+      | "&" => 400
+      | "|" => 300
+      | "*" => 600
+      | "+" => 500
+      | "^" => 700
+      | "o" => 800
       | _ => ~1
 
+(**)
 
  
 fun parse_arepeat (a,parsefn) tl = 
@@ -549,8 +465,13 @@ and parse_arepeat1 (a,parsefn) tl =
 
 exception ERROR of string
 
-fun rparen (x, Key")"::toks) = (x, toks)
-  | rparen _ = raise ERROR "Symbol ) expected";
+
+fun rparen s (x, Key(s')::toks) = 
+    if s = s' then (x, toks) else
+    raise ERROR ("Symbol:" ^ (s) ^ " expected")
+  | rparen s _ =  raise ERROR ("Symbol:" ^ (s) ^ " expected")
+
+(*doing rparen and then nothing is wrong, see parse_pt_atom*)
 
 fun parse_ast tl =
     case tl of
@@ -570,7 +491,6 @@ fun parse_ast tl =
         in
             (aBinder ("EXISTS",ns,b), tl2)
         end 
-      | Key"("::tl => rparen (parse_ast tl)
       | _ => parse_ast_fix 0 (parse_ast_atom tl)
 and parse_ast_fix n (ast,tl) = 
     case tl of 
@@ -578,7 +498,12 @@ and parse_ast_fix n (ast,tl) =
         if fxty k < n then (ast,Key(k) :: tl)
         else
             let
-                val (ast1,tl1) = parse_ast tl
+                val (ast1,tl1) =
+                    (*if List.hd tl1 = Key "ALL" orelse 
+                       List.hd tl1 = Key "EXISTS" then 
+                        parse_ast tl 
+                    else *)
+                    parse_ast_atom tl
                 val (ast2,tl2) = parse_ast_fix (fxty k) (ast1,tl1)
                 val ast' = aInfix (ast,k,ast2)
             in parse_ast_fix n (ast',tl2)
@@ -592,25 +517,28 @@ and parse_ast_atom tl =
         end
      | Id(a)::Key"("::tl1 => 
        let 
-           val (astl,tl2) = rparen (parse_arepeat1 (",",parse_ast) tl1)
+           val (astl,tl2) = rparen ")" (parse_arepeat1 (",",parse_ast) tl1)
        in (aApp(a,astl),tl2)
        end
+     | Key"("::tl => rparen ")" (parse_ast tl) 
      | Id(a)::tl => (aId(a),tl)
+     | Key"<"::tl => 
+       let 
+           val (astl,tl2) = rparen ">" (parse_arepeat1 (",",parse_ast) tl)
+       in (aApp("pa",astl),tl2)
+       end
+     | _ => raise ERR ""
+
+
+(*
+parse_ast (lex "ALL X. ~ areiso(X,0) ==> EXISTS x: 1 -> X. T");
+Exception- ERR "" raised
+*)
+(*handle "()"*)
 
 
 
 (*need dict of infixes*)
-
-
-
-datatype aterm = 
-         aVar of string * ((aterm * aterm) option)
-         | aFun of string * aterm list
-
-datatype aform = 
-         aPred of aterm list 
-         | aConn of aform list
-         | aQuant of string * ((aterm * aterm) option) * aform
 
 fun pPred_cons pf pt = 
     case pf of 
@@ -621,7 +549,9 @@ fun pFun_cons pt0 pt =
     case pt0 of 
         pFun(f,ps,tl) => pFun(f,ps,pt :: tl)
       | _ => raise ERR "not a pFun"
+ 
 
+(*clear ps when move out of a env*)
 fun ast2pf ast (env:env) = 
     case ast of 
         aId(a) => 
@@ -633,7 +563,7 @@ fun ast2pf ast (env:env) =
             (pConn("~",[pf]),env)
         end
       | aApp(str,astl) => 
-        if mem str ["P","Q"] then 
+        if is_pred str then 
             case astl of
                 [] => (pPred(str,[]),env)
               | h :: t => 
@@ -657,14 +587,18 @@ fun ast2pf ast (env:env) =
             in
                 (pPred(str,[pt1,pt2]),env2)
             end else
-        raise ERR "not an infix operator" (*add case of equality!*)
+        raise ERR "not an infix operator"
       | aBinder(str,ns,b) => 
         if str = "ALL" orelse str = "EXISTS" then
             let val (pt,env1) = ast2pt ns env in 
                 case pt of 
                     pVar(n,s) => 
                     let val (pf,env2) = ast2pf b env1 in
-                        (pQuant(str,n,s,pf),env2)
+                        (pQuant(str,n,s,pf),clear_ps n env2)
+                    end
+                  | pAnno(pVar(n,s),ps) => 
+                    let val (pf,env2) = ast2pf b env1 in
+                        (pQuant(str,n,s,pf),clear_ps n env2)
                     end
                   | _ => raise ERR "err in parsing bound variable"
             end
@@ -672,6 +606,9 @@ fun ast2pf ast (env:env) =
 and ast2pt ast env = 
     case ast of 
         aId(a) =>
+        if is_const a then
+            (pFun(a,ps_of_const a,[]),env)
+        else
         (case ps_of env a of 
              NONE => let val (Av,env1) = fresh_var env 
                          val env2 = record_ps a (psvar Av) env1
@@ -696,7 +633,9 @@ and ast2pt ast env =
             val (pt1,env1) = ast2pt ast1 env
             val (pt2,env2) = ast2pt ast2 env1
             val (Av,env3) = fresh_var env2
-        in (pAnno(pVar(n,psvar Av),par(pt1,pt2)),env3)
+            val env4 = record_ps n (psvar Av) env3
+            val env5 = unify_ps env4 (psvar Av) (par(pt1,pt2)) 
+        in (pVar(n,par(pt1,pt2)),env5)
         end
       | aInfix(ast1,str,ast2) => 
         if mem str ["*","+","^","o"] then
@@ -707,27 +646,14 @@ and ast2pt ast env =
                 (pFun(str,psvar Av,[pt1,pt2]),env3)
             end
         else raise ERR "not an infix operator"
-      (*need to generate type-inference/u vars*)
       | aBinder(str,ns,b) => 
         raise ERR "quantified formula parsed as a term!"
 
+fun parse_ast_end (x:ast, l:token list) =
+    if l = [] then x
+    else raise ERROR "Extra characters in formula";
 
-
-(*generate the unification variables on a later step after obtaining a ast*)
-
-(*and turn the ast into a pterm*)
-
-
-fun is_const sr = 
-    case (peek (!cdict,sr)) of 
-        SOME _ => true
-      | _ => false
-
-fun ps_of_const c = 
-    case (peek (!cdict,c)) of 
-        SOME ps => ps 
-      | _ => raise ERROR "not a constant"
-
+fun read_ast_pf a = ast2pf (parse_ast_end (parse_ast (lex a))) empty
 
 fun parse_pt tl env = parse_pt_fix 0 (parse_pt_atom tl env)
 and parse_pt_atom tl env = 
@@ -806,31 +732,6 @@ fun prec_of "~" = 4
   | prec_of "<=>" = 1
   | prec_of "==>" = 1
   | prec_of _ = ~1;
-
-datatype ForP = fsym | psym
-
-val fpdict0:(string,ForP) Binarymap.dict =
-    foldr (fn ((n,forp),d) => Binarymap.insert(d,n,forp)) (Binarymap.mkDict String.compare) 
-          [("=",psym),("P",psym),("o",fsym),("id",fsym),("to1",fsym),
-           ("from0",fsym),("p1",fsym),("p2",fsym),("pa",fsym),("ismono",psym),
-           ("T",psym),("F",psym),("isgroup",psym)]
-
-(*change to fold*)
-
-val fpdict = ref fpdict0
-
-fun is_fun sr = 
-    case (peek (!fpdict,sr)) of 
-        SOME fsym => true
-      | _ => false
-
-fun is_pred sr =
-    case (peek (!fpdict,sr)) of
-        SOME psym => true
-      | _ => false
-
-fun insert_fsym s = fpdict:= insert(!fpdict,s,fsym) 
-fun insert_psym s = fpdict:= insert(!fpdict,s,psym)
 
 
 fun parse_pf tl env = 
@@ -1003,5 +904,12 @@ fun read_f f =
 val readf = fst o read_f
 
 val readt = fst o read_t
+
+
+fun read_ast_f f = 
+    let val (pf,env) = read_ast_pf f
+        val env1 = type_infer_pf env pf
+    in (form_from_pf env1 pf,pdict env1)
+    end
 
 end

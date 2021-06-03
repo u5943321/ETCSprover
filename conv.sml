@@ -1,6 +1,6 @@
 structure conv :> conv = 
 struct
-open term form thm drule
+open term form thm drule pp
 type conv = term -> thm
 
 exception unchanged
@@ -65,7 +65,7 @@ fun first_conv cl =
 fun arg_conv c t = 
     case t of 
         Fun (f,s,l) => 
-        (EQ_fsym f s (List.map (try_conv c) l))
+        (EQ_fsym f (List.map (try_conv c) l))
       | _ => refl t
                
 fun sub_conv c = first_conv [arg_conv c, all_conv]
@@ -106,7 +106,8 @@ fun part_fmatch partfn th f =
     let 
         val fvd = (match_form (partfn th) f mempty)
         val th' = inst_thm fvd th
-        val _ = if !simp_trace then th' else ()
+        val _ = if !simp_trace then printth th' else ""
+        (*should be (): unit, what is the tool for it?*)
     in 
         th'
     end
@@ -291,7 +292,6 @@ fun basic_fconv c fc =
 fun conv_rule c th = dimp_mp_r2l th (c (concl th))
 
 
-fun assum_list aslfun (g as (asl, _)) = aslfun (List.map assume asl) g
 
 
 end

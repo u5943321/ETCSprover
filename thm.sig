@@ -23,7 +23,7 @@ val disjI1: thm -> form -> thm
 val disjI2: form -> thm -> thm
 val dimpI: thm -> thm -> thm
 val dimpE: thm -> thm
-val EQ_fsym: string -> sort -> thm list -> thm
+val EQ_fsym: string -> thm list -> thm
 val EQ_psym: string -> thm list -> thm
 val conjE1: thm -> thm
 val conjE2: thm -> thm
@@ -65,6 +65,19 @@ val ax6: thm
 val ax7: thm
 val ax8: thm
 
+val ax_tml: thm
+val ax_inl: thm
+val ax_pr: thm
+val ax_copr: thm
+val ax_eq: thm
+val ax_coeq: thm
+val ax_exp: thm
+val ax_N: thm
+val ax_wp:thm
+val ax_c: thm
+val ax_elt: thm
+val ax_mcp: thm
+val ax_delt: thm
 
 (*type thm*)
 (*rules for inference*) 

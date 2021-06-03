@@ -13,6 +13,7 @@ val frefl: form -> thm
 val dimpl2r: thm -> thm
 val dimpr2l: thm -> thm
 val iff_trans: thm -> thm -> thm
+val iff_swap: thm -> thm
 val equivT: thm -> thm
 
 val eqT_intro: thm -> thm
@@ -25,6 +26,9 @@ val dimp_mp_r2l: thm -> thm -> thm
 val abstl: thm -> (string * sort) list -> thm
 val spec_all: thm -> thm
 val specl: thm -> term list -> thm
+
+val gen_all: thm -> thm
+val genl: (string * sort) list -> thm -> thm
 
 val undisch: thm -> thm
 val add_assum: form -> thm -> thm

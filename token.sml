@@ -5,7 +5,7 @@ datatype token = Key of string | Id of string;
 fun is_char(l,c,u) = ord l <= ord c andalso ord c <= ord u;
 
 fun is_letter_or_digit c =
-    is_char(#"A",c,#"Z") orelse is_char(#"a",c,#"z") orelse is_char(#"0",c,#"9");
+    is_char(#"A",c,#"Z") orelse is_char(#"a",c,#"z") orelse is_char(#"0",c,#"9") orelse c = #"'";
 
 fun token_of a = if mem a ["ALL","EXISTS","ar","ob","o"] then (Key a) else (Id a); 
 

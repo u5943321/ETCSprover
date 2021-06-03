@@ -22,18 +22,6 @@ val read_t : string -> term.term * (string list * string list * string list * st
 val read_f : string -> form.form * (string list * string list * string list * string list * int)
 val readf: string -> form.form
 val readt: string -> term.term
-type psymd
-type fsymd
-val lookup_pred: psymd -> string -> ((string * sort) list) option
-val lookup_fun: fsymd -> string -> (sort * (string * sort) list) option
-val psyms0: psymd
-val fsyms0: fsymd
-val new_pred: string -> ((string * sort) list) -> psymd
-val new_fun: string -> (sort * (string * sort) list) -> fsymd
 
-datatype ForP = fsym | psym
-val fpdict0:(string,ForP) Binarymap.dict
-val fpdict: ((string,ForP) Binarymap.dict) ref
-val insert_fsym: string -> unit
-val insert_psym: string -> unit
+
 end

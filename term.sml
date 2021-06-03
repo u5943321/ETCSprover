@@ -47,12 +47,12 @@ and string_of_sort s =
 
 
 
-fun dest_arrow (ar (S,T)) = (S,T)
-  | dest_arrow _  = raise Fail "dest_arrow : Error"
+fun dest_ar (ar (S,T)) = (S,T)
+  | dest_ar _  = raise Fail "dest_arrow : Error"
 
-fun dom a = #1 (dest_arrow a)
+fun dom a = #1 (dest_ar a)
 
-fun cod a = #2 (dest_arrow a)
+fun cod a = #2 (dest_ar a)
 
 val one = Fun ("one",ob,[])
 val zero = Fun ("zero",ob,[])        
@@ -111,7 +111,7 @@ fun to1 X = if sort_of X = ob then Fun ("to1",ar(X, one), [X])
 fun from0 X = if sort_of X = ob then Fun ("form0",ar(zero, X),[X])
               else raise no_sort
 
-fun po A B = if sort_of A = ob andalso sort_of B = ob then Fun ("po",ob,[A,B]) 
+fun po A B = if sort_of A = ob andalso sort_of B = ob then Fun ("*",ob,[A,B]) 
              else raise no_sort 
 
 fun pa f g = (case (sort_of f, sort_of g) of 
@@ -126,7 +126,7 @@ fun p1 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p1",ar(po A B,A
 fun p2 A B = if sort_of A = ob andalso sort_of B = ob then Fun ("p2",ar(po A B,B),[A,B])
              else raise no_sort 
 
-fun copo A B = if sort_of A = ob andalso sort_of B = ob then Fun ("po",ar(A,B),[A,B]) 
+fun copo A B = if sort_of A = ob andalso sort_of B = ob then Fun ("+",ar(A,B),[A,B]) 
              else raise no_sort 
 
 fun copa f g = (case (sort_of f, sort_of g) of 
@@ -165,7 +165,7 @@ fun coeqa f g = (case (sort_of f, sort_of g) of
                                                  else raise no_sort
                      | _ => raise no_sort)
 
-fun exp A B = Fun("exp",ob,[A,B])
+fun exp A B = Fun("^",ob,[A,B])
 
 fun tp f =  (case sort_of f of 
                  (ar (P,C)) =>

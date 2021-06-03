@@ -126,7 +126,7 @@ fun conj_imp_equiv A B C =
 (*A , A <=> B gives B. A <=> B , B gives A*)
 
 fun dimp_mp_l2r A B =  mp (dimpl2r B) A
-
+                          
 fun dimp_mp_r2l B A =  mp (dimpr2l B) A
 
 (*A /\ ¬A ==> B*)
@@ -615,6 +615,7 @@ fun specl th l =
                   end
     else th 
 
+
 fun spec_all th = 
     let 
         val fv = fvfl ((concl th) ::ant th)
@@ -731,7 +732,12 @@ fun gen_all th =
 
 
 
+fun dischl l th = 
+    case l of 
+        [] => th
+      | h :: t => dischl t (disch h th)
 
+fun disch_all th = dischl (ant th) th
 
 
 end

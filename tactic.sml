@@ -1,17 +1,55 @@
 structure tactic :> tactic = 
 struct
-open term form thm conv
-
-type goal = form list * form
-type validation = thm list -> thm
-type tactic = goal -> goal list * validation
-
-fun assume_tac th (fl,f) = 
-    ([(concl th:: fl,f)], fn [a] => prove_hyp th)
+open term form thm drule abbrev
 
 
+fun empty th [] = th
+  | empty th _ = raise ERR "empty" 
 
-fun drule0 th (fl:form list,f) = 
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" 
+
+fun pairths f [x, y] = f x y
+  | pairths f _ = raise ERR "pairths" 
+
+val accept_tac = 
+ fn th => fn (ct,asl,w) =>
+    if eq_form(concl th,w)  then ([], empty th) else raise ERR "ACCEPT_TAC"
+
+val T_INTRO_TAC:tactic = 
+ fn (ct,asl,w) => 
+    if w = TRUE then ([],fn [] => trueI asl)
+    else raise ERR "the goal is not T"
+
+
+fun gen_tac (ct,asl,w) = 
+    case w of
+        Quant("ALL",n,s,b) =>
+        let val w' = subst_bound (Var(n,s)) b 
+            val ct' = HOLset.union(ct,fvt (Var(n,s))) 
+        in
+            ([(ct',asl,w')], fn [th] => allI (n,s) th
+                   | _ => raise ERR "incorrect length of list")
+        end
+        | _ => raise ERR "goal is not universally quantified"
+
+
+
+(*
+
+A1 |- t1 A2 |- t2
+ ------------------------ PROVE_HYP
+ A1 u (A2 - {t1}) |- t2
+
+*)
+
+val assume_tac:thm_tactic = 
+    fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
+    ([(G,concl th:: fl,f)], fn [a:thm] => prove_hyp th a)
+
+
+
+fun drule th (G,fl:form list,f) = 
     let 
         val c = concl th
         val (b,vs) = strip_all c
@@ -27,21 +65,23 @@ fun drule0 th (fl:form list,f) =
     in
         case (first_opt mfn fl) of 
             NONE => raise ERR "no match"
-          | SOME th => assume_tac th (fl,f)
+          | SOME th => assume_tac th (G,fl,f)
     end
 
-fun efn (n,s) (f,th) = 
+(*
+fun efn (n,s) (G,f,th) = 
     let 
         val ef = mk_exists n s f
     in
-        (ef,existsE (n,s) (assume ef) th)
+        (G,ef,existsE (n,s) (assume ef) th)
     end
 
 fun genl nsl th = 
     case nsl of 
         [] => th
       | h :: t => allI h (genl t th)
-
+*)
+(*
 fun match_mp_tac th (A,g) = 
     let
         val (imp,gvs) = strip_all (concl th)
@@ -60,87 +100,95 @@ fun match_mp_tac th (A,g) =
         ([(A, ant)], fn thl => mp (disch ant gth) (hd thl))
     end
 
+*)
+(*********)
 
-
-
-fun conj_tac ((fl,f):goal):goal list * validation = 
+fun conj_tac ((G,fl,f):goal):goal list * validation = 
     case f of 
         (Conn("&",[f1,f2])) =>
-        ([(fl,f1), (fl,f2)],fn [thm1,thm2] => conjI thm1 thm2
-                           | _ => raise ERR "incorrect length of list")
+        ([(G,fl,f1), (G,fl,f2)],fn [thm1,thm2] => conjI thm1 thm2
+                              | _ => raise ERR "incorrect length of list")
       | _ => raise ERR "not a conjunction"
 
-fun disj1_tac (fl,f) = 
+fun disj1_tac (g:goal as (G,fl,f)) = 
     case f of
         Conn("|",[f1,f2]) => 
-         ([(fl,f1)], 
-          fn [thm1] => disjI1 thm1 f2
-          | _ => raise ERR "incorrect number of list items")
+        ([(G,fl,f1)], 
+         fn [thm1] => disjI1 thm1 f2
+         | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not a disjunction"
 
 
 
-fun disj2_tac (fl,f) = 
+fun disj2_tac (G,fl,f) = 
     case f of
         Conn("|",[f1,f2]) => 
-         ([(fl,f2)], fn [thm2] => disjI2 f1 thm2
-                   | _ => raise ERR "incorrect number of list items")
+        ([(G,fl,f2)], fn [thm2] => disjI2 f1 thm2
+                  | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not a disjunction"
 
- 
-fun cases_on c (fl,f) =
-    ([(c::fl,f),((mk_neg c)::fl,f)], 
-     fn [th1,th2] => disjE c (mk_neg c) (concl th1) (tautI c) th1 th2
-     | _ => raise ERR "incorrect length of list") 
+                   
+fun cases_on c (G,fl,f) =
+    let 
+        val G' = HOLset.union(G,fvf c)
+    in
+        ([(G',c::fl,f),(G',(mk_neg c)::fl,f)], 
+         fn [th1,th2] => disjE c (mk_neg c) (concl th1) (tautI c) th1 th2
+         | _ => raise ERR "incorrect length of list") 
+    end
 
-fun contra_tac (fl,f) = 
+fun contra_tac (g:goal as (G,fl,f)) = 
     case f of
         Conn("~",[A]) => 
-        ([(A::fl,FALSE)], fn [th] => negI th f
-                         | _ => raise ERR "incorrect number of list items")
+        ([(G,A::fl,FALSE):goal], fn [th] => negI th f
+                          | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not a negation"
 
 
-fun imp_tac (fl,f) = 
+fun imp_tac (G,fl,f) = 
     case f of 
         Conn("==>",[f1,f2]) => 
-        ([(f1::fl,f2)],
+        ([(G,f1::fl,f2)],
          fn [th] => disch f1 th
          | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not an implication"
 
 
-fun dimp_tac (fl,f) = 
+fun dimp_tac (G,fl,f) = 
     case f of
         Conn("<=>",[f1,f2]) => 
-        ([(fl,Conn("==>",[f1,f2])),(fl,Conn("==>",[f2,f1]))],
+        ([(G,fl,Conn("==>",[f1,f2])),(G,fl,Conn("==>",[f2,f1]))],
          fn [thm1,thm2] => dimpI thm1 thm2
          | _ => raise ERR "incorrect number of list item")
       | _ => raise ERR "not an iff"
 
 
-fun conj_tac ((fl,f):goal):goal list * validation = 
+fun conj_tac ((G,fl,f):goal):goal list * validation = 
     case f of 
         (Conn("&",[f1,f2])) =>
-        ([(fl,f1), (fl,f2)],fn [thm1,thm2] => conjI thm1 thm2
-                           | _ => raise ERR "incorrect length of list")
+        ([(G,fl,f1), (G,fl,f2)],fn [thm1,thm2] => conjI thm1 thm2
+                              | _ => raise ERR "incorrect length of list")
       | _ => raise ERR "not a conjunction"
 
 
-fun wexists_tac t (fl,f) = 
+(*maybe need to be more carful about the context*)
+
+fun wexists_tac t (G,fl,f) = 
     case f of 
         Quant("EXISTS",n,s,b) =>
         if sort_of t = s then 
-            ([(fl,subst_bound t b)], fn [th] => existsI th (n,s) t f
+            ([(G,fl,subst_bound t b)], fn [th] => existsI th (n,s) t f
                                    | _ => raise ERR "incorrect length of list")
         else raise ERR "inconsist sorts"
       | _ => raise ERR "not an EXISTS"
 
-fun gen_all_tac (fl,f) = 
+fun spec_all_tac (G,fl,f) = 
     case f of
         Quant("ALL",n,s,b) =>
-        let val f' = subst_bound (Var(n,s)) b in
-        ([(fl,f')], fn [th] => allI (n,s) th
+        let val f' = subst_bound (Var(n,s)) b 
+            val G' = HOLset.union(G,fvt (Var(n,s))) 
+        in
+            ([(G',fl,f')], fn [th] => allI (n,s) th
                    | _ => raise ERR "incorrect length of list")
         end
         | _ => raise ERR "goal is not universally quantified"
@@ -151,8 +199,8 @@ fun h1_of l =
         [] => []
       | (a,b) :: t => a :: h1_of t
 
-fun then_tac ((tac1:tactic),(tac2:tactic)) (fl,f) = 
-    let val (gl,func) = tac1 (fl,f)
+fun then_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) = 
+    let val (gl,func) = tac1 (G,fl,f)
         val branches = List.map tac2 gl
         val gl1 = flatten (h1_of branches)
         fun func1 l = 
@@ -169,8 +217,8 @@ infix >> then_tac
 
 val op >> = then_tac
 
-fun then1_tac ((tac1:tactic),(tac2:tactic)) (fl,f) = 
-    let val (gl,func) = tac1 (fl,f)
+fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) = 
+    let val (gl,func) = tac1 (G,fl,f)
         val (gl1,func1) = tac2 (hd gl)
         val gl' = gl1 @ (tl gl)
         fun func' l = 
@@ -185,28 +233,32 @@ infix >- then1_tac
 
 val op >- = then1_tac
 
-fun Orelse0 (tac1:goal -> goal list * validation) 
-            (tac2:goal -> goal list * validation) (g as (fl,f)) = 
-           tac1 g handle ERR _ => tac2 g
 
-fun Orelse (t1,t2) = Orelse0 t1 t2
+
+fun Orelse (tac1:tactic, tac2:tactic) = 
+    fn (g as (G,fl,f)) =>
+       tac1 g handle ERR _ => tac2 g
+
 infix Orelse;
 
 
-val stp_tac = conj_tac Orelse contra_tac Orelse imp_tac Orelse gen_all_tac
+val stp_tac = conj_tac Orelse contra_tac Orelse imp_tac Orelse gen_tac
 
-fun all_tac (fl,l) =  ([(fl,l)],(fn [th] => th
+fun all_tac (G,fl,l) =  ([(G,fl,l):goal],(fn [th] => th
                      | _ => raise ERR "incorrect number of list items"))
 
 fun try tac:tactic = tac Orelse all_tac
 
 fun repeat tac g = ((tac >> (repeat tac)) Orelse all_tac) g
 
-fun fconv_tac fc (fl,f) = 
-    ([(fl, (snd o dest_dimp) (concl (fc f)))],
+fun fconv_tac fc (G,fl,f) = 
+    let val G' = HOLset.union(G,cont (fc f))
+    in
+    ([(G',fl, (snd o dest_dimp) (concl (fc f)))],
      (fn [th] => dimp_mp_r2l (fc f) th
      | _ => raise ERR "incorrect number of list items"))
- 
+    end
+
 (*
 fun rw_tac thl = 
     let val thms = flatten (List.map imp_canon thl)
@@ -216,27 +268,37 @@ fun rw_tac thl =
     end
 *)
 
+
+
 fun rw_tac thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv thl)
         val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (basic_fconv conv fconv) 
     end
+
+
+
 (*
 
 val simp_trace = ref false
 *)
+fun by_tac f0 (G,fl,f) = 
+    let 
+        val G' = HOLset.union(G,fvf f0) 
+    in
+    ([(G',fl,f0),(G',f0::fl,f)],
+     fn [th1,th2] => prove_hyp th1 th2)
+    end
+(*
+A ?- t
+============== MP_TAC (A’ |- s) 
+A ?- s ==> t
+*)
 
+fun mp_tac th0 (G,asl,w) = 
+    let val G' = HOLset.union(G,cont th0) in
+    ([(G',asl, mk_imp (concl th0) w)], fn [th] => mp th th0) end
 
-
-fun by_tac na (fl,f) = 
-    ([(fl,na),(na::fl,f)],
-     fn [th1,th2] => prove_hyp th1 th2
-     | _ => raise ERR "incorrect length of list")
-
-fun mp_tac thb (asl,w) = 
-    ([(asl, mk_imp (concl thb) w)], fn [th] => mp th thb)
-
-
-             
+fun assum_list aslfun (g as (_,asl, _)) = aslfun (List.map assume asl) g
 end

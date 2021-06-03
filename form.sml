@@ -422,4 +422,18 @@ fun fsymsf f =
                    ("formula: " ^ (string_of_form f) ^ " is not well-formed")
 
 
+
+fun is_ss_ob (n:string,s) = if s = ob then true else false
+
+(*dpcy for dependency*)
+
+fun ok_dpdc (env:menv) ((n:string,s),t) = 
+    if sort_of t = inst_sort env s then true else false
+    
+
+fun is_wfmenv menv = 
+    let val pairs = Binarymap.listItems (vd_of menv)
+    in List.all (ok_dpdc menv) pairs
+    end
+
 end

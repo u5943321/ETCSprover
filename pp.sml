@@ -4,20 +4,35 @@ open form term smpp
 
 infix >>
 
+fun is_infix sym = 
+    if mem sym ["*","+","^","=","o"] then true else false
+
 (*also want this pp for HOLset... *)
  
 fun paren pp = block HOLPP.INCONSISTENT 1 
                      (add_string "(" >> pp >> 
                                  add_string ")")
+(*
+datatype gravity = LR of int option * int option (*prec of left and right neighbours*)
 
-fun ppterm ss t = 
+Fun("*",[A, Fun("+",[B,C])])
+
+*)
+
+fun ppterm ss (*g *) t = 
     case t of 
         Var(n,s) => 
         if ss then paren 
                        (add_string n >> add_string " :" >>
-                       add_break (1,2) >> ppsort s)
+                                   add_break (1,2) >> ppsort s)
         else add_string n
-      | Fun(f,s,[t1,t2]) => ppterm ss t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >> ppterm ss t2
+      | Fun(f,s,[t1,t2]) => 
+        if is_infix f then
+        (*compare precedence of f with left and right gravity info, if f prec is bigger than either, then print with (), otherwise don't. If printing (), then the left grav may be NONE.
+update the right grav when printing left argument, and vise versa *)
+        add_string "(" >> ppterm ss t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >> ppterm ss t2 >> add_string ")"
+        else 
+            add_string f >> paren (pr_list (ppterm ss) (add_string "," >> add_break (1,0))[t1,t2])
       | Fun(f,s,args) => 
         add_string f >> paren (pr_list (ppterm ss) (add_string "," >> add_break (1,0)) args)
 and ppsort s =
@@ -30,42 +45,12 @@ and ppsort s =
 
 val show_types = ref false
                      
-fun PPT printdepth _ t = let val s = ppterm (!show_types) t 
+fun PPterm printdepth _ t = let val s = ppterm (!show_types) t 
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
 
-val _ = PolyML.addPrettyPrinter PPT
-
-
-
-
- 
- (*
-fun pp_cont dpth s =
-    let
-        open HOLPP
-         fun ppi ((n:string,s:sort)) = PPT dpth () (Var(n,s))
-    in
-        if dpth <= 0 then add_string "HOLset{...}"
-        else
-            block CONSISTENT 0 [
-                add_string "HOLset{",
-                block INCONSISTENT 7
-                      (pr_list ppi [add_string ",",add_break (1,0)] (listItems s)),
-                add_string "}"
-            ]
-    end
-
-fun PPsss printdepth _ sss = let val s = pp_cont 70 sss 
-                             val SOME (pretty,_,_) = lower s ()
-                         in pretty
-                         end
-*)
-
-
-val print = HOLPP.pp_to_string 75 (fn f => PPF 70 () f)  (*70-75 for the int*)
-
+val _ = PolyML.addPrettyPrinter PPterm
 
           
 fun ppform (ss:bool) (f:form) = 
@@ -79,41 +64,45 @@ fun ppform (ss:bool) (f:form) =
       | Conn("~",[f]) => add_string "~" >> ppform ss f
       | Quant(q,n,s,b) =>
         block HOLPP.INCONSISTENT 2
-              (add_string q >> add_break (1,0) >> ppterm ss (Var(n,s)) >> add_string "." >> add_break (1,0) >> ppform ss (subst_bound (Var(n,s)) b))
+              (add_string q >> add_break (1,0) >> ppterm true (Var(n,s)) >> add_string "." >> add_break (1,0) >> ppform ss (subst_bound (Var(n,s)) b))
+      | fVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
       | _ => raise ERR "ill-formed formula"
 
 
-(*
-HOLset.foldl
-
-HOLset.ppHOLset
-*)
 
 
-
-fun PPF printdepth _ t = let val s = ppform (!show_types) t 
+fun PPform printdepth _ t = let val s = ppform (!show_types) t 
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
 
-val _ = PolyML.addPrettyPrinter PPF
+val _ = PolyML.addPrettyPrinter PPform
 
 fun ppthm (thm(G,A,C)) =
     let
         val Gvl = List.map Var (HOLset.listItems G)
     in
-        pr_list (ppterm true) (add_string "," >> add_break (1,0)) Gvl >>
+        pr_list (ppterm true) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
                 block HOLPP.INCONSISTENT 2 
-                (pr_list (ppform false) (add_string "," >> add_break (1,0)) A >>
-                ppform false C)
+                (pr_list (ppform false) (add_string "," >> add_newline) A) >>
+                add_newline >>
+                add_string "|-" >>
+                add_newline >>
+                block HOLPP.INCONSISTENT 2 
+                (ppform false C)
     end 
 
-fun PPTH printdepth _ th = let val s = ppthm th
+fun PPthm printdepth _ th = let val s = ppthm th
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
 
-val _ = PolyML.addPrettyPrinter PPTH
+val printf = HOLPP.pp_to_string 75 (fn f => PPform 70 () f)  (*70-75 for the int*) 
 
+val printth = HOLPP.pp_to_string 75 (fn th => PPthm 70 () th)  (*70-75 for the int*) 
+
+val _ = PolyML.addPrettyPrinter PPthm
+
+(*TODO: Dont print thm and goal as same*)
 
 end

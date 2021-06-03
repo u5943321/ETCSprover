@@ -24,8 +24,6 @@ val thenfc: ('a -> thm) * (form -> thm) -> 'a -> thm
 val top_depth_conv: (term -> thm) -> term -> thm
 val try_conv: (term -> thm) -> term -> thm
 exception unchanged
-val assum_list:
-   (thm list -> form list * 'a -> 'b) -> form list * 'a -> 'b
 val basic_fconv: (term -> thm) -> (form -> thm) -> form -> thm
 val basic_taut_fconv: form -> thm
 val changed_fconv: (form -> thm) -> form -> thm

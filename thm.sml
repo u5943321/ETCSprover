@@ -1,6 +1,6 @@
 structure thm :> thm = 
 struct
-open token pterm_dtype term form pterm
+open token pterm_dtype term form pterm symbols
 
 datatype thm = thm of ((string * sort) set * form list * form) 
 
@@ -15,6 +15,8 @@ fun eq_forml (l1:form list) (l2:form list) =
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
       | _ => raise ERR "incorrect length of list"
+
+fun fmem f fl = List.exists (curry eq_form f) fl
 
 fun eq_thm th1 th2 = 
     HOLset.equal(cont th1,cont th2) andalso
@@ -41,16 +43,20 @@ then specl on f will give a' o a: A -> B = b
 fun mk_sss l = List.foldr HOLset.union essps l
 
 (*make (string * sort) set*)
+(*specl/genl instead of inst_thm*)
 
+(*need to worry about the env makes sense*)
 fun inst_thm env th = 
-    let
-        val G0 = HOLset.listItems (cont th)
-        val G = mk_sss (List.map (fvt o (inst_term env) o Var) G0)
-        val A = List.map (inst_form env) (ant th)
-        val C = inst_form env (concl th)
-    in
-        thm(G,A,C)
-    end
+    if is_wfmenv env then
+        let
+            val G0 = HOLset.listItems (cont th)
+            val G = mk_sss (List.map (fvt o (inst_term env) o Var) G0)
+            val A = List.map (inst_form env) (ant th)
+            val C = inst_form env (concl th)
+        in
+            thm(G,A,C)
+        end
+    else raise ERR "bad environment"
 
 fun ril i l = 
     case l of [] => []
@@ -101,9 +107,9 @@ fun disjE A B C (thm (G1,A1,AorB)) (thm (G2,A2,C1)) (thm (G3,A3,C2)) =
                 raise ERR "theorem #2 unexpected"
         val _ = (C2 = C) orelse 
                 raise ERR "theorem #3 unexpected"
-        val _ = mem A A2 orelse
+        val _ = fmem A A2 orelse
                 raise ERR "first disjunct not in theorem #2"
-        val _ = mem B A3 orelse
+        val _ = fmem B A3 orelse
                 raise ERR "first disjunct not in theorem #3"
     in
         thm (contl_U [G1,G2,G3], asml_U [ril A A2, ril B A3, A1],C)
@@ -125,6 +131,8 @@ fun thml_eq_pairs (th:thm,(ll,rl,asml)) =
     else 
         raise ERR "input theorem is not an equality" 
 
+(*avoid EQ_psym/fsym using by hand*)
+
 fun EQ_fsym f s thml = 
     let 
         val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
@@ -133,6 +141,24 @@ fun EQ_fsym f s thml =
              Pred("=",[Fun(f,s,ll),Fun(f,s,rl)]))
     end
 
+
+
+fun EQ_fsym f thml = 
+    case lookup_fun fsyms0 f of 
+        NONE => raise ERR ("function:" ^ f ^ " is not found")
+      | SOME(s,l) => 
+        let 
+            val sl = List.map (fst o dest_eq o concl) thml
+            val menv0 = match_tl (List.map Var l) sl mempty 
+            val s' = inst_sort menv0 s
+            val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
+        in
+            thm (contl_U (List.map cont thml),asml,
+                 Pred("=",[Fun(f,s',ll),Fun(f,s',rl)]))
+        end
+
+
+                
 fun EQ_psym p thml = 
     let 
         val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
@@ -147,7 +173,7 @@ fun negI (thm (G,A,C)) f =
     let 
         val _ = (C = FALSE) orelse 
                 raise ERR "conclusion is not FALSE"
-        val _ = mem f A orelse
+        val _ = fmem f A orelse
                 raise ERR "formula to be negated not in assumption"
     in
         thm (G,ril f A, (Conn("~",[f])))
@@ -162,7 +188,7 @@ fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
     end
 
 fun falseE fl f = 
-    let val _ = mem FALSE fl orelse 
+    let val _ = fmem FALSE fl orelse 
                 raise ERR "FALSE is not in the list"
     in
         thm(fvfl fl,[FALSE],f)
@@ -196,8 +222,10 @@ fun allI (a,s) (thm(G,A,C)) =
                  handle _ => G
         val _ = HOLset.isSubset(fvs s,G0) orelse 
                 raise ERR "sort of the variable to be abstract has extra variable(s)"
-        val _ = HOLset.isSubset(fvfl A,G0) orelse
-                raise ERR "variable to be abstract occurs in assumption"
+        val _ = not (HOLset.member(fvfl A,(a,s))) orelse
+                raise ERR "variable to be abstract occurs in assumption" 
+    (*    val _ = HOLset.isSubset(fvfl A,G0) orelse
+                raise ERR "variable to be abstract occurs in assumption" *)
     in thm(G0,A,mk_all a s C)
     end
 
@@ -254,11 +282,14 @@ X,Y, Γ1 ∪ Γ2 |- B
 ---------------------------------------------------*)
 
 fun delete'(s,e) = HOLset.delete(s,e) handle _ => s 
+
+
+
  
 fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     let 
         val ((n,s),b) = dest_exists C1
-        val _ = mem (subst_bound (Var(a,s0)) b) A2
+        val _ = fmem (subst_bound (Var(a,s0)) b) A2
         val _ = (s = s0) orelse 
                 raise ERR "the given variable has unexpected sort"
         val _ = (HOLset.member
@@ -426,25 +457,47 @@ val idR = read_thm "ALL A. ALL B. ALL f: A -> B. f o id(A) = f"
 
 val o_assoc = read_thm "ALL A. ALL B. ALL C. ALL D. ALL f: A -> B. ALL g:B -> C. ALL h: C -> D.(h o g) o f = h o g o f"
 
+val o_assoc' = read_thm "ALL A. ALL B. ALL f: A -> B. ALL C. ALL g:B -> C. ALL D.ALL h: C -> D.(h o g) o f = h o g o f"
+
 val ax1_1 = read_thm "ALL X. ALL tx: X -> 1. tx = to1(X)"
+
+val ax_tml = ax1_1
 
 val ax1_2 = read_thm "ALL X. ALL ix: 0 -> X. ix = from0(X)"
 
-val ax1_3 = read_thm "ALL A. ALL B. ALL X. ALL fg: X -> A * B. ALL f: X -> A. ALL g: X -> B. p1(A,B) o fg = f & p2(A,B) o fg = g <=> fg = pa(f,g)"
+val ax_inl = ax1_2
 
-val ax1_4 = read_thm "ALL A. ALL B. ALL X. ALL fg: A + B -> X. ALL f: A -> X. ALL g. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"
+val ax1_3 = read_thm "ALL A. ALL B. ALL X. ALL fg: X -> A * B. ALL f: X -> A. ALL g: X -> B.(p1(A,B) o fg = f & p2(A,B) o fg = g) <=> fg = pa(f,g)"
+
+val ax_pr = ax1_3
+
+val ax1_4 = read_thm "ALL A. ALL B. ALL X. ALL fg: A + B -> X. ALL f: A -> X. ALL g. (fg o i1(A,B) = f & fg o i2(A,B) = g) <=> fg = copa(f,g)"
+
+val ax_copr = ax1_4
 
 val ax1_5 = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. ALL X. ALL x0: X -> eqo(f,g).ALL h: X -> A. g o eqa(f,g) = f o eqa(f,g) & (f o h = g o h ==> (eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
 
+val ax_eq = ax1_5
+
 val ax1_6 = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. ALL X. ALL x0:coeqo(f,g) -> X. ALL h: B -> X. coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
+
+val ax_coeq = ax1_6
 
 val ax2 = read_thm "ALL A. ALL B. ALL X. ALL f: A * X -> B.ALL h: X -> exp(A,B). ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"
 
+val ax_exp = ax2
+
 val ax3 = read_thm "ALL X. ALL x0: 1 -> X. ALL x: N -> X. ALL t: X -> X. x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"
+
+val ax_N = ax3
 
 val ax4 = read_thm "ALL A. ALL B.ALL f: A -> B. ALL g:A ->B.~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)"
 
+val ax_wp = ax4
+
 val ax5 = read_thm "ALL A. ALL a: 1 -> A. ALL B. ALL f: A -> B. EXISTS g : B -> A. f o g o f = f"
+
+val ax_c = ax5
 
 val psyms0 = insert_psym "ismono";
  
@@ -456,6 +509,8 @@ val areiso_def = define_pred (readf "ALL A. ALL B. areiso(A,B) <=> EXISTS f: A -
 
 val ax6 = read_thm "ALL X. ~ areiso(X,0) ==> EXISTS x: 1 -> X. T"
 
+val ax_elt = ax6
+
 val psyms0 = insert_psym "issubset";
 
 val issubset_def = define_pred (readf "ALL X. ALL A. ALL a: X -> A. issubset(a,A) <=> ismono(a)")
@@ -466,6 +521,10 @@ val ismem_def = define_pred (readf "ALL A. ALL A0. ALL a:A0 -> A. ALL x:1 -> A. 
 
 val ax7 = read_thm "ALL A. ALL B. ALL f: 1 -> A + B. ismem(f,i1(A,B),A + B) | ismem(f,i2(A,B),A + B)"
 
+val ax_mcp = ax6
+
 val ax8 = read_thm "EXISTS X. EXISTS x1: 1 -> X. EXISTS x2: 1 -> X. ~ x1 = x2"
+
+val ax_delt = ax6
 
 end
