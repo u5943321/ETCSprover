@@ -3,6 +3,13 @@ struct
 open token pterm_dtype term form symbols
 
 
+fun mk_pQuant q n ps pf = pQuant (q,n,ps,pf)
+
+fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
+
+fun mk_pNeg pf = pConn("~",[pf])
+
+fun mk_pPred P ptl = pPred(P,ptl)
 
 (*TODO: let the parse parse " ' ". *)
 
@@ -573,7 +580,7 @@ fun ast2pf ast (env:env) =
                     val (pt,env2) = ast2pt h env1
                 in (pPred_cons pf pt,env2)
                 end
-        else raise ERR "not a predicate symbol" 
+        else raise ERR ("not a predicate symbol: "^ str)
       | aInfix(ast1,str,ast2) => 
         if mem str ["&","|","<=>","==>"] then
             let
@@ -631,12 +638,12 @@ and ast2pt ast env =
                     val (pt,env2) = ast2pt h env1
                 in (pFun_cons pt0 pt,env2)
                 end
-        else raise ERR "not a predicate symbol" 
+        else raise ERR ("not a function symbol: " ^ str) 
       | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) => 
         let 
             val (pt1,env1) = ast2pt ast1 env
             val (pt2,env2) = ast2pt ast2 env1
-            val env3 = record_ps n (par(pt1,pt2)) env2
+            val env3 = record_ps n (par(pAnno(pt1,pob),pAnno(pt2,pob))) env2
         in  (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env3)
         end 
         (*let 
@@ -729,13 +736,7 @@ and parse_pob tl env =
     in (pAnno (pt,pob),tl1,env1)
     end
  
-fun mk_pQuant q n ps pf = pQuant (q,n,ps,pf)
 
-fun mk_pConn co pf1 pf2 = pConn(co,[pf1,pf2])
-
-fun mk_pNeg pf = pConn("~",[pf])
-
-fun mk_pPred P ptl = pPred(P,ptl)
 
 
 fun prec_of "~" = 4

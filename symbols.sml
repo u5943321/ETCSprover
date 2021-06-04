@@ -109,6 +109,7 @@ val fpdict0:(string,ForP) Binarymap.dict =
            ("i1",fsym),("i2",fsym),("copa",fsym),("copo",fsym),
            ("eqo",fsym),("eqa",fsym),("coeqo",fsym),("coeqa",fsym),
            ("*",fsym),("+",fsym),("^",fsym),
+           ("exp",fsym),("ev",fsym),("tp",fsym),
            ("eqinduce",fsym),("coeqinduce",fsym),("Nind",fsym)
            ]
 
