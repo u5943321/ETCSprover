@@ -150,6 +150,8 @@ fun ps_of_pt pt env =
       | pFun (n,ps,l) => (ps,env)
       | pAnno(pt,ps) => ps_of_pt pt env
 
+(*TODO: read_ast_f "ALL A. ALL B.ALL f: A -> B. ALL g:A ->B.~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)";
+Exception- UNIFY "occurs check(pt):pv a : psv  4 ptu  4" raised*)
 
 fun unify_ps env (ps1:psort) (ps2:psort):env = 
     case (chasevars ps1 env,chasevars ps2 env) of
@@ -499,10 +501,10 @@ and parse_ast_fix n (ast,tl) =
         else
             let
                 val (ast1,tl1) =
-                    (*if List.hd tl1 = Key "ALL" orelse 
-                       List.hd tl1 = Key "EXISTS" then 
+                    if List.hd tl = Key "ALL" orelse 
+                       List.hd tl = Key "EXISTS" then 
                         parse_ast tl 
-                    else *)
+                    else 
                     parse_ast_atom tl
                 val (ast2,tl2) = parse_ast_fix (fxty k) (ast1,tl1)
                 val ast' = aInfix (ast,k,ast2)
@@ -593,12 +595,14 @@ fun ast2pf ast (env:env) =
             let val (pt,env1) = ast2pt ns env in 
                 case pt of 
                     pVar(n,s) => 
-                    let val (pf,env2) = ast2pf b env1 in
-                        (pQuant(str,n,s,pf),clear_ps n env2)
+(*TODO: need to record sort of n here!*)
+                    let 
+                        val (pf,env2) = ast2pf b env1 in
+                        (mk_pQuant str n s pf,clear_ps n env2)
                     end
                   | pAnno(pVar(n,s),ps) => 
                     let val (pf,env2) = ast2pf b env1 in
-                        (pQuant(str,n,s,pf),clear_ps n env2)
+                        (mk_pQuant str n ps pf,clear_ps n env2)
                     end
                   | _ => raise ERR "err in parsing bound variable"
             end
@@ -632,11 +636,19 @@ and ast2pt ast env =
         let 
             val (pt1,env1) = ast2pt ast1 env
             val (pt2,env2) = ast2pt ast2 env1
-            val (Av,env3) = fresh_var env2
-            val env4 = record_ps n (psvar Av) env3
-            val env5 = unify_ps env4 (psvar Av) (par(pt1,pt2)) 
-        in (pVar(n,par(pt1,pt2)),env5)
-        end
+            val env3 = record_ps n (par(pt1,pt2)) env2
+        in  (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env3)
+        end 
+        (*let 
+            val (pt1,env1) = ast2pt ast1 env
+            val (pt2,env2) = ast2pt ast2 env1
+        in (pVar(n,par(pt1,pt2)),env2)
+        end*)
+        (*let 
+            val (pt1,env1) = ast2pt ast1 env
+            val (pt2,env2) = ast2pt ast2 env1
+        in (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env2)
+        end *)
       | aInfix(ast1,str,ast2) => 
         if mem str ["*","+","^","o"] then
             let val (pt1,env1) = ast2pt ast1 env
@@ -785,6 +797,9 @@ and parsefix prec (pf,tl,env) =
                       (apfst (mk_pConn co pf)
                              (parsefix (prec_of co) 
                                        (parse_pf tl1 env)))
+      (*else let val (pf1,tl1,env1) = parse_pf tl1 env 
+                 val (pf2,tl2,env2) = parse_fix (prec_of co) (pf1,tl1,env1)
+                 val *)
       | _ => (pf,tl,env) 
 and parse_atom tl env (*unkw*) =
     case tl of 

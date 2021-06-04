@@ -19,7 +19,7 @@ use "drule.sml";
 
 open term form pterm thm drule;
 
-
+(*
 use "pp.sig"; 
 use "pp.sml";
 
@@ -44,5 +44,5 @@ use "goalstack.sig";
 use "goalstack.sml";
 
 open goalstack;
-
+*)
 
