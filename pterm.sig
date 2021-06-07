@@ -22,6 +22,6 @@ val read_t : string -> term.term * (string list * string list * string list * st
 val read_f : string -> form.form * (string list * string list * string list * string list * int)
 val readf: string -> form.form
 val readt: string -> term.term
-
-
+val rpf: string -> form.form
+val rapf: string -> form.form
 end

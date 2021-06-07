@@ -48,7 +48,6 @@ val assume_tac:thm_tactic =
     ([(G,concl th:: fl,f)], fn [a:thm] => prove_hyp th a)
 
 
-
 fun drule th (G,fl:form list,f) = 
     let 
         val c = concl th
@@ -57,11 +56,11 @@ fun drule th (G,fl:form list,f) =
         fun mfn _ asm = 
             let 
                 val menv = match_form ant asm mempty
-                val ith = inst_thm menv th
+                val ith = inst_thm menv (spec_all th)
             in
                 SOME (mp ith (assume asm))
             end
-            handle ERR _ => NONE
+            handle ERR _ => NONE 
     in
         case (first_opt mfn fl) of 
             NONE => raise ERR "no match"
@@ -69,20 +68,24 @@ fun drule th (G,fl:form list,f) =
     end
 
 (*
-fun efn (n,s) (G,f,th) = 
+require specially that the name of free variable substituted is precisely the bounded variable name.
+
+?B:ob. P(B) |-  ?B. P(B)           P(B) |- C
+-------------------------------------------- efn (B,ob) (P(B), P(B) |- C)
+?B.P(B) |- C    
+
+*)
+
+
+fun efn (n,s) (f,th) = 
     let 
         val ef = mk_exists n s f
     in
-        (G,ef,existsE (n,s) (assume ef) th)
+        (ef,existsE (n,s) (assume ef) th)
     end
 
-fun genl nsl th = 
-    case nsl of 
-        [] => th
-      | h :: t => allI h (genl t th)
-*)
-(*
-fun match_mp_tac th (A,g) = 
+
+fun match_mp_tac th (cont:cont,asl:form list,w) = 
     let
         val (imp,gvs) = strip_all (concl th)
         val (ant,conseq) = dest_imp imp
@@ -90,15 +93,55 @@ fun match_mp_tac th (A,g) =
         val th1 = specl (undisch (specl th (List.map Var gvs))) (List.map Var cvs) 
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
         val th2 = uncurry disch (itlist efn evs (ant, th1))
-        val (gl,vs) = strip_all g
+        val (gl,vs) = strip_all w
         val env = match_form con gl mempty
         val ith = inst_thm env th2
         val gth = genl vs (undisch ith)
-                          (*should be genl! need fix this*)
         val ant = fst (dest_imp (concl ith))
     in
-        ([(A, ant)], fn thl => mp (disch ant gth) (hd thl))
+        ([(cont,asl,ant)], fn thl => mp (disch ant gth) (hd thl))
     end
+
+(*
+ ALL (A : ob). ALL (x : 1() -> A). P(x) ==> Q(A)   -- test passed
+
+ALL (A : ob). ALL (B : ob). ALL (f : A -> B). P(A, B, f) ==> Q(f) test passed
+
+
+ALL (A : ob).
+       ALL (B : ob). ALL (f : A -> B). ALL (C : ob). P(A, B, C, f) ==> Q(f):
+   thm
+> # val it =
+   ([(HOLset{("C", ob), ("D", ob), ("g", ar (Var ("C", ob), Var ("D", ob)))},
+      [], EXISTS (C : ob). P(C, D, C, g))], fn):
+   (cont * form list * form) list * (thm list -> thm) -- name issue,  but:
+
+ 
+   |-
+   ALL (A : ob).
+       ALL (B : ob). ALL (f : A -> B). ALL (K : ob). P(A, B, K, f) ==> Q(f):
+   thm
+> # val it =
+   ([(HOLset{("C", ob), ("D", ob), ("g", ar (Var ("C", ob), Var ("D", ob)))},
+      [], EXISTS (K : ob). P(C, D, K, g))], fn):
+   (cont * form list * form) list * (thm list -> thm) -- test passed
+
+|-
+   ALL (A : ob).
+       ALL (B : ob).
+         ALL (f : A -> B).
+           ALL (K : ob). P(A, B, K, f) ==> ALL (g : X -> Y). Q(g) -- test passed
+
+
+|-
+   ALL (A : ob).
+       ALL (B : ob).
+         ALL (f : A -> B).
+           ALL (K : ob). P(A, B, K, f) ==> ALL (g : A -> B). Q(g) -- test passed
+
+
+|-
+   ALL (A : ob). ALL (B : ob). A P B ==> ALL (f : A -> B). Q(f) -- test passed
 
 *)
 (*********)
@@ -229,9 +272,9 @@ fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) =
     in (gl',func')
     end
 
-infix >- then1_tac 
+infix >-- then1_tac 
 
-val op >- = then1_tac
+val op >-- = then1_tac
 
 
 
@@ -301,4 +344,7 @@ fun mp_tac th0 (G,asl,w) =
     ([(G',asl, mk_imp (concl th0) w)], fn [th] => mp th th0) end
 
 fun assum_list aslfun (g as (_,asl, _)) = aslfun (List.map assume asl) g
+
+
+(*if want to use assumptions and thms, aslfun = fn thl => rw_tac(thl ++ [list of ths])*)
 end

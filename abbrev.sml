@@ -5,6 +5,7 @@ struct
   type sort         = term.sort
   type form         = form.form
   type conv         = term -> thm
+  type fconv        = form -> thm
   type rule         = thm -> thm
   type cont         = (string * sort) set
   type goal         = cont * form list * form

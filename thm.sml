@@ -417,7 +417,7 @@ fun define_pred f =
         (*check RHS variables are subset of LHS ones*)
         (*check arguments are all distinct*)
         (*store P in psymd*)
-        val psymd0 = new_pred P (List.map dest_var args)
+        val psyms0 = new_pred P (List.map dest_var args)
     in thm(essps,[],f)
     end
 (*check that R does not contain any unknown predicate symbols/fun syms*)
@@ -434,7 +434,7 @@ fun define_fun f =
                 orelse raise ERR "unexpected free variable on RHS"
         val _ = (lookup_fun fsyms0 nf = NONE) orelse raise ERR ("redefining predicate: " ^ nf)
         val _ = all_distinct args orelse raise ERR "input arguments are not all distinct"
-        val fsymd0 = new_fun nf (sf,(List.map dest_var args))
+        val fsyms0 = new_fun nf (sf,(List.map dest_var args))
     in thm(essps,[],f)
     end
 
@@ -502,6 +502,8 @@ val ax_c = ax5
 val psyms0 = insert_psym "ismono";
  
 val ismono_def = define_pred (readf "ALL A. ALL B. ALL  f: A -> B. ismono(f) <=> ALL X.ALL g:X -> A. ALL h. f o g = f o h ==> h = g")
+
+(*TODO: debug the define_pred*)
 
 val psyms0 = insert_psym "areiso";
 

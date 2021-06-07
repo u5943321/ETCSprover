@@ -8,6 +8,8 @@ sig
     val prove: form.form -> tactic.tactic -> thm.thm
     val new_goal: abbrev.cont * form.form list * form.form -> gstk
     val read_goal: string -> gstk
+    val rpg: string -> gstk
+    val proved_th: gstk -> thm.thm
     val expandf: tactic.tactic -> gstk -> gstk
     val ppgstk: gstk -> ('a, unit) t
 end

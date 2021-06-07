@@ -20,10 +20,21 @@ datatype proposition = POSED of goal
 datatype gstk = GSTK of {prop  : proposition,
                          stack : tac_result list}
 
-fun new_goal (g as (G,asl:form list,w:form)) = GSTK{prop=POSED g, stack=[]}
+fun new_goal (g as (G:(string*sort) set,asl:form list,w:form)) = GSTK{prop=POSED g, stack=[]}
 
 fun read_goal f = 
-    let val f0 = readf f in new_goal (fvf f0,[],f0) end
+    let val f0 = readf f in new_goal (fvf f0,[]:form list,f0) end
+
+(*read goal with pretty name*)
+fun rpg f = 
+    let val f0 = rpf f in new_goal (fvf f0,[]:form list,f0) end
+
+fun proved_th (GSTK{prop:proposition,...}) = 
+    case prop of
+        PROVED (th,_) => th
+      | _ => raise ERR "goal is not proved yet"
+
+
 
 fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g}) =
     let val th = validation []
@@ -75,7 +86,7 @@ fun ppgoal (G,A,C) =
     let
         val Gvl = List.map Var (HOLset.listItems G)
     in
-        pr_list (ppterm true) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
+        pr_list (ppterm true (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
                 block HOLPP.INCONSISTENT 2 
                 (pr_list (ppform false) (add_string "," >> add_break (1,0)) A) >>
                 add_newline >>
@@ -104,7 +115,7 @@ val _ = PolyML.addPrettyPrinter PPprop
 
 fun ppgoals goals = 
     case goals of [] => add_string ""
-                | h :: t => (ppgoal h) >> (ppgoals t)
+                | h :: t => (ppgoal h) >> add_newline >> (ppgoals t)
 
 fun pptac_result ({goals:goal list,validation:thm list -> thm}) = ppgoals goals
     
@@ -117,7 +128,7 @@ fun PPtac_result printdepth _ rst = let val s =  pptac_result rst
 
 fun pptac_results trs =
     case trs of [] => add_string ""
-              | h :: t => pptac_result h >> pptac_results t
+              | h :: t => pptac_result h >> add_newline >> pptac_results t
 
 fun ppgstk (GSTK{prop:proposition, stack: tac_result list}) = 
     ppprop prop >> add_newline >> pptac_results stack

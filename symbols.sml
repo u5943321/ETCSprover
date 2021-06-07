@@ -4,6 +4,22 @@ open term form pterm_dtype
 
 exception ERROR of string
 
+fun fxty i = 
+    case i of 
+        ":" => 460
+      | "->" => 470
+      | "=" => 450
+      | "==>" => 200
+      | "<=>" => 100
+      | "~" => 900
+      | "&" => 400
+      | "|" => 300
+      | "*" => 600
+      | "+" => 500
+      | "^" => 700
+      | "o" => 800
+      | _ => ~1
+
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
 type psymd = (string, (string * sort) list) Binarymap.dict
@@ -116,7 +132,8 @@ val fpdict0:(string,ForP) Binarymap.dict =
 (*change to fold*)
 
 val fpdict = ref fpdict0
-
+val fsyms = ref fsyms0
+val psyms = ref psyms0
 
 fun insert_fsym s = fpdict:= Binarymap.insert(!fpdict,s,fsym) 
 fun insert_psym s = fpdict:= Binarymap.insert(!fpdict,s,psym)
@@ -133,8 +150,8 @@ fun is_pred sr =
       | _ => false
 
 
-fun new_pred p tl = Binarymap.insert (psyms0,p,tl)
+fun new_pred p tl = psyms := Binarymap.insert (!psyms,p,tl)
 
-fun new_fun f (s,tl) = Binarymap.insert (fsyms0,f,(s,tl))
+fun new_fun f (s,tl) = fsyms := Binarymap.insert (!fsyms,f,(s,tl))
 
 end

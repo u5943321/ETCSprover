@@ -2,6 +2,10 @@ structure conv :> conv =
 struct
 open term form thm drule pp
 type conv = term -> thm
+type fconv = form -> thm
+type form = form.form
+type term = term.term
+type sort = term.sort
 
 exception unchanged
 
@@ -106,8 +110,7 @@ fun part_fmatch partfn th f =
     let 
         val fvd = (match_form (partfn th) f mempty)
         val th' = inst_thm fvd th
-        val _ = if !simp_trace then printth th' else ""
-        (*should be (): unit, what is the tool for it?*)
+        val _ = if !simp_trace then Lib.say (printth th') else ()
     in 
         th'
     end
@@ -181,22 +184,7 @@ fun dimp_fconv fc f =
         dimp_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not an iff"
 
-fun qall_fconv fc f = 
-    case f of 
-        Quant("ALL",n,s,b) => 
-        all_iff (try_fconv fc b) (n,s)
-      | _ => raise ERR "not a forall"
 
-(*
-fun qexists_fconv fc f = 
-    case f of 
-        Quant("EXISTS",n,s,b) => 
-        exists_iff (try_fconv fc b) (n,s)
-      | _ => raise ERR "not an exists"
-
-need to fix exists_iff
-
-*)
 val reflTob = equivT (refl (Var("a",ob)))
 
 val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
@@ -212,8 +200,6 @@ fun sub_fconv c fc =
                  disj_fconv fc,
                  imp_fconv fc,
                  dimp_fconv fc,
-                 qall_fconv fc,
-                (* qexists_fconv fc, *)
                  pred_fconv c])
 
 

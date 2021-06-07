@@ -17,20 +17,21 @@ use "thm.sml";
 use "drule.sig";
 use "drule.sml";
 
-open term form pterm thm drule;
+open term form pterm thm drule symbols;
 
-(*
+
 use "pp.sig"; 
 use "pp.sml";
 
 open pp;
+
 
 use "abbrev.sig";
 use "abbrev.sml";
 
 use "conv.sig"; 
 use "conv.sml";
-open conv;
+open abbrev conv;
 
 
 
@@ -44,5 +45,5 @@ use "goalstack.sig";
 use "goalstack.sml";
 
 open goalstack;
-*)
+
 

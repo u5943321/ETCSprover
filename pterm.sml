@@ -422,6 +422,7 @@ fun rightparen (x, Key")"::toks,env) = (x, toks,env)
 fun fprec_of "*" = 2
   | fprec_of "+" = 1
   | fprec_of "o" = 3
+  | fprec_of "^" = 4
   | fprec_of _ = ~1 
 
 
@@ -441,21 +442,7 @@ datatype ast =
 
 (*fixity table, to be ordered according to the numbers*)
 
-fun fxty i = 
-    case i of 
-        ":" => 460
-      | "->" => 470
-      | "=" => 450
-      | "==>" => 200
-      | "<=>" => 100
-      | "~" => 900
-      | "&" => 400
-      | "|" => 300
-      | "*" => 600
-      | "+" => 500
-      | "^" => 700
-      | "o" => 800
-      | _ => ~1
+
 
 (**)
 
@@ -521,7 +508,7 @@ and parse_ast_fix n (ast,tl) =
 and parse_ast_atom tl = 
     case tl of
         (Key"~"::tl1) =>
-        let val (ast,tl2) = parse_ast tl1
+        let val (ast,tl2) = parse_ast_atom tl1
         in (aApp("~",[ast]),tl2)
         end
      | Id(a)::Key"("::tl1 => 
@@ -927,5 +914,74 @@ fun read_ast_f f =
         val env1 = type_infer_pf env pf
     in (form_from_pf env1 pf,pdict env1)
     end
+
+(*pretty name environment*)
+
+
+(*collect all the variables in f. 
+use explode to turn string into list, if begin with a space, it means the variable is generated. 
+
+keep a dict or ? to store name correspondence and already used names, not only just the one which has a number mapped to , but also the ones which has already present in the formula.
+
+capital letter for objects, lower case for arrows, add "'" if clashed. 
+
+generating letter which does not clash should be done in the function int 2 name, takes 2 arguments, a number and a set of variables names.
+
+need to ensure does not clash with existing names in the formula.*)
+
+type pne = (string,int)Binarymap.dict * int
+
+
+fun n2l n = 
+    if n > 0 then n :: (n2l (n - 1)) else [] 
+  
+
+fun bad_name (n,s:sort) = if List.hd (explode n) = #" " then true else false
+
+fun try_until_ok n uns = 
+    if HOLset.member(uns,str(chr (n+64))) = false then str(chr (n+64)) else try_until_ok (n + 1) uns
+
+fun map_HOLset f s order = 
+    let val l = HOLset.listItems s
+        val l' = List.map f l
+    in HOLset.fromList order l'
+    end
+
+fun pretty_form f = 
+    let val s0 = fvf f 
+        val bad_names = HOLset.listItems (HOLset.filter bad_name s0)
+        val used_names0 = HOLset.filter (fn ns => not (bad_name ns)) s0
+(*bad name list, used names, *) 
+        val l = zip (List.map fst bad_names) (n2l (List.length bad_names))
+        fun foldfun ((bn,n), (uns,nr)) = 
+            let val gn = try_until_ok n uns
+                val uns' = HOLset.add(uns,gn)
+                val nr' = (bn,gn) :: nr 
+            in
+                (uns',nr')
+            end
+        val envl = snd (List.foldr foldfun (map_HOLset fst used_names0 String.compare,[]) l)
+        val env0 = mk_tenv (List.map (fn (n1,n2) => ((n1,ob),Var(n2,ob))) envl) 
+        val env = mk_menv env0 (Binarymap.mkDict String.compare)
+    in
+        inst_form env f
+    end
+
+fun rpf f = pretty_form (readf f)
+
+fun rapf f = pretty_form (fst (read_ast_f f))
+
+(*val f' = ALL (f :  -> ). (g o f) = h: form
+> val th = thm (fvf f',[],f');
+val th =
+   ( : ob),
+   ( : ob),
+   ( : ob),
+   (g :  -> ),
+   (h :  -> )
+   
+   |-
+   ALL (f :  -> ). (g o f) = h: thm
+> chr 1;*)
 
 end

@@ -366,6 +366,17 @@ and inst_sort env s =
         ob => s
       | ar(t1,t2) => ar(inst_term env t1,inst_term env t2)
 
+fun name_clash n env = 
+    let
+        val new_terms = List.map snd (Binarymap.listItems (vd_of env))
+        val new_names = mapfilter (fst o dest_var) new_terms
+    in 
+        List.exists (fn n0 => n0 = n) new_names
+    end
+
+fun rename_once_need n env = 
+    if name_clash n env = false then n else rename_once_need (n^"'") env
+
 fun inst_form env f = 
     case f of
         Pred(P,tl) => Pred(P,List.map (inst_term env) tl)
@@ -374,8 +385,9 @@ fun inst_form env f =
         let 
             val s' = inst_sort env s
             val b' = inst_form env b
+            val n' = rename_once_need n env 
         in 
-            Quant(q,n,s',b')
+            Quant(q,n',s',b')
         end
       | fVar fvn => 
         (case lookup_f env fvn of

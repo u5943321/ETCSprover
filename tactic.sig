@@ -2,6 +2,8 @@ signature tactic =
 sig
 type tactic = abbrev.tactic
 type thm_tactic = abbrev.thm_tactic
+val accept_tac: thm_tactic
+val assume_tac: thm_tactic
 val conj_tac: tactic
 val disj1_tac: tactic
 val disj2_tac: tactic
@@ -13,7 +15,7 @@ val gen_tac: tactic
 val then_tac: (tactic * tactic) -> tactic
 val >> : (tactic * tactic) -> tactic
 val then1_tac: (tactic * tactic) -> tactic
-val >- : (tactic * tactic) -> tactic
+val >-- : (tactic * tactic) -> tactic
 val Orelse: (tactic * tactic) -> tactic
 val stp_tac: tactic
 val all_tac: tactic

@@ -1,6 +1,7 @@
 signature symbols = 
 sig
 datatype ForP = fsym | psym
+val fxty: string -> int
 val cdict: (string, pterm_dtype.psort) Binarymap.dict ref
 val cdict0: (string, pterm_dtype.psort) Binarymap.dict
 val is_const: string -> bool
@@ -16,9 +17,7 @@ val fsyms0: fsymd
 val lookup_fun: fsymd -> string -> (term.sort * (string * term.sort) list) option
 val is_fun: string -> bool
 val new_fun:
-   string ->
-     term.sort * (string * term.sort) list ->
-       (string, term.sort * (string * term.sort) list) Binarymap.dict
+   string -> term.sort * (string * term.sort) list -> unit
 
 
 
@@ -28,6 +27,6 @@ val psyms0: psymd
 val lookup_pred: psymd -> string -> (string * term.sort) list option
 val is_pred: string -> bool
 val new_pred:
-   string -> (string * term.sort) list -> (string, (string * term.sort) list) Binarymap.dict
+   string -> (string * term.sort) list -> unit
 
 end

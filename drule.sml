@@ -739,5 +739,6 @@ fun dischl l th =
 
 fun disch_all th = dischl (ant th) th
 
+fun GSYM th =  sym (spec_all th)
 
 end
