@@ -23,10 +23,11 @@ fun part_tmatch partfn A t =
 
 *)
 
+(*TODO: think more carefully if use cont or recollect the variable set*)
 
 fun part_tmatch partfn th t = 
     let 
-        val env = match_term (partfn th) t mempty
+        val env = match_term (fvfl (ant th)) (partfn th) t mempty
     in 
         inst_thm env th
     end
@@ -34,6 +35,8 @@ fun part_tmatch partfn th t =
 
 val rewr_conv = part_tmatch (fst o dest_eq o concl)
 
+
+(*change cont or spec_all *)
 
 (*operations on conv*)
 
@@ -91,24 +94,11 @@ fun top_depth_conv c t =
 
 (*fconvs*)
 
-(*
-fun part_fmatch partfn A f = 
-    let 
-        val fvd = (match_form (partfn A) f mempty)
-        val vd = Binarymap.listItems 
-                     (vd_of fvd)
-        val A0 = inst_thm fvd A
-        val A' = genl (List.map (fn (a,b) => b) vd) A0
-    in specl A' (List.map (fn (a,b) => b) vd)
-    end
-
-*)
-
 val simp_trace = ref false
 
 fun part_fmatch partfn th f = 
     let 
-        val fvd = (match_form (partfn th) f mempty)
+        val fvd = (match_form (fvfl (ant th)) (partfn th) f mempty)
         val th' = inst_thm fvd th
         val _ = if !simp_trace then Lib.say (printth th') else ()
     in 
@@ -149,6 +139,8 @@ fun changed_fconv (fc:form -> thm) f =
 
 fun repeatfc fc f = 
     ((fc thenfc (repeatfc fc)) orelsefc all_fconv) f
+
+(*Q: should it fail if cannot make any change?*)
 
 fun pred_fconv c f = 
     case f of 

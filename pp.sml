@@ -45,8 +45,8 @@ fun ppterm ss g t =
                 in 
                     if int_option_less (fxty f, lg) orelse int_option_leq (fxty f, rg) then 
                         add_string "(" >> 
-                                   ppterm ss g1 t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
-                                   ppterm ss g2 t2 >> add_string ")"
+                                   ppterm ss (LR (NONE, SOME (fxty f))) t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
+                                   ppterm ss (LR (SOME (fxty f), NONE)) t2 >> add_string ")"
                     else 
                         ppterm ss g1 t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
                                ppterm ss g2 t2

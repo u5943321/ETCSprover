@@ -1,3 +1,4 @@
+use "infixes.sml";
 use "token.sig";
 use "token.sml";
 use "pterm_dtype.sml";
@@ -45,5 +46,7 @@ use "goalstack.sig";
 use "goalstack.sml";
 
 open goalstack;
+
+
 
 

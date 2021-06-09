@@ -2,7 +2,6 @@ structure tactic :> tactic =
 struct
 open term form thm drule abbrev
 
-
 fun empty th [] = th
   | empty th _ = raise ERR "empty" 
 
@@ -55,7 +54,7 @@ fun drule th (G,fl:form list,f) =
         val (ant,con) = dest_imp b
         fun mfn _ asm = 
             let 
-                val menv = match_form ant asm mempty
+                val menv = match_form (cont th) ant asm mempty
                 val ith = inst_thm menv (spec_all th)
             in
                 SOME (mp ith (assume asm))
@@ -85,7 +84,7 @@ fun efn (n,s) (f,th) =
     end
 
 
-fun match_mp_tac th (cont:cont,asl:form list,w) = 
+fun match_mp_tac th (ct:cont,asl:form list,w) = 
     let
         val (imp,gvs) = strip_all (concl th)
         val (ant,conseq) = dest_imp imp
@@ -94,12 +93,12 @@ fun match_mp_tac th (cont:cont,asl:form list,w) =
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
         val th2 = uncurry disch (itlist efn evs (ant, th1))
         val (gl,vs) = strip_all w
-        val env = match_form con gl mempty
+        val env = match_form (cont th) con gl mempty
         val ith = inst_thm env th2
         val gth = genl vs (undisch ith)
         val ant = fst (dest_imp (concl ith))
     in
-        ([(cont,asl,ant)], fn thl => mp (disch ant gth) (hd thl))
+        ([(ct,asl,ant)], fn thl => mp (disch ant gth) (hd thl))
     end
 
 (*
@@ -255,9 +254,6 @@ fun then_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) =
     end
 
 
-
-infix >> then_tac 
-
 val op >> = then_tac
 
 fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) = 
@@ -272,17 +268,15 @@ fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) =
     in (gl',func')
     end
 
-infix >-- then1_tac 
 
 val op >-- = then1_tac
 
 
-
-fun Orelse (tac1:tactic, tac2:tactic) = 
+fun op Orelse (tac1:tactic, tac2:tactic) = 
     fn (g as (G,fl,f)) =>
        tac1 g handle ERR _ => tac2 g
 
-infix Orelse;
+
 
 
 val stp_tac = conj_tac Orelse contra_tac Orelse imp_tac Orelse gen_tac
@@ -294,22 +288,24 @@ fun try tac:tactic = tac Orelse all_tac
 
 fun repeat tac g = ((tac >> (repeat tac)) Orelse all_tac) g
 
+
 fun fconv_tac fc (G,fl,f) = 
-    let val G' = HOLset.union(G,cont (fc f))
+    let 
+        val th = fc f
+        val G' = HOLset.union(G,cont th)
+        val (_,rhs) = dest_dimp (concl th)
     in
-    ([(G',fl, (snd o dest_dimp) (concl (fc f)))],
-     (fn [th] => dimp_mp_r2l (fc f) th
-     | _ => raise ERR "incorrect number of list items"))
+        if eq_form (rhs,TRUE) 
+        then ([],empty (dimp_mp_l2r (trueI []) (iff_swap th)))
+        else
+            ([(G',fl,rhs)],
+             (fn [th] => dimp_mp_r2l (fc f) th
+             | _ => raise ERR "incorrect number of list items"))
     end
 
-(*
-fun rw_tac thl = 
-    let val thms = flatten (List.map imp_canon thl)
-        val conv = first_conv (mapfilter rewr_conv thms)
-        val fconv = first_fconv (mapfilter rewr_fconv thms)
-    in fconv_tac (basic_fconv conv fconv) 
-    end
-*)
+
+(*TODO: see Tactical.sml CONV_TAC,    if aconv rhs T then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH)), if fc f is eq_form to T, then this extra line*)
+
 
 
 
@@ -319,8 +315,6 @@ fun rw_tac thl =
         val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (basic_fconv conv fconv) 
     end
-
-
 
 (*
 
@@ -345,6 +339,88 @@ fun mp_tac th0 (G,asl,w) =
 
 fun assum_list aslfun (g as (_,asl, _)) = aslfun (List.map assume asl) g
 
+fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
 
-(*if want to use assumptions and thms, aslfun = fn thl => rw_tac(thl ++ [list of ths])*)
+fun pop_assum_list (asltac:thm list -> tactic):tactic = 
+    fn (G,asl, w) => asltac (map assume asl) (G,[], w)
+
+fun stp_rw thl g = 
+    repeat (stp_tac >> rw_tac thl) g
+
+(*only difference between pop_assum_list and assum_list is the former removes the assumptions?*)
+
+fun every tacl = List.foldr (op then_tac) all_tac tacl
+
+fun map_every tacf lst = every (map tacf lst) 
+
+fun rule_assum_tac rule: tactic =
+    pop_assum_list
+        (fn asl => map_every assume_tac (rev_itlist (cons o rule) asl []))
+
+(*TODO: let rw_tac strip as much as it can: i.e. if it rw RHS into something which can be stripped, also strip that*)
+
+
+(*
+If tac applied to the goal (asl,g) produces a justification that does not create a theorem A |- g, with A a subset of asl, then VALID tac (asl,g) fails (raises an exception)
+*)
+
+(*
+val validity_tag = "ValidityCheck"
+   fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
+   datatype validity_failure = Concl of term | Hyp of term
+   fun bad_prf th (asl, w) =
+       if concl th !~ w then SOME (Concl (concl th))
+       else
+         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
+             NONE => NONE
+           | SOME h => SOME (Hyp h)
+*)
+
+
+fun masquerade goal = thm goal
+
+datatype validity_failure = Concl of form | Ant of form| Cont of (string * sort)
+
+fun bad_prf th (ct,asl,w) =
+    if not (eq_form(concl th,w)) then SOME (Concl (concl th))
+    else
+        let val clth = HOLset.listItems (cont th)
+            val clct = HOLset.listItems ct
+        in 
+            case
+                List.find 
+                    (fn ns0 => List.all (fn ns => not (ns = ns0)) clct) clth
+             of
+                SOME ns => SOME (Cont ns)
+              | NONE => 
+                (case List.find (fn h => List.all (not o ((curry eq_form) h)) asl)
+                               (ant th) of
+                    NONE => NONE
+                  | SOME h => SOME (Ant h))
+        end
+
+fun error f t e =
+       let
+         val pfx = "Invalid " ^ t ^ ": theorem has "
+         val (desc, t) =
+             case e of
+                 Ant h => ("bad hypothesis", string_of_form h)
+               | Concl c => ("wrong conclusion", string_of_form c)
+               | Cont ns => ("extra variable involved",string_of_term (Var ns))
+       in
+         raise ERR (f^pfx ^ desc ^ " " ^ t)
+       end
+
+
+fun valid (tac: tactic) : tactic =
+      fn g: goal =>
+         let
+            val (result as (glist, prf)) = tac g
+         in
+           case bad_prf (prf (map masquerade glist)) g of
+               NONE => result
+             | SOME e => error "VALID" "tactic" e
+         end
+
 end
+    

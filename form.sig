@@ -76,10 +76,10 @@ val mk_fenv: (string * form) list -> (string, form) Binarymap.dict
 val mk_inst: ((string * sort) * term) list -> (string * form) list -> menv
 val mk_menv:(string * sort, term) Binarymap.dict -> (string, form) Binarymap.dict -> menv
 
-val match_term: term -> term -> menv -> menv
-val match_sort: sort -> sort -> menv -> menv
-val match_tl: term list -> term list -> menv -> menv
-val match_form: form -> form -> menv -> menv
+val match_term: (string * sort) set -> term -> term -> menv -> menv
+val match_sort: (string * sort) set -> sort -> sort -> menv -> menv
+val match_tl: (string * sort) set -> term list -> term list -> menv -> menv
+val match_form: (string * sort) set -> form -> form -> menv -> menv
 val strip_all: form -> form * (string * sort) list
 val pvariantt: (string * sort) set -> term -> term
 

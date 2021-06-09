@@ -149,7 +149,7 @@ fun EQ_fsym f thml =
       | SOME(s,l) => 
         let 
             val sl = List.map (fst o dest_eq o concl) thml
-            val menv0 = match_tl (List.map Var l) sl mempty 
+            val menv0 = match_tl essps (List.map Var l) sl mempty 
             val s' = inst_sort menv0 s
             val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
         in

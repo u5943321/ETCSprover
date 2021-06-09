@@ -281,55 +281,60 @@ fun mk_inst tl fl = mk_menv (mk_tenv tl) (mk_fenv fl)
 
 fun pmenv (env:menv) = (Binarymap.listItems (vd_of env),Binarymap.listItems (fvd_of env))
 
-fun match_term pat ct (env:menv) = 
+(*TODO: change name to be raw_match*)
+fun match_term nss pat ct (env:menv) = 
     case (pat,ct) of 
         (Fun(f1,s1,l1),Fun(f2,s2,l2)) => 
         if f1 <> f2 then raise ERR "different function names"
-        else match_sort s1 s2 (match_tl l1 l2 env)  
+        else match_sort nss s1 s2 (match_tl nss l1 l2 env)  
       | (Var(n1,s1),_) => 
-        (case (lookup_t env (n1,s1)) of
-            SOME t => if t = ct then env else
-                      raise ERR "double bind"
-          | _ => 
-            v2t (n1,s1) ct (match_sort s1 (sort_of ct) env))
+        if HOLset.member(nss,(n1,s1)) then
+            if pat = ct then env 
+            else raise ERR "current term not alloed to be instantiated"
+        else 
+            (case (lookup_t env (n1,s1)) of
+                 SOME t => if t = ct then env else
+                           raise ERR "double bind"
+               | _ => 
+                 v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env))
       | (Bound i1,Bound i2) => 
         if i1 <> i2 then 
             raise ERR "bounded variable cannot be unified"
         else env
       | _ => raise Fail "unexpected term constructor"
-and match_sort sp cs env = 
+and match_sort nss sp cs env = 
     case (sp,cs) of 
         (ob,ob) => env
       | (ar(d1,c1),ar(d2,c2)) => 
-        match_term c1 c2 (match_term d1 d2 env)
+        match_term nss c1 c2 (match_term nss d1 d2 env)
       | _ => raise ERR "cannot match ob with ar"
-and match_tl l1 l2 env =
+and match_tl nss l1 l2 env =
     case (l1,l2) of 
         ([],[]) => env
       | (h1 :: t1,h2 :: t2) => 
-        match_tl t1 t2 (match_term h1 h2 env)
+        match_tl nss t1 t2 (match_term nss h1 h2 env)
       | _ => raise ERR "incorrect length of list"
 
 
 
-fun match_form pat cf env:menv = 
+fun match_form nss pat cf env:menv = 
     case (pat,cf) of
         (Pred(P1,l1),Pred(P2,l2)) => 
         if P1 <> P2 then raise ERR "different predicates"
-        else match_tl l1 l2 env
+        else match_tl nss l1 l2 env
       | (Conn(co1,l1),Conn(co2,l2)) => 
         if co1 <> co2 then raise ERR "different connectives"
-        else match_fl l1 l2 env
+        else match_fl nss l1 l2 env
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
         if q1 <> q2 then raise ERR "different quantifiers"
-        else match_form b1 b2 (match_sort s1 s2 env)
+        else match_form nss b1 b2 (match_sort nss s1 s2 env)
       | (fVar fm,_) => fv2f fm cf env
       | _ => raise ERR "different formula constructors"
-and match_fl l1 l2 env = 
+and match_fl nss l1 l2 env = 
     case (l1,l2) of 
         ([],[]) => env
       | (h1::t1,h2::t2) =>  
-        match_fl t1 t2 (match_form h1 h2 env)
+        match_fl nss t1 t2 (match_form nss h1 h2 env)
       | _ => raise ERR "incorrect length of list"
 
 
