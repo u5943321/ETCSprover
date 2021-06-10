@@ -328,7 +328,11 @@ fun match_form nss pat cf env:menv =
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
         if q1 <> q2 then raise ERR "different quantifiers"
         else match_form nss b1 b2 (match_sort nss s1 s2 env)
-      | (fVar fm,_) => fv2f fm cf env
+      | (fVar fm,_) => 
+            (case (lookup_f env fm) of
+                 SOME f => if f = cf then env else
+                           raise ERR "double bind"
+               | _ => fv2f fm cf env)
       | _ => raise ERR "different formula constructors"
 and match_fl nss l1 l2 env = 
     case (l1,l2) of 

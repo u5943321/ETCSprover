@@ -29,6 +29,9 @@ fun read_goal f =
 fun rpg f = 
     let val f0 = rpf f in new_goal (fvf f0,[]:form list,f0) end
 
+fun rapg f = 
+    let val f0 = rapf f in new_goal (fvf f0,[]:form list,f0) end
+
 fun proved_th (GSTK{prop:proposition,...}) = 
     case prop of
         PROVED (th,_) => th
