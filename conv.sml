@@ -261,6 +261,16 @@ fun top_depth_fconv c fc f =
                   orelsefc all_fconv))
         f
 
+fun once_depth_conv conv tm =
+   try_conv (conv orelsec (sub_conv (once_depth_conv conv))) tm
+
+fun once_depth_fconv c fc f =
+   try_fconv (fc orelsefc (sub_fconv c (once_depth_fconv c fc))) f
+
+fun basic_once_fconv c fc = 
+    once_depth_fconv (once_depth_conv c) 
+                     (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
+
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
                     (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
@@ -268,6 +278,7 @@ fun basic_fconv c fc =
 (* fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th *)
 
 fun conv_rule c th = dimp_mp_r2l th (c (concl th))
+
 
 
 

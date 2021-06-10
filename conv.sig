@@ -24,6 +24,7 @@ val sub_conv: conv -> conv
 val thenc: conv * conv -> conv
 val thenfc: fconv * fconv -> fconv
 val top_depth_conv: conv -> conv
+val once_depth_conv: conv -> conv
 val try_conv: conv -> conv
 exception unchanged
 val basic_fconv: conv -> fconv -> fconv
@@ -49,6 +50,8 @@ val taut_exists_fconv: fconv
 val taut_forall_fconv: fconv
 val taut_imp_fconv: fconv
 val top_depth_fconv: conv -> fconv -> fconv
+val once_depth_fconv: conv -> fconv -> fconv
+val basic_once_fconv: conv -> fconv -> fconv
 val try_fconv: fconv -> fconv
 val simp_trace: bool ref
 end

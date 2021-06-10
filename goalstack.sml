@@ -82,6 +82,8 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
                               stack={goals=glist, validation=vf} :: stack})
      in expand_msg dpth gs ; gs end
 
+fun e tac = expandf (valid tac) 
+
 (*
 fun e tac = expandf (VALID tac) 
 do valid check on each step.

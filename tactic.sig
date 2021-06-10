@@ -1,10 +1,12 @@
 signature tactic = 
 sig
 type tactic = abbrev.tactic
+type fconv = abbrev.fconv
 type thm_tactic = abbrev.thm_tactic
 val >> : (tactic * tactic) -> tactic
 val >-- : (tactic * tactic) -> tactic
 
+val empty: 'a -> 'b list -> 'a
 val accept_tac: thm_tactic
 val assume_tac: thm_tactic
 val conj_tac: tactic
@@ -27,5 +29,8 @@ val rw_tac: thm.thm list -> tactic
 val T_INTRO_TAC: tactic
 val drule: thm_tactic
 val arw_tac: thm.thm list -> tactic
+val fconv_tac: fconv -> tactic
+val once_rw_tac: thm.thm list -> tactic
+val valid: tactic -> tactic
 end
 

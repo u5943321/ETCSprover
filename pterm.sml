@@ -949,7 +949,7 @@ fun map_HOLset f s order =
 
 fun pretty_form f = 
     let val s0 = fvf f 
-        val bad_names = HOLset.listItems (HOLset.filter bad_name s0)
+        val bad_names = rev (HOLset.listItems (HOLset.filter bad_name s0))
         val used_names0 = HOLset.filter (fn ns => not (bad_name ns)) s0
 (*bad name list, used names, *) 
         val l = zip (List.map fst bad_names) (n2l (List.length bad_names))
@@ -970,18 +970,5 @@ fun pretty_form f =
 fun rpf f = pretty_form (readf f)
 
 fun rapf f = pretty_form (fst (read_ast_f f))
-
-(*val f' = ALL (f :  -> ). (g o f) = h: form
-> val th = thm (fvf f',[],f');
-val th =
-   ( : ob),
-   ( : ob),
-   ( : ob),
-   (g :  -> ),
-   (h :  -> )
-   
-   |-
-   ALL (f :  -> ). (g o f) = h: thm
-> chr 1;*)
 
 end

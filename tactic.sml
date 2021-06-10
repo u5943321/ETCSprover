@@ -46,6 +46,7 @@ val assume_tac:thm_tactic =
     fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
     ([(G,concl th:: fl,f)], fn [a:thm] => prove_hyp th a)
 
+val hyp = ant
 
 fun drule th (G,fl:form list,f) = 
     let 
@@ -54,7 +55,7 @@ fun drule th (G,fl:form list,f) =
         val (ant,con) = dest_imp b
         fun mfn _ asm = 
             let 
-                val menv = match_form (cont th) ant asm mempty
+                val menv = match_form (fvfl (hyp th)) ant asm mempty
                 val ith = inst_thm menv (spec_all th)
             in
                 SOME (mp ith (assume asm))
@@ -306,15 +307,27 @@ fun fconv_tac fc (G,fl,f) =
 
 (*TODO: see Tactical.sml CONV_TAC,    if aconv rhs T then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH)), if fc f is eq_form to T, then this extra line*)
 
+fun gen_rw_tac fc thl = 
+    let 
+        val conv = first_conv (mapfilter rewr_conv thl)
+        val fconv = first_fconv (mapfilter rewr_fconv thl)
+    in fconv_tac (fc conv fconv) 
+    end
 
 
+fun rw_tac thl = gen_rw_tac basic_fconv thl
 
+fun once_rw_tac thl = gen_rw_tac basic_once_fconv thl
+
+(*
 fun rw_tac thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv thl)
         val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (basic_fconv conv fconv) 
     end
+
+*)
 
 (*
 

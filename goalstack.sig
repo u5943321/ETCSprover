@@ -12,4 +12,5 @@ sig
     val proved_th: gstk -> thm.thm
     val expandf: tactic.tactic -> gstk -> gstk
     val ppgstk: gstk -> ('a, unit) t
+    val e: tactic.tactic -> gstk -> gstk
 end
