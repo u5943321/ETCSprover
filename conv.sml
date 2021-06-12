@@ -271,6 +271,8 @@ fun basic_once_fconv c fc =
     once_depth_fconv (once_depth_conv c) 
                      (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
+
+
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
                     (fc orelsefc basic_taut_fconv orelsefc refl_fconv)

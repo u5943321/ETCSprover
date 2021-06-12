@@ -183,10 +183,16 @@ fun cases_on c (G,fl,f) =
 fun contra_tac (g:goal as (G,fl,f)) = 
     case f of
         Conn("~",[A]) => 
-        ([(G,A::fl,FALSE):goal], fn [th] => negI th f
+        ([(G,A::fl,FALSE):goal], fn [th] => negI th A
                           | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not a negation"
 
+(*
+fun F_INTRO_TAC cf (g:goal as (G,fl,f)) = 
+    case f of 
+        FALSE => if fmem cf fl andalso fmem (mk_neg cf) fl then
+                     ([],)
+*)
 
 fun imp_tac (G,fl,f) = 
     case f of 
@@ -220,7 +226,8 @@ fun wexists_tac t (G,fl,f) =
     case f of 
         Quant("EXISTS",n,s,b) =>
         if sort_of t = s then 
-            ([(G,fl,subst_bound t b)], fn [th] => existsI th (n,s) t f
+            ([(G,fl,subst_bound t b)], 
+             fn [th] => existsI th (n,s) t (subst_bound (Var(n,s)) b)
                                    | _ => raise ERR "incorrect length of list")
         else raise ERR "inconsist sorts"
       | _ => raise ERR "not an EXISTS"
@@ -318,6 +325,10 @@ fun gen_rw_tac fc thl =
 fun rw_tac thl = gen_rw_tac basic_fconv thl
 
 fun once_rw_tac thl = gen_rw_tac basic_once_fconv thl
+
+fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
+
+fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
 
 (*
 fun rw_tac thl = 

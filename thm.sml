@@ -191,7 +191,7 @@ fun falseE fl f =
     let val _ = fmem FALSE fl orelse 
                 raise ERR "FALSE is not in the list"
     in
-        thm(fvfl fl,[FALSE],f)
+        thm(fvfl fl,fl,f)
     end
 
 fun trueI A = thm (fvfl A,A,TRUE)
@@ -260,12 +260,20 @@ A,Γ |- f[t/Var(a,s)]
 A,Γ |- EXISTS a: s. f
 *)
 
+(*----------------------------------------------------------------------
+Γ,A |- f[t/(a,s)]
+-------------------
+Γ,A |- ?a:s. f
+
+
+----------------------------------------------------------------------*)
+
 fun existsI (thm(G,A,C)) (a,s) t f = 
     let 
         val _ = HOLset.isSubset(fvt t,G)
         val _ = (sort_of t = s) orelse 
                 raise ERR "term and variable to be abstract of different sorts"
-        val _ = (C = substf ((a,s),t) f) orelse
+        val _ = eq_form (C, substf ((a,s),t) f) orelse
                 raise ERR ("formula has the wrong form" ^ string_of_form C)
     in
         thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))

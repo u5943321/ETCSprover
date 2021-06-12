@@ -32,5 +32,7 @@ val arw_tac: thm.thm list -> tactic
 val fconv_tac: fconv -> tactic
 val once_rw_tac: thm.thm list -> tactic
 val valid: tactic -> tactic
+val by_tac: form.form -> tactic
+val match_mp_tac: thm_tactic
 end
 

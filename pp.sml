@@ -59,6 +59,7 @@ update the right grav when printing left argument, and vise versa
       | Fun(f,s,args) => 
         if args = [] then add_string f else
         add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) args)
+      | Bound i => add_string "B" >> paren (add_string (int_to_string i))
 and ppsort g s =
     case s of
         ob => add_string "ob"

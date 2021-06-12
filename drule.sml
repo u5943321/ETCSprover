@@ -335,6 +335,8 @@ fun exists_false (n,s) =
     thm(essps,[],mk_dimp (mk_exists n s FALSE) FALSE)
 
 
+(* TODO: cj_asm: A1,A2 |- B <=> A1/\ A2 |- B *)
+
 
 fun iff_trans (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     case (C1,C2) of 

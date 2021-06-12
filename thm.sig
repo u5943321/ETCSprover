@@ -79,6 +79,7 @@ val ax_elt: thm
 val ax_mcp: thm
 val ax_delt: thm
 
+val areiso_def: thm
 (*type thm*)
 (*rules for inference*) 
 end
