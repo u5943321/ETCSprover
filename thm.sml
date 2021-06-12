@@ -495,7 +495,7 @@ val ax2 = read_thm "ALL A. ALL B. ALL X. ALL f: A * X -> B.ALL h: X -> exp(A,B).
 
 val ax_exp = ax2
 
-val ax3 = read_thm "ALL X. ALL x0: 1 -> X. ALL x: N -> X. ALL t: X -> X. x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"
+val ax3 = read_thm "ALL X. ALL x0: 1 -> X. ALL x: N -> X. ALL t: X -> X. (x o z = x0 & x o s = t o x) <=> x = Nind(x0,t)"
 
 val ax_N = ax3
 
