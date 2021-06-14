@@ -279,7 +279,7 @@ fun basic_fconv c fc =
 
 (* fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th *)
 
-fun conv_rule c th = dimp_mp_r2l th (c (concl th))
+fun conv_rule c th = dimp_mp_l2r th (c (concl th)) 
 
 
 

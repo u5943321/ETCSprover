@@ -98,7 +98,7 @@ fun ppgoal (G,A,C) =
     in
         pr_list (ppterm true (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
                 block HOLPP.INCONSISTENT 2 
-                (pr_list (ppform false) (add_string "," >> add_break (1,0)) A) >>
+                (pr_list (ppform false) (add_string "," >> add_newline) A) >>
                 add_newline >>
                 add_string "----------------------------------------------------------------------" >>
                 add_newline >>

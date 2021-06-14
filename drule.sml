@@ -743,4 +743,19 @@ fun disch_all th = dischl (ant th) th
 
 fun GSYM th =  sym (spec_all th)
 
+fun conj_assum f1 f2 (th as thm(G,A,C)) = 
+    let 
+        val _ = fmem f1 A orelse raise ERR "first formula not in assumption"
+        val _ = fmem f2 A orelse raise ERR "second formula not in assumption"
+        val th1 = disch f1 (disch f2 th)
+    in mp (mp th1 (conjE1 (assume (mk_conj f1 f2))))
+          (conjE2 (assume (mk_conj f1 f2)))
+    end
+
+(*
+fun conj_asl fl th = 
+case fl
+
+*)
+
 end

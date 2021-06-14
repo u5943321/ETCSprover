@@ -79,6 +79,7 @@ val exists_false_ob: thm
 val GSYM: thm -> thm
 val disch_all: thm -> thm
 val dischl: form list -> thm -> thm
+val conj_assum: form -> form -> thm -> thm
 
 (*
 val imp_canon: thm -> thm list

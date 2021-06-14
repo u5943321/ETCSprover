@@ -1040,14 +1040,576 @@ to_p_eq_one_side:
 
 *)
 
+(*TODO: test rule_assum_tac on this*)
+
 val to_p_eq_one_side = proved_th(
-expandf 
+e
 (stp_tac >>
 by_tac (rapf "p2(A,B) o <id(A),f> = p2(A,B) o <id(A),g>")
->-- arw_tac[])
-(rapg "<id(A),f> = <id(A),g> ==> f = g")
-
+>-- arw_tac[] 
+>> (*return to the main goal*)
+rule_assum_tac (
+let val fc = basic_fconv (rewr_conv (spec_all p2_of_pa)) no_fconv
+in (fn th => dimp_mp_l2r th (fc (concl th)))
+end
+) >>
+accept_tac (assume (rapf "f:A -> B = g"))
 )
+(rapg "<id(A),f> = <id(A),g> ==> f = g")
+)
+
+
+(*
+Definition is_inc_def:
+is_inc a b A ⇔ is_subset a A ∧ is_subset b A ∧ ∃h. h∶(dom a) → (dom b) ∧ b o h = a
+End
+
+*)
+val psyms0 = insert_psym "isinc";
+
+val isinc_def = define_pred(rapf "ALL A.ALL A0.ALL a:A0 ->A.ALL A1. ALL b:A1 ->A. isinc(a,b,A) <=> EXISTS h. b o h = a")
+
+(*is_mono_thm:
+∀A B m. m∶ A → B ⇒
+        (is_mono m ⇔
+        (∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g))*)
+
+val is_mono_thm = (gen_all o dimpl2r o spec_all) ismono_def
+
+
+(*
+is_mono_applied:
+∀A B m. m∶ A → B ∧
+        (∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g) ⇒
+        is_mono m
+
+TODO: check the applied works for match_mp_tac
+*)
+val is_mono_applied = (gen_all o dimpr2l o spec_all) ismono_def
+
+(*
+is_mono_property:
+∀A B m. is_mono m ∧ m∶ A → B ⇒
+(∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g)
+
+same as is_mono_thm here
+
+Definition is_mono_def:   
+  is_mono f ⇔
+  ∀g1 g2. dom g1 = dom g2 ∧ cod g1 = dom f ∧ cod g2 = dom f ∧
+          f o g1 = f o g2 ⇒ g1 = g2
+
+maybe not useful thms here, we need them before, not sure if useful here.
+*)
+
+(*
+Theorem post_inv_mono:
+∀A B m i. m∶ A → B ∧ i∶ B → A ∧ (i o m) = id A ⇒ is_mono m
+*)
+
+
+(*TODO:rapf bug:
+rapf "((i:B->A) o m:A-> B) o h = (i o m) o g"
+ Exception- ERR "not an infix operator" raised
+
+
+*)
+
+(* TODO:
+ arw_tac[] >-- rw_tac[spec_all idL] works, whereas 
+arw_tac[spec_all idL] seems loops, but can be interuptted
+
+ m o g = m o h, i o m = id(A)
+   ----------------------------------------------------------------------
+   h = g ==> h = g
+
+
+should be automatically solved
+*)
+
+val post_inv_mono = proved_th(
+e
+(stp_tac >> match_mp_tac is_mono_applied >> repeat stp_tac >>
+suffices_tac (rapf "((i:B->A) o (m:A-> B)) o (h:X-> A) = (i o m) o g") 
+(*solving the suffices*)
+>-- arw_tac[] >-- rw_tac[spec_all idL] >-- stp_tac >-- 
+accept_tac (assume (rapf "h:X->A = g"))
+>> (*done with suffices*)
+rw_tac[spec_all o_assoc] >> arw_tac[]
+)
+(rapg "i o m = id(A) ==> ismono(m)")
+)
+
+(*
+
+previous is_epi_def uses dom/cod stuff, now is_epi_thm can just be def
+
+Theorem is_epi_thm:
+∀e A B. e∶ A → B ⇒
+       (is_epi e ⇔ (∀X f g. f∶ B → X ∧ g∶ B → X ∧ f o e = g o e ⇒ f = g))
+
+*)
+
+val psyms0 = insert_psym "isepi";
+
+(*
+TODO: define_pred does not update the dict for type-inference, so does ismono
+# val it = isepi(f): form
+> fvf it;
+val it = HOLset{("f", ob)}: (string * sort) set
+*)
+ 
+val isepi_def = define_pred (readf "ALL A. ALL B. ALL e: A -> B. isepi(e) <=> ALL X.ALL f:B -> X. ALL g. f o e = g o e  ==> f = g")
+
+val is_epi_thm = (gen_all o dimpl2r o spec_all) isepi_def
+
+val is_epi_applied = (gen_all o dimpr2l o spec_all) isepi_def
+
+(*have already checked that thm and applied look the same for mono and epi*)
+
+(*
+pre_inv_epi:
+∀A B e i. e∶ A → B ∧ i∶ B → A ∧ e o i = id B ⇒ is_epi e
+*)
+
+val post_inv_mono = proved_th(
+e
+(stp_tac >> match_mp_tac is_mono_applied >> repeat stp_tac >>
+suffices_tac (rapf "((i:B->A) o (m:A-> B)) o (h:X-> A) = (i o m) o g") 
+(*solving the suffices*)
+>-- arw_tac[] >-- rw_tac[spec_all idL] >-- stp_tac >-- 
+accept_tac (assume (rapf "h:X->A = g"))
+>> (*done with suffices*)
+rw_tac[spec_all o_assoc] >> arw_tac[]
+)
+(rapg "i o m = id(A) ==> ismono(m)")
+)
+
+(*TODO: need check! the arw works here and does not work for that of mono
+how to do it better than once_rw_tac[GSYM o_assoc] >> arw_tac[]? once arw_tac?
+*)
+
+val pre_inv_epi = proved_th(
+e
+(stp_tac >> match_mp_tac is_epi_applied >> repeat stp_tac >>
+ suffices_tac (rapf "(f:B->X) o (e:A->B) o (i:B->A) = g o e o i") 
+ >-- arw_tac[spec_all idR] 
+ >-- stp_tac >-- accept_tac (assume (rapf "f:B -> X = g")) >>
+ once_rw_tac[GSYM o_assoc] >> arw_tac[]
+ )
+(rapg "e o i = id(B) ==> isepi(e)")
+)
+
+(*
+
+Definition is_pb_def:
+is_pb P p q f g <=> cod f = cod g /\ p∶ P → dom f ∧ q∶ P → dom g /\
+                      f o p = g o q ∧
+                      (∀A u v. u∶ A → dom f ∧ v∶ A → dom g ∧ f o u = g o v ⇒
+                      ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)
+*)
+
+val psyms0 = insert_psym "ispb"
+
+(*TODO: remove () and check it works*)
+val is_pb_def = define_pred (rapf 
+"ALL X. ALL Z. ALL f: X -> Z. ALL Y. ALL g:Y -> Z. ALL P. ALL p:P-> X. ALL q:P->Y. ispb(P,p,q,f,g) <=> f o p = g o q & (ALL A. ALL u: A -> X. ALL v: A -> Y. f o u = g o v ==> EXISTS a:A -> P. (p o a = u & q o a = v & ALL b:A -> P. (p o b = u & q o b = v) ==> a = b))"
+)
+
+(*
+eq_equlity:
+∀A B f g.
+         f∶A → B ∧ g∶A → B ⇒ f ∘ eqa f g = g ∘ eqa f g
+*)
+
+val eq_equality = (conjE1 o spec_all) ax_eq'
+
+val coeq_equality = (conjE1 o spec_all) ax_coeq'
+
+(*
+coeq_of_equal:
+!f A B. f∶ A → B ==> ?ki. ki∶ coeqo f f → B /\ ki o (coeqa f f) = id B
+*)
+
+(*already checked that type inference works for coeqinduce*)
+
+val coeq_of_equal = proved_th(
+e
+(wexists_tac (readt "coeqinduce(f:A-> B,f,id(B))") >> 
+match_mp_tac ax1_6_applied >> rw_tac[]
+)
+(rapg "EXISTS ki. ki o (coeqa(f,f)) = id(B)")
+)
+
+(*
+eqa_is_mono:
+∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_mono (eqa f g)
+*)
+(*
+TODO: 
+(rapf "h = eqinduce (f1:A-> B,f2,eqa(f1,f2) o g:X -> eqo(f1,f2))") 
+
+not an infix operator error
+*)
+
+(*if use arw for 
+(A : ob),
+   (B : ob),
+   (X : ob),
+   (f1 : A -> B),
+   (f2 : A -> B),
+   (g : X -> eqo(f1, f2)),
+   (h : X -> eqo(f1, f2))
+   h = eqinduce(f1, f2, eqa(f1, f2) o g), g =
+     eqinduce(f1, f2, eqa(f1, f2) o g), eqa(f1, f2) o g = eqa(f1, f2) o h
+   ----------------------------------------------------------------------
+   h = g
+
+then loop, not surprise
+
+and once_arw leaves this:
+
+ eqinduce(f1, f2, eqa(f1, f2) o g) = eqinduce(f1, f2, eqa(f1, f2) o g)
+*)
+
+(*TODO:want match_mp_tac to work for 
+f o h = g o h ==>
+                     eqa(f, g) o x0 = h ==> x0 = eqinduce(f, g, h): thm
+*)
+
+
+
+
+val is_eqinduce = (gen_all o disch_all o 
+                   (conj_assum
+                        (rapf "(f:A-> B) o (h:X-> A) = g o h")
+                        (rapf "eqa(f:A->B, g) o (x0:X->eqo(f,g)) = h:X->A")) o 
+                   (undisch o dimpl2r o undisch o conjE2 o spec_all) ax1_5
+
+val is_coeqinduce = (gen_all o disch_all o 
+                   (conj_assum
+                        (rapf "(h:B-> X) o (f:A-> B) = h o g")
+                        (rapf "(x0:coeqo(f,g) -> X) o coeqa(f:A->B, g) = h:B->X")) o 
+                   undisch o dimpl2r o undisch o conjE2 o spec_all) ax1_6
+
+(*The above two thms can be strengthen by moving ALL inwards*)
+
+val eqa_is_mono = proved_th(
+e
+(match_mp_tac is_mono_applied >> repeat stp_tac >> 
+ suffices_tac
+ (rapf "h = eqinduce (f1:A-> B,f2,eqa(f1,f2) o (g:X -> eqo(f1,f2)))") 
+ >-- suffices_tac
+ (rapf "g = eqinduce (f1:A-> B,f2,eqa(f1,f2) o (g:X -> eqo(f1,f2)))") 
+ >-- repeat stp_tac >-- once_arw_tac[] 
+ >-- accept_tac (refl (readt "eqinduce(f1:A->B, f2, eqa(f1, f2) o (g:X->eqo(f1,f2)))"))
+(*two goals remaining*)
+ >> (match_mp_tac is_eqinduce >> rw_tac[] >> once_rw_tac[GSYM o_assoc] >>
+     rw_tac[eq_equality])
+(*only one *)
+>> arw_tac[]
+)
+(rapg "ismono(eqa(f1,f2))")
+)
+
+(*coeqa_is_epi:
+∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_epi (coeqa f g)*)
+
+val coeqa_is_epi = proved_th(
+e
+(match_mp_tac is_epi_applied >> repeat stp_tac >> 
+ suffices_tac
+ (rapf "f = coeqinduce (f1:A-> B,f2, (g:coeqo(f1, f2) -> X) o coeqa(f1,f2))") 
+ >-- suffices_tac
+ (rapf "g = coeqinduce (f1:A-> B,f2, (g:coeqo(f1, f2) -> X) o coeqa(f1,f2))") 
+ >-- repeat stp_tac >-- once_arw_tac[] 
+ >-- accept_tac (refl (readt "coeqinduce(f1:A->B, f2, (g:coeqo(f1, f2) -> X) o coeqa(f1, f2))"))
+(*two goals remaining*)
+ >> (match_mp_tac is_coeqinduce >> rw_tac[spec_all o_assoc] >>
+     rw_tac[coeq_equality])
+(*only one *)
+>> arw_tac[]
+)
+(rapg "isepi(coeqa(f1,f2))")
+)
+
+
+(*
+THEOREM pb_exists:
+∀X Y Z f g. f∶ X → Z ∧ g∶ Y → Z ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
+            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
+             ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)
+*)
+
+
+(*TODO: type inference for ispb does not work
+ (f : ob),
+   (g : ob)
+   
+   ----------------------------------------------------------------------
+   EXISTS P. EXISTS p. EXISTS q. ispb(P, p, q, f, g)
+*)
+
+
+(*TODO: maybe have an abbrev_tac... better have the Q stuff
+OR just use let val... in ?
+
+*)
+
+(*
+TODO:
+
+(once_rw_tac[GSYM o_assoc] >> rw_tac[GSYM eq_equality])
+
+does but once_rw_tac[GSYM o_assoc,GSYM eq_equality] does not work for:
+
+(X : ob),
+   (Y : ob),
+   (Z : ob),
+   (f : X -> Z),
+   (g : Y -> Z)
+   
+   ----------------------------------------------------------------------
+   (f o p1(X, Y)) o eqa(f o p1(X, Y), g o p2(X, Y)) = (g o p2(X, Y)) o
+     eqa(f o p1(X, Y), g o p2(X, Y))
+
+*)
+
+
+(*
+TODO: pp: assumption list ugly indented like:
+
+  (f o p1(X, Y)) o pa(u, v) = (g o p2(X, Y)) o
+     pa(u, v),
+     f o u = g o
+     v,
+     f o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o
+     eqa(f o p1(X, Y), g o p2(X, Y))
+
+Have new lines though.
+
+(f o p1(X, Y)) o pa(u, v) = (g o p2(X, Y)) o
+     pa(u, v),
+     f o u = g o
+     v,
+     f o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o
+     eqa(f o p1(X, Y), g o p2(X, Y))
+
+newly added assumption appears in the top, need reverse. 
+*)
+drule eq_fac_unique >> rw[] >>
+first_x_assum (qspecl_then [‘X×Y’,‘Z’,‘A’] assume_tac) >>
+
+eq_induce (f ∘ p1 X Y) (g ∘ p2 X Y) ⟨u,v⟩
+
+
+(*TODO:
+up to 
+ ----------------------------------------------------------------------
+   (p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o
+       eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = u &
+       (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o
+         eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = v &
+         ALL (b : A -> eqo(f o p1(X, Y), g o p2(X, Y))).
+           (p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = u & (p2(X, Y) o
+               eqa(f o p1(X, Y), g o p2(X, Y))) o b = v ==>
+             eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = b
+, if can put ax1_5' into assumption and drule with it, then will be nice.
+*)
+
+(*TODO:
+goal is:
+
+eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = b
+
+want to apply match_mp on ... ==> x0 = eqinduce ...
+
+need a tactic which applies a rule on the goal, is it fconv_tac?
+
+test the strip_assume_tac here
+
+in the proof below :
+ once_arw_tac[GSYM o_assoc] >> arw_tac[] works, but once_arw_tac itself does not 
+*)
+
+val pb_exists = proved_th(
+e
+(repeat stp_tac >> 
+ wexists_tac (readt "eqo ((f:X->Z)o p1(X,Y),g o p2(X,Y))") >>
+ wexists_tac (readt "p1(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
+ wexists_tac (readt "p2(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
+ rw_tac[spec_all is_pb_def] >>
+ by_tac 
+ (rapf "(f:X->Z) o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))") 
+ >-- (once_rw_tac[GSYM o_assoc] >> rw_tac[GSYM eq_equality])
+ >> arw_tac[] >> repeat stp_tac >> 
+ by_tac
+ (rapf "((f:X->Z) o p1(X,Y)) o <u:A->X,v:A->Y> = (g o p2(X,Y)) o <u,v>")
+(*for solving by tac*)
+ >-- (arw_tac[spec_all p1_of_pa,spec_all p2_of_pa,spec_all o_assoc])
+ >> wexists_tac (readt "eqinduce ((f:X->Z) o p1(X,Y),g o p2(X,Y), pa(u:A->X,v:A->Y))")
+ >> by_tac (rapf "eqa((f:X->Z) o p1(X, Y), g o p2(X, Y)) o eqinduce(f o p1(X,Y), g o p2(X, Y), pa(u:A->X, v:A-> Y)) = <u,v>")
+(*solving the by tac*)
+ >-- (match_mp_tac ax1_5_applied >> 
+     arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa])
+ >> arw_tac[spec_all o_assoc] 
+ >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa]
+(*uniqueness, last subgoal*)
+ >> repeat stp_tac >> 
+ suffices_tac
+ (rapf "b = eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")
+ >-- (stp_tac >> accept_tac (sym(assume(rapf "b=eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))"))))
+ (*proved the suffices*)
+ >> match_mp_tac is_eqinduce >> arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa] >>
+ match_mp_tac to_p_eq' >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
+ by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X")
+ >-- accept_tac ((conjE1 o assume) (rapf 
+"(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
+                ))
+ >> once_arw_tac[GSYM o_assoc] >> arw_tac[] >>
+ accept_tac ((conjE2 o assume) (rapf 
+"(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
+                ))
+)
+(rapg
+"ALL f:X->Z. ALL g:Y->Z. EXISTS P. EXISTS p:P->X. EXISTS q:P-> Y. ispb(P,p,q,f,g)")
+)
+
+(*
+pb_fac_exists
+∀X Y Z f g. g∶ Y → Z ∧  f∶ X → Z  ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
+            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
+             ∃a. a∶ A → P ∧ p o a = u ∧ q o a = v)
+*)
+
+(*TODO: BUG! spec_all pb_exists does not work, but (spec_all (gen_all pb_exists)) does
+specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
+*)
+
+
+(*TODO: one thing ugly about choose_tac is that is cannot use the map_every, since it takes two arguments, but there might be multiple quantifiers
+
+may add existential to rw?
+*)
+
+(*TODO: implement and test first_assum here, seems irrelevant to mp_then stuff*)
+
+(*TODO: a rule of turning unique existence into existence*)
+
+val pb_fac_exists = proved_th(
+e
+(repeat stp_tac >>
+mp_tac (spec_all (gen_all pb_exists)) >> rw_tac[spec_all is_pb_def] >>
+stp_tac >> 
+choose_tac "P" 
+(rapf "EXISTS P. EXISTS (p : P -> X). EXISTS (q : P -> Y). ispb(P, p, q, f:X->Z, g:Y->Z)") >>
+choose_tac "p"
+(rapf "EXISTS (p :P -> X).EXISTS (q: P -> Y). ispb(P, p, q, f:X->Z, g:Y->Z)") >>
+choose_tac "q"
+(rapf "EXISTS (q : P -> Y). ispb(P, p:P->X, q, f:X->Z, g:Y->Z)") >>
+rule_assum_tac (conv_rule (rewr_fconv (spec_all is_pb_def))) >>
+map_every wexists_tac (List.map readt ["P","p:P->X","q:P->Y"]) >>
+stp_tac
+>-- accept_tac (conjE1 (assume 
+   (rapf "(f:X->Z) o (p:P->X) = g o q & ALL A. ALL (u : A -> X).ALL (v : A -> Y).f o u = g o v ==> EXISTS (a : A -> P). p o a = u & q o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"))) 
+>> repeat stp_tac
+>> assume_tac 
+(mp
+    (specl (conjE2 (assume 
+                        (rapf "(f:X->Z) o (p:P->X) = g o q & ALL A. ALL (u : A -> X).ALL (v : A -> Y).f o u = g o v ==> EXISTS (a : A -> P). p o a = u & q o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"))) (List.map readt ["A","u:A->X","v:A->Y"]))
+    (assume (rapf "(f:X->Z) o (u:A->X) = (g:Y->Z) o v"))
+) 
+>> choose_tac "a" 
+(rapf "EXISTS (a : A -> P).(p:P->X) o a = u & (q:P->Y) o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b")
+>> wexists_tac (readt "a:A->P") 
+>> accept_tac (
+let val f = rapf "(p:P->X) o a = u & (q:P->Y) o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"
+in
+conjI ((conjE1 o assume) f) ((conjE1 o conjE2 o assume) f)
+end)
+)
+(rapg 
+"ALL X. ALL Z. ALL f:X->Z. ALL Y. ALL g:Y->Z.EXISTS P. EXISTS p:P->X.EXISTS q:P->Y. f o p = g o q & (ALL A.ALL u:A->X.ALL v:A->Y. f o u = g o v ==>EXISTS a:A->P. p o a = u & q o a = v)")
+)
+
+(*
+
+pb_mono_mono:
+!P p q f g. is_pb P p q f g /\ is_mono g ==> is_mono p
+
+need the exists tactic
+*)
+
+(*non_zero_pinv:∀A B f. f∶ A → B ∧ ¬(A ≅ zero) ⇒ ∃g. g∶B → A ∧ f ∘ g ∘ f = f
+also need the tactic for existence
+
+Already have choose_tac, this is a simple example for test exists relative things
+*)
+
+(*TODO: ASM_ACCEPT_TAC, accepts an assumption*)
+
+
+val non_zero_pinv = proved_th(
+e
+(repeat stp_tac >> drule ax6 >> 
+ choose_tac "x" (rapf"EXISTS x:1->A.T") >> 
+ assume_tac (specl ax5 (List.map readt ["A","x:1->A","B","f:A->B"])) >>
+ accept_tac ((assume o rapf) "EXISTS (g : B -> A). f o g o f = f"))
+(rapg "ALL A. ~ areiso(A,0) ==> ALL f:A -> B. EXISTS g. f o g o f = f")
+)
+
+(*
+ epi_pinv_pre_inv:
+∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_epi f ∧ f ∘ g ∘ f = f ⇒ f o g = id B
+*)
+is_epi_thm
+
+(*TODO: can certainly be better if have first x assum stuff
+and need irule from the assumption list!
+
+*)
+val epi_pinv_pre_inv = proved_th(
+e
+(stp_tac >>
+by_tac (rapf "isepi(f:A->B)")
+>-- accept_tac (conjE1 (assume (rapf"(isepi(f) & f o g o f = f)"))) 
+>> drule is_epi_thm
+>> rule_assum_tac (fn th => specl th (List.map readt ["B","(f:A-> B) o (g:B->A)","id(B)"]))
+>> by_tac (rapf "f o g o f = f:A->B")
+>-- accept_tac (conjE2 (assume (rapf"(isepi(f) & f o g o f = f)")))
+>> by_tac (rapf "(f o g) o f = id(B) o f")
+>-- arw_tac[spec_all idL,spec_all o_assoc] 
+>> accept_tac (mp (assume (rapf "(f o g) o f = id(B) o f ==> f o g = id(B)"))
+                  (assume (rapf "(f o g) o f = id(B) o f"))))
+(rapg "(isepi(f) & f o g o f = f) ==> f o g = id(B)")
+)
+
+
+
+(*
+mono_pinv_post_inv:
+∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_mono f ∧ f ∘ g ∘ f = f ⇒
+          g o f = id A
+*)
+
+val mono_pinv_post_inv = proved_th(
+e
+(stp_tac >>
+by_tac (rapf "isepi(f:A->B)")
+>-- accept_tac (conjE1 (assume (rapf"(isepi(f) & f o g o f = f)"))) 
+>> drule is_epi_thm
+>> rule_assum_tac (fn th => specl th (List.map readt ["B","(f:A-> B) o (g:B->A)","id(B)"]))
+>> by_tac (rapf "f o g o f = f:A->B")
+>-- accept_tac (conjE2 (assume (rapf"(isepi(f) & f o g o f = f)")))
+>> by_tac (rapf "(f o g) o f = id(B) o f")
+>-- arw_tac[spec_all idL,spec_all o_assoc] 
+>> accept_tac (mp (assume (rapf "(f o g) o f = id(B) o f ==> f o g = id(B)"))
+                  (assume (rapf "(f o g) o f = id(B) o f"))))
+(rapg "(isepi(f) & f o g o f = f) ==> f o g = id(B)")
+)
+
+
+
 (**)
 end
 

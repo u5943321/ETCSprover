@@ -487,9 +487,21 @@ val ax1_5 = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. ALL X. ALL x0: X
 
 val ax_eq = ax1_5
 
+val ax1_5' = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. g o eqa(f,g) = f o eqa(f,g) & ALL X.ALL h: X -> A. (f o h = g o h ==> (ALL x0: X -> eqo(f,g).eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
+
+(*actually stronger than ax1_5*)
+
+val ax_eq' = ax1_5'
+
 val ax1_6 = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. ALL X. ALL x0:coeqo(f,g) -> X. ALL h: B -> X. coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
 
 val ax_coeq = ax1_6
+
+
+val ax1_6' = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. coeqa(f,g) o f = coeqa(f,g) o g & ALL X. ALL h: B -> X. (h o f = h o g ==> (ALL x0:coeqo(f,g) -> X. x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
+
+val ax_coeq' = ax1_6'
+
 
 val ax2 = read_thm "ALL A. ALL B. ALL X. ALL f: A * X -> B.ALL h: X -> exp(A,B). ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"
 

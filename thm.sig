@@ -5,10 +5,15 @@ type term = term.term
 type sort = term.sort
 type menv = form.menv
 datatype thm = thm of (string * sort) set * form list * form
+
+val ril: 'a -> 'a list -> 'a list
+
 val ant: thm -> form list
 val cont: thm -> (string * sort) set
 val assume: form -> thm
 val concl: thm -> form
+
+val fmem: form -> form list -> bool
 
 val eq_thm: thm -> thm -> bool
 
@@ -79,7 +84,10 @@ val ax_elt: thm
 val ax_mcp: thm
 val ax_delt: thm
 
+val ismono_def: thm
 val areiso_def: thm
+val issubset_def: thm
+val ismem_def: thm
 (*type thm*)
 (*rules for inference*) 
 end

@@ -24,15 +24,19 @@ val stp_tac: tactic
 val all_tac: tactic
 val repeat: tactic -> tactic 
 val assum_list: (thm.thm list -> tactic) -> tactic
+val pop_assum_list: (thm.thm list -> tactic) -> tactic
 val mp_tac: thm_tactic
 val rw_tac: thm.thm list -> tactic
 val T_INTRO_TAC: tactic
 val drule: thm_tactic
 val arw_tac: thm.thm list -> tactic
+val once_arw_tac: thm.thm list -> tactic
 val fconv_tac: fconv -> tactic
 val once_rw_tac: thm.thm list -> tactic
 val valid: tactic -> tactic
 val by_tac: form.form -> tactic
+val suffices_tac: form.form -> tactic
 val match_mp_tac: thm_tactic
+val rule_assum_tac: (thm.thm -> thm.thm) -> tactic
 end
 

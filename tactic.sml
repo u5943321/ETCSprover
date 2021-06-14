@@ -357,6 +357,14 @@ A ?- t
 A ?- s ==> t
 *)
 
+fun suffices_tac f0 (G,fl,f) = 
+    let
+        val G' = HOLset.union(G,fvf f0)
+    in 
+        ([(G',fl,mk_imp f0 f),(G',fl,f0)],
+         fn [th1,th2] => mp th1 th2)
+    end
+
 fun mp_tac th0 (G,asl,w) = 
     let val G' = HOLset.union(G,cont th0) in
     ([(G',asl, mk_imp (concl th0) w)], fn [th] => mp th th0) end
@@ -364,6 +372,8 @@ fun mp_tac th0 (G,asl,w) =
 fun assum_list aslfun (g as (_,asl, _)) = aslfun (List.map assume asl) g
 
 fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
+
+fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
     fn (G,asl, w) => asltac (map assume asl) (G,[], w)
@@ -383,6 +393,17 @@ fun rule_assum_tac rule: tactic =
 
 (*TODO: let rw_tac strip as much as it can: i.e. if it rw RHS into something which can be stripped, also strip that*)
 
+fun choose_tac cn a0:tactic = 
+    fn (ct,asl,w) => 
+       let val _ = fmem a0 asl orelse
+                   raise ERR "formula to be substitute not in assumption list"
+           val _ = not (mem cn (List.map fst (HOLset.listItems ct))) 
+                   orelse raise ERR "name to be choose is already used"
+           val ((n,s),b) = dest_exists a0
+           val newasm = subst_bound (Var(cn,s)) b
+       in ([(ct,newasm ::(ril a0 asl),w)],
+           fn [th] => existsE (cn,s) (assume a0) th)
+       end
 
 (*
 If tac applied to the goal (asl,g) produces a justification that does not create a theorem A |- g, with A a subset of asl, then VALID tac (asl,g) fails (raises an exception)
