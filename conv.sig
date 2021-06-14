@@ -54,5 +54,5 @@ val once_depth_fconv: conv -> fconv -> fconv
 val basic_once_fconv: conv -> fconv -> fconv
 val try_fconv: fconv -> fconv
 val simp_trace: bool ref
-val conv_rule:conv -> thm -> thm
+val conv_rule: fconv -> thm -> thm
 end

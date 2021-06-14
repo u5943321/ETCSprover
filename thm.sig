@@ -6,7 +6,7 @@ type sort = term.sort
 type menv = form.menv
 datatype thm = thm of (string * sort) set * form list * form
 
-val ril: 'a -> 'a list -> 'a list
+val ril: ''a -> ''a list -> ''a list
 
 val ant: thm -> form list
 val cont: thm -> (string * sort) set
@@ -62,6 +62,8 @@ val ax1_3: thm
 val ax1_4: thm
 val ax1_5: thm
 val ax1_6: thm
+val ax1_5': thm
+val ax1_6': thm
 val ax2: thm
 val ax3: thm
 val ax4: thm
@@ -76,6 +78,8 @@ val ax_pr: thm
 val ax_copr: thm
 val ax_eq: thm
 val ax_coeq: thm
+val ax_eq': thm
+val ax_coeq': thm
 val ax_exp: thm
 val ax_N: thm
 val ax_wp:thm

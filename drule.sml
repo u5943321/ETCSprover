@@ -743,6 +743,8 @@ fun disch_all th = dischl (ant th) th
 
 fun GSYM th =  sym (spec_all th)
 
+(*f1,f2 |- C maps to f1 /\ f2 |- C*)
+
 fun conj_assum f1 f2 (th as thm(G,A,C)) = 
     let 
         val _ = fmem f1 A orelse raise ERR "first formula not in assumption"
@@ -757,5 +759,9 @@ fun conj_asl fl th =
 case fl
 
 *)
+fun F2f f = disch FALSE (falseE [FALSE] f)
+
+fun CONTR f th =
+   mp (F2f f) th handle ERR _ => raise ERR "CONTR"
 
 end

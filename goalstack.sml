@@ -37,6 +37,19 @@ fun proved_th (GSTK{prop:proposition,...}) =
         PROVED (th,_) => th
       | _ => raise ERR "goal is not proved yet"
 
+fun current_tac_result (GSTK{prop,stack:tac_result list}) = 
+    case stack of
+        [] => raise ERR "no remaining goal"
+      | h :: t => h
+
+(*
+
+fun current_goal ({goals: goal list,validation : thm list -> thm}:tac_result) = 
+    case goals of 
+        [] => raise ERR "no goal remains"
+      | h :: t => h
+
+*)
 
 
 fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g}) =

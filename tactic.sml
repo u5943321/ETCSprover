@@ -401,7 +401,7 @@ fun choose_tac cn a0:tactic =
                    orelse raise ERR "name to be choose is already used"
            val ((n,s),b) = dest_exists a0
            val newasm = subst_bound (Var(cn,s)) b
-       in ([(ct,newasm ::(ril a0 asl),w)],
+       in ([(HOLset.add(ct,(cn,s)),newasm ::(ril a0 asl),w)],
            fn [th] => existsE (cn,s) (assume a0) th)
        end
 
@@ -466,6 +466,99 @@ fun valid (tac: tactic) : tactic =
                NONE => result
              | SOME e => error "VALID" "tactic" e
          end
+
+
+fun (ttcl1: thm_tactical) THEN_TCL (ttcl2: thm_tactical) =
+   fn ttac => ttcl1 (ttcl2 ttac)
+
+fun (ttcl1: thm_tactical) ORELSE_TCL (ttcl2: thm_tactical) =
+   fn ttac => fn th => ttcl1 ttac th handle ERR _ => ttcl2 ttac th
+
+fun REPEAT_TCL ttcl ttac th =
+   ((ttcl THEN_TCL (REPEAT_TCL ttcl)) ORELSE_TCL I) ttac th
+
+val ALL_THEN: thm_tactical = I
+val NO_THEN: thm_tactical = fn ttac => fn th => raise ERR "NO_THEN"
+val FIRST_TCL = List.foldr (op ORELSE_TCL) NO_THEN
+
+
+val CONTR_TAC: thm_tactic =
+   fn cth => fn (ct,asl, w) =>
+      let
+         val th = CONTR w cth
+      in
+         ([], empty th)
+      end
+      handle ERR _ => raise ERR "CONTR_TAC"
+
+fun first tacl = 
+    case tacl of
+        [] => raise ERR "no tactic applies"
+      | h :: t => h Orelse (first t)
+
+val check_assume_tac: thm_tactic =
+   fn gth =>
+      first [CONTR_TAC gth, accept_tac gth, (*OPPOSITE_TAC gth,
+             DISCARD_TAC gth,*) assume_tac gth]
+
+fun conj_pair th =
+    (conjE1 th,conjE2 th)
+    handle ERR _ => 
+           raise ERR ("not a conjunction" ^ (string_of_form (concl th)) ^ ": From conj_pair")
+
+fun conjuncts_then2 ttac1 ttac2 =
+   fn cth =>
+      let
+         val (th1,th2) = conj_pair cth
+      in
+         then_tac (ttac1 th1, ttac2 th2)
+      end
+      handle ERR _ => raise ERR "conjuncts_then2"
+
+val conjuncts_then:thm_tactical = fn ttac => conjuncts_then2 ttac ttac
+
+val STRIP_THM_THEN = FIRST_TCL [conjuncts_then(*, DISJ_CASES_THEN, CHOOSE_THEN*)]
+
+val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN check_assume_tac
+
+val STRIP_ASSUME_TAC0 = conjuncts_then assume_tac
+
+val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
+
+fun find (ttac:thm_tactic) goal [] = raise ERR "find"
+    | find ttac goal (a :: L) =
+      ttac (assume a) goal handle ERR _ => find ttac goal L
+ 
+fun first_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) asl
+
+(*what is the "name" in Tactical.find for?change above to first_opt?*)
+
+(*
+conjuncts_THEN f (A |- l /\ r) = f (A |- l) THEN f (A |- r) so
+*)
+
+(*
+Suppose we have a goal of the following form:
+{a /\ b, c, (d /\ e) /\ f} ?- t
+Then we can split the conjunctions in the assumption list apart by applying the tactic: POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC)
+which results in the new goal: {a, b, c, d, e, f} ?- t
+Uses
+page 722
+
+STRIP_ASSUME_TAC page 978
+*)
+
+(*
+fun CONJUNCTS_THEN ttac th =
+      let val (c1, c2) = (CONJUNCT1 th, CONJUNCT2 th)
+      in ttac c1 THEN ttac c2
+      end
+
+in Thm_cont
+
+
+*)
+
 
 end
     

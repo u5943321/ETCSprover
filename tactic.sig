@@ -38,5 +38,21 @@ val by_tac: form.form -> tactic
 val suffices_tac: form.form -> tactic
 val match_mp_tac: thm_tactic
 val rule_assum_tac: (thm.thm -> thm.thm) -> tactic
+val choose_tac: string -> form.form -> tactic
+
+val every: tactic list -> tactic
+val map_every: ('a -> tactic) -> 'a list -> tactic
+
+val CONTR_TAC:thm_tactic
+val first: tactic list -> tactic
+val check_assume_tac: thm_tactic
+val conj_pair: thm.thm -> (thm.thm * thm.thm)
+val conjuncts_then: thm_tactic -> thm_tactic
+val STRIP_ASSUME_TAC: thm_tactic
+
+val STRIP_ASM_CONJ_TAC: thm_tactic
+
+val first_assum: thm_tactic -> tactic
+
 end
 

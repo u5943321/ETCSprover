@@ -12,4 +12,5 @@ sig
   type validation   = thm list -> thm
   type tactic       = goal -> goal list * validation
   type thm_tactic   = thm -> tactic
+  type thm_tactical = thm_tactic -> thm_tactic
 end

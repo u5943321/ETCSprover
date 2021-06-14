@@ -1284,7 +1284,7 @@ val is_eqinduce = (gen_all o disch_all o
                    (conj_assum
                         (rapf "(f:A-> B) o (h:X-> A) = g o h")
                         (rapf "eqa(f:A->B, g) o (x0:X->eqo(f,g)) = h:X->A")) o 
-                   (undisch o dimpl2r o undisch o conjE2 o spec_all) ax1_5
+                   undisch o dimpl2r o undisch o conjE2 o spec_all) ax1_5
 
 val is_coeqinduce = (gen_all o disch_all o 
                    (conj_assum
@@ -1397,10 +1397,6 @@ Have new lines though.
 
 newly added assumption appears in the top, need reverse. 
 *)
-drule eq_fac_unique >> rw[] >>
-first_x_assum (qspecl_then [‘X×Y’,‘Z’,‘A’] assume_tac) >>
-
-eq_induce (f ∘ p1 X Y) (g ∘ p2 X Y) ⟨u,v⟩
 
 
 (*TODO:
@@ -1537,8 +1533,109 @@ end)
 pb_mono_mono:
 !P p q f g. is_pb P p q f g /\ is_mono g ==> is_mono p
 
-need the exists tactic
+rule_assum_tac ((conv_rule o try_fconv) (rewr_fconv (spec_all is_pb_def)))
+
+need try_fconv because there are two assumptions! ugly
+
+
+ALL X'. ALL (g : X' -> P). ALL (h : X' -> P). p o g = p o h ==> h = g
+TODO:
+rename tactic, deal with above
+
+ f o p = g o q &
+       ALL A.
+         ALL (u : A -> X).
+           ALL (v : A -> Y).
+             f o u = g o v ==>
+               EXISTS (a : A -> P).
+                 p o a = u &
+                   q o a = v &
+                     ALL (b : A -> P). p o b = u & q o b = v ==> a = b
+
+cannot be stripped by  STRIP_ASM_CONJ_TAC
 *)
+
+(*TODO:
+match_mp_tac is_mono_applied renaming!
+ (Z : ob),
+   (f : X -> Z),
+   (g : Y -> Z),
+   (p : P -> X),
+   (q : P -> Y)
+   ismono(g),
+     f o p = g o q &
+       ALL A.
+         ALL (u : A -> X).
+           ALL (v : A -> Y).
+             f o u = g o v ==>
+               EXISTS (a : A -> P).
+                 p o a = u &
+                   q o a = v &
+                     ALL (b : A -> P). p o b = u & q o b = v ==> a = b
+   ----------------------------------------------------------------------
+   ALL X'. ALL (g : X' -> P). ALL (h : X' -> P). p o g = p o h ==> h = g
+
+rename tac then strip?
+
+TODO: is_mono_applied  should be p o h = p o k ==> h = k, not k = h, just comfusing
+
+  f o p = g o q &
+       ALL A.
+         ALL (u : A -> X).
+           ALL (v : A -> Y).
+             f o u = g o v ==>
+               EXISTS (a : A -> P).
+                 p o a = u &
+                   q o a = v &
+                     ALL (b : A -> P). p o b = u & q o b = v ==> a = b
+
+split the conjunct, but not all assumptions are conjunctions
+
+ once_rw_tac[GSYM o_assoc] >> arw_tac[] works, once_rw_tac[GSYM o_assoc] does not 
+
+again
+
+arw_tac[spec_all o_assoc] works.
+
+seems like once and arw not same as once rw and then arw
+*)
+
+
+val pb_mono_mono = proved_th
+(let val f0 = rapf "(f:X->Z) o (p:P->X) = (g:Y->Z) o q & ALL A. ALL (u : A -> X).ALL (v : A -> Y). f o u = g o v ==> EXISTS (a : A -> P).p o a = u &q o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b" 
+     val f' = rapf "EXISTS (a : D -> P).(p:P->X) o a = p o (k1:D->P) &(q:P->Y) o a = q o k2 & ALL (b : D -> P). p o b = p o k1 & q o b = q o k2 ==> a = b"
+     val f'' = rapf "(p:P->X) o a = p o (k1:D->P) &(q:P->Y) o a = q o k2 & ALL (b : D -> P). p o b = p o k1 & q o b = q o k2 ==> a = b"
+in
+e
+(repeat stp_tac >> pop_assum_list (map_every STRIP_ASM_CONJ_TAC) >> 
+rule_assum_tac ((conv_rule o try_fconv) (rewr_fconv (spec_all is_pb_def))) >>
+match_mp_tac is_mono_applied >>
+suffices_tac
+(rapf "ALL D. ALL k1:D -> P. ALL k2:D ->P. (p:P->X) o k1 = p o k2 ==> k2 = k1")
+>-- stp_tac >-- accept_tac (assume ((rapf "ALL D. ALL k1:D -> P. ALL k2:D ->P. (p:P->X) o k1 = p o k2 ==> k2 = k1"))) >> repeat stp_tac >>
+assume_tac (conjE2 (assume f0)) >> 
+first_assum (fn th => (assume_tac (specl th (List.map readt ["D","(p:P->X) o (k1:D->P)","(q:P->Y) o (k2:D->P)"]))))
+>> by_tac (rapf "(q:P->Y) o (k1:D->P) = q o k2")
+>-- (drule is_mono_thm >> first_assum match_mp_tac >>
+    assume_tac ((sym o conjE1 o assume) f0) >> once_rw_tac[GSYM o_assoc] >> arw_tac[] >>
+    arw_tac[spec_all o_assoc])
+>> suffices_tac (rapf "(f:X->Z) o (p:P->X) o (k1:D->P) = (g:Y->Z) o (q:P->Y) o k2")
+>-- (stp_tac >> first_assum drule >> choose_tac "a" f' >>
+    first_assum (fn th => assume_tac (conjE2 (conjE2 th)))
+    >-- suffices_tac (rapf "k1=a:D->P") >-- suffices_tac (rapf "k2=a:D->P")
+    >-- repeat stp_tac >> arw_tac[]
+    >--(* up to here, have k2 = a ,k1=a as goals, and f o p o k1 = g o q o k2*)
+    suffices_tac (rapf "a = k2:D->P") >-- stp_tac >-- arw_tac[]
+    >-- (*solving a = k2*) first_assum match_mp_tac >-- conj_tac >-- arw_tac[] >-- arw_tac[]
+    >-- (suffices_tac (rapf "a = k1:D->P") >-- stp_tac >-- arw_tac[] >-- 
+                      first_assum match_mp_tac >-- conj_tac >-- arw_tac[] >-- arw_tac[])) >>
+(*only remains f o p o k1 = g o q o k2*)
+assume_tac (conjE1 (assume f0)) >> once_rw_tac[GSYM o_assoc] >> arw_tac[] >>
+rw_tac[spec_all o_assoc] >> arw_tac[]
+)
+(rapg "ispb(P,p:P->X,q:P->Y,f:X->Z,g:Y->Z) & ismono(g) ==> ismono(p)")
+end
+)
 
 (*non_zero_pinv:∀A B f. f∶ A → B ∧ ¬(A ≅ zero) ⇒ ∃g. g∶B → A ∧ f ∘ g ∘ f = f
 also need the tactic for existence
@@ -1547,6 +1644,8 @@ Already have choose_tac, this is a simple example for test exists relative thing
 *)
 
 (*TODO: ASM_ACCEPT_TAC, accepts an assumption*)
+
+(*Q: Want to extract the current goal for testing tactic form the goal stack, how to do this?*)
 
 
 val non_zero_pinv = proved_th(
@@ -1562,7 +1661,6 @@ e
  epi_pinv_pre_inv:
 ∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_epi f ∧ f ∘ g ∘ f = f ⇒ f o g = id B
 *)
-is_epi_thm
 
 (*TODO: can certainly be better if have first x assum stuff
 and need irule from the assumption list!
@@ -1590,22 +1688,29 @@ by_tac (rapf "isepi(f:A->B)")
 mono_pinv_post_inv:
 ∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_mono f ∧ f ∘ g ∘ f = f ⇒
           g o f = id A
+
+want first_x_assum, the missing ingredient is undisch_then, what is Lib.pluck?
 *)
+
 
 val mono_pinv_post_inv = proved_th(
 e
 (stp_tac >>
-by_tac (rapf "isepi(f:A->B)")
->-- accept_tac (conjE1 (assume (rapf"(isepi(f) & f o g o f = f)"))) 
->> drule is_epi_thm
+pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
+>> drule is_mono_thm
+>> first_assum (fn th => (assume_tac (specl th (List.map readt ["A","id(A)","(g:B->A) o (f:A->B)"]))))
+>> first_assum match_mp_tac >> arw_tac[spec_all idR]
+(*
 >> rule_assum_tac (fn th => specl th (List.map readt ["B","(f:A-> B) o (g:B->A)","id(B)"]))
 >> by_tac (rapf "f o g o f = f:A->B")
 >-- accept_tac (conjE2 (assume (rapf"(isepi(f) & f o g o f = f)")))
 >> by_tac (rapf "(f o g) o f = id(B) o f")
 >-- arw_tac[spec_all idL,spec_all o_assoc] 
 >> accept_tac (mp (assume (rapf "(f o g) o f = id(B) o f ==> f o g = id(B)"))
-                  (assume (rapf "(f o g) o f = id(B) o f"))))
-(rapg "(isepi(f) & f o g o f = f) ==> f o g = id(B)")
+                  (assume (rapf "(f o g) o f = id(B) o f")))
+*)
+)
+(rapg "(ismono(f) & f o g o f = f) ==> g o f = id(A)")
 )
 
 
