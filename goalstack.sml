@@ -137,7 +137,7 @@ fun PPprop printdepth _ th = let val s = ppprop th
 val _ = PolyML.addPrettyPrinter PPprop
 
 fun ppgoals goals = 
-    case goals of [] => add_string ""
+    case (rev goals) of [] => add_string ""
                 | h :: t => (ppgoal h) >> add_newline >> (ppgoals t)
 
 fun pptac_result ({goals:goal list,validation:thm list -> thm}) = ppgoals goals

@@ -1,14 +1,3 @@
-
-
-read_goal "ALL X.ALL A.ALL f.(id(A) o (f: X -> A) = f)"
-
-expandf ((repeat gen_tac) >> rw_tac[spec_all idL] >> T_INTRO_TAC) it
-
-read_goal "ALL X.ALL Y.ALL g.(id(X) o (g: Y -> X) = g)"
-
-read_goal "h o f o g = (h o f) o g";
-e (rw_tac[spec_all o_assoc] (*>> assum_list rw_tac *) >> T_INTRO_TAC) it
-
 val ax1_5_applied = prove 
 (readf "ALL A.ALL B.ALL g. ALL f.ALL X.ALL h.(f: A ->B) o (h:X -> A) = g o h ==> (eqa(f, g) o eqinduce(f, g, h)) = h")
 (repeat stp_tac >> drule
@@ -37,15 +26,27 @@ val ax1_5_applied =
 
 val compose_assoc_5_4_left = gen_all
 (prove (rapf "(f5 o f4 o f3 o f2 o f1) = (f5 o (f4 o (f3 o f2))) o f1")
- (rw_tac [spec_all o_assoc] (*>> T_INTRO_TAC*)))
+ (rw_tac [spec_all o_assoc]))
+
+val compose_assoc_5_4_left' = gen_all
+(prove (rapf "(f5 o f4 o f3 o f2 o f1) = (f5 o (f4 o (f3 o f2))) o f1")
+ (rw_tac [o_assoc]))
 
 val compose_assoc_5_4_left_SYM = gen_all
 (prove (readf "(f5 o f4 o f3 o f2) o f1 = f5 o f4 o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
+val compose_assoc_5_4_left_SYM' = gen_all
+(prove (rapf "(f5 o f4 o f3 o f2) o f1 = f5 o f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
 val compose_assoc_5_2_left = gen_all
 (prove (readf "(f5 o f4) o f3 o f2 o f1 = f5 o f4 o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
+
+val compose_assoc_5_2_left' = gen_all
+(prove (rapf "(f5 o f4) o f3 o f2 o f1 = f5 o f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
 
 
 val compose_assoc_4_3_left = gen_all
@@ -53,13 +54,28 @@ val compose_assoc_4_3_left = gen_all
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
+val compose_assoc_4_3_left' = gen_all
+(prove (rapf "(f4 o f3 o f2) o f1 = f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
+
 val compose_assoc_5_2_left_SYM = gen_all
 (prove (readf "f5 o f4 o f3 o f2 o f1 = (f5 o f4) o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
+
+val compose_assoc_5_2_left_SYM' = gen_all
+(prove (rapf"f5 o f4 o f3 o f2 o f1 = (f5 o f4) o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
+
 val compose_assoc_4_2_left = gen_all
 (prove (readf "(f4 o f3) o f2 o f1 = f4 o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
+
+val compose_assoc_4_2_left' = gen_all
+(prove (rapf "(f4 o f3) o f2 o f1 = f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
 
 
 val compose_assoc_4_2_middle = gen_all
@@ -67,14 +83,28 @@ val compose_assoc_4_2_middle = gen_all
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
+val compose_assoc_4_2_middle' = gen_all
+(prove (rapf "f4 o (f3 o f2) o f1 = f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
 val compose_assoc_4_2_middle_SYM = gen_all
 (prove (readf "f4 o f3 o f2 o f1 = f4 o (f3 o f2) o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
+val compose_assoc_4_2_middle_SYM' = gen_all
+(prove (rapf "f4 o f3 o f2 o f1 = f4 o (f3 o f2) o f1")
+ (rw_tac [o_assoc]))
+
+
 val compose_assoc_4_2_left_SYM = gen_all
 (prove (readf "f4 o f3 o f2 o f1 = (f4 o f3) o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
+
+
+val compose_assoc_4_2_left_SYM' = gen_all
+(prove (rapf "f4 o f3 o f2 o f1 = (f4 o f3) o f2 o f1")
+ (rw_tac [o_assoc]))
 
 
 val compose_assoc_4_2_left_middle = gen_all
@@ -83,22 +113,38 @@ val compose_assoc_4_2_left_middle = gen_all
 
 
 
+val compose_assoc_4_2_left_middle' = gen_all
+(prove (rapf "(f4 o f3) o f2 o f1 = f4 o (f3 o f2) o f1")
+ (rw_tac [o_assoc]))
+
 val compose_assoc_4_2_left_left = gen_all
 (prove (readf "((f4 o f3) o f2) o f1 = f4 o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
+val compose_assoc_4_2_left_left' = gen_all
+(prove (rapf "((f4 o f3) o f2) o f1 = f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
+
 val compose_assoc_4_2_left_left = gen_all
 (prove (readf "((f4 o f3) o f2) o f1 = f4 o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
-(*is rw's job for proving o_bracket_left/right? avoid T_INTRO_TAC?*)
+val compose_assoc_4_2_left_left' = gen_all
+(prove (rapf "((f4 o f3) o f2) o f1 = f4 o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
+
 
 val compose_assoc_5_2_left1_left = gen_all
 (prove (readf "f5 o (f4 o f3) o f2 o f1 = (f5 o f4) o f3 o f2 o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
+
+val compose_assoc_5_2_left1_left' = gen_all
+(prove (rapf "f5 o (f4 o f3) o f2 o f1 = (f5 o f4) o f3 o f2 o f1")
+ (rw_tac [o_assoc]))
 
 
 val compose_assoc_6_3_2_left_middle = gen_all
@@ -106,9 +152,22 @@ val compose_assoc_6_3_2_left_middle = gen_all
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
 
 
+val compose_assoc_6_3_2_left_middle' = gen_all
+(prove (rapf "(f6 o f5 o f4) o f3 o f2 o f1 = f6 o f5 o (f4 o f3) o f2 o f1")
+ (rw_tac [o_assoc]))
+
+
 val compose_assoc_6_left_left_left_right2 = gen_all
 (prove (readf "(((f6 o f5 o f4) o f3) o f2) o f1 = f6 o f5 o f4 o (f3 o f2) o f1")
  (rw_tac [spec_all o_assoc] >> T_INTRO_TAC))
+
+
+val compose_assoc_6_left_left_left_right2' = gen_all
+(prove (rapf "(((f6 o f5 o f4) o f3) o f2) o f1 = f6 o f5 o f4 o (f3 o f2) o f1")
+ (rw_tac [o_assoc]))
+
+
+(*' version is with the new rw*)
 
 (*rw_tac can prove all these examples in one proof!*)
 
@@ -290,7 +349,7 @@ validity check works
 (*should I have (fVar f <=> fVar f') <=> (fVar f ==> fVar f' & fVar f' ==> fVar f)*)
 
 
-(*TODO: reverse the order of pp of gstk*)
+(*TO-DO: reverse the order of pp of gstk done*)
 
 val tp_eq = proved_th
                 (expandf (dimp_tac >> stp_tac >> arw_tac[] >> 
@@ -925,6 +984,7 @@ iterated_p_eq:
          p2((A * B), C) o f = p2((A * B), C) o g
    ----------------------------------------------------------------------
    p2((A * B), C) o f = p2((A * B), C) o g
+
 *)
 
 val iterated_p_eq = proved_th(
@@ -980,7 +1040,21 @@ e
 )
 (rapg "id(N) = Nind(z,s)")
 )
-
+(*
+val N_ind_z_s_id = proved_th
+(
+e 
+(match_mp_tac
+ (dimpl2r (specl ax_N (List.map readt ["N","z","id(N)","s"]))) >> conj_tac >>
+ rw_tac[idL,idR] >> rw_tac[idL](*
+ >-- accept_tac (specl idL (List.map readt ["1","N","z"]))
+ >> accept_tac (trans (specl idL (List.map readt ["N","N","s"])) 
+                      (sym (specl idR (List.map readt ["N","N","s"]))))
+ *)
+)
+(rapg "id(N) = Nind(z,s)")
+)
+*)
 (*
  basic_fconv (rewr_conv (spec_all idL)) no_fconv (readf "id(A) o f = f");
 val it =
@@ -1083,7 +1157,7 @@ is_mono_applied:
         (∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g) ⇒
         is_mono m
 
-TODO: check the applied works for match_mp_tac
+TO-DO: check the applied works for match_mp_tac (done)
 *)
 val is_mono_applied = (gen_all o dimpr2l o spec_all) ismono_def
 
@@ -1272,7 +1346,7 @@ and once_arw leaves this:
  eqinduce(f1, f2, eqa(f1, f2) o g) = eqinduce(f1, f2, eqa(f1, f2) o g)
 *)
 
-(*TODO:want match_mp_tac to work for 
+(*TODO:AQ want match_mp_tac to work for 
 f o h = g o h ==>
                      eqa(f, g) o x0 = h ==> x0 = eqinduce(f, g, h): thm
 *)
@@ -1351,7 +1425,7 @@ THEOREM pb_exists:
 *)
 
 
-(*TODO: maybe have an abbrev_tac... better have the Q stuff
+(*TODO:AQ maybe have an abbrev_tac... better have the Q stuff
 OR just use let val... in ?
 
 *)
@@ -1413,7 +1487,7 @@ up to
 , if can put ax1_5' into assumption and drule with it, then will be nice.
 *)
 
-(*TODO:
+(*TODO: AQ
 goal is:
 
 eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = b
@@ -1483,12 +1557,12 @@ specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
 *)
 
 
-(*TODO: one thing ugly about choose_tac is that is cannot use the map_every, since it takes two arguments, but there might be multiple quantifiers
+(*TODO:AQ one thing ugly about choose_tac is that is cannot use the map_every, since it takes two arguments, but there might be multiple quantifiers
 
 may add existential to rw?
 *)
 
-(*TODO: implement and test first_assum here, seems irrelevant to mp_then stuff*)
+(*TO-DO: implement and test first_assum here, seems irrelevant to mp_then stuff done*)
 
 (*TODO: a rule of turning unique existence into existence*)
 
@@ -1555,7 +1629,7 @@ rename tactic, deal with above
 cannot be stripped by  STRIP_ASM_CONJ_TAC
 *)
 
-(*TODO:
+(*TODO: AQ
 match_mp_tac is_mono_applied renaming!
  (Z : ob),
    (f : X -> Z),
@@ -1598,6 +1672,8 @@ again
 arw_tac[spec_all o_assoc] works.
 
 seems like once and arw not same as once rw and then arw
+
+Check the () works for >--
 *)
 
 
@@ -1662,8 +1738,7 @@ e
 ∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_epi f ∧ f ∘ g ∘ f = f ⇒ f o g = id B
 *)
 
-(*TODO: can certainly be better if have first x assum stuff
-and need irule from the assumption list!
+(*TODO:AQ can certainly be better if have first x assum stuff (the x?)
 
 *)
 val epi_pinv_pre_inv = proved_th(
@@ -1713,10 +1788,8 @@ pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
 (rapg "(ismono(f) & f o g o f = f) ==> g o f = id(A)")
 )
 
+(*TODO:AQ want turn out pp and still get everything work. should I have a document which stores all types*)
 
-
-(**)
-end
 
 
 

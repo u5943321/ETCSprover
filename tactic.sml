@@ -314,6 +314,50 @@ fun fconv_tac fc (G,fl,f) =
 
 (*TODO: see Tactical.sml CONV_TAC,    if aconv rhs T then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH)), if fc f is eq_form to T, then this extra line*)
 
+fun conj_pair th =
+    (conjE1 th,conjE2 th)
+    handle ERR _ => 
+           raise ERR ("not a conjunction" ^ (string_of_form (concl th)) ^ ": From conj_pair")
+
+fun fconv_canon th = 
+    let val th = spec_all th
+        val f = concl th
+    in 
+       (* if aconv f TRUE then [] else seems happens in HOL but not here*)
+        if is_dimp f then [th] else
+        if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
+        if is_neg f then [eqF_intro th] 
+        else [eqT_intro th]
+    end 
+
+fun conv_canon th = 
+    let val th = spec_all th
+        val f = concl th
+    in 
+       (* if aconv f TRUE then [] else seems happens in HOL but not here*)
+        if is_dimp f then [th] else
+        if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
+        if is_neg f then [eqF_intro th] 
+        else [th]
+    end 
+
+(*
+
+FCONV-CANON
+alters the consequent
+of certain implications into logical
+equivalences: P(X)
++ P(X)*TRUTH(
+ip(x)
+--, P(X) -FALSITY(
+C-D
++ unchanged
+else fail.
+)
+
+Larry's FCONV_CANON seems turns  a = b into a=b <=> T for fconv, but not conv AQ
+*)
+
 fun gen_rw_tac fc thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv thl)
@@ -329,6 +373,13 @@ fun once_rw_tac thl = gen_rw_tac basic_once_fconv thl
 fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
 
 fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
+
+fun rw_tac thl = 
+    let 
+        val conv = first_conv (mapfilter rewr_conv (flatten (List.map conv_canon thl)))
+        val fconv = first_fconv (mapfilter rewr_fconv (flatten (List.map fconv_canon thl)))
+    in fconv_tac (basic_fconv conv fconv) 
+    end
 
 (*
 fun rw_tac thl = 
@@ -501,10 +552,6 @@ val check_assume_tac: thm_tactic =
       first [CONTR_TAC gth, accept_tac gth, (*OPPOSITE_TAC gth,
              DISCARD_TAC gth,*) assume_tac gth]
 
-fun conj_pair th =
-    (conjE1 th,conjE2 th)
-    handle ERR _ => 
-           raise ERR ("not a conjunction" ^ (string_of_form (concl th)) ^ ": From conj_pair")
 
 fun conjuncts_then2 ttac1 ttac2 =
    fn cth =>
