@@ -54,5 +54,7 @@ val STRIP_ASM_CONJ_TAC: thm_tactic
 
 val first_assum: thm_tactic -> tactic
 
+val conv_canon: thm.thm -> thm.thm list
+val fconv_canon: thm.thm -> thm.thm list
 end
 

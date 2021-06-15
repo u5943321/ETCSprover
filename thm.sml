@@ -430,6 +430,23 @@ fun define_pred f =
     end
 (*check that R does not contain any unknown predicate symbols/fun syms*)
 
+(*define fun spec
+
+a rule that turns
+
+!a b c. ?!R. P(a,b,c,R).
+
+into 
+
+ALL a b c. P(a,b,c,f(a,b,c))
+
+and defines f
+
+
+!a b c. Q(a) ==> ?!R. P(a,b,c,R).
+
+allow this, and put Q(a) in the output thm as well.
+*)
 
 fun define_fun f = 
     let val fvs = fvf f

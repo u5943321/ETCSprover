@@ -87,8 +87,8 @@ val fsyms0:fsymd =
                     (mk_fun "*" ob [mk_ob "A",mk_fun "exp" ob [mk_ob "A",mk_ob "B"]]) 
                     (mk_ob "B"),
                 [("A",ob),("B",ob)])),
-         ("s",(ar(mk_ob "N",mk_ob "N"),[])),
-         ("z",(ar(mk_const "1" ob,mk_ob "N"),[])),
+         ("s",(ar(mk_const "N" ob,mk_const "N" ob),[])),
+         ("z",(ar(mk_const "1" ob,mk_const "N" ob),[])),
          ("Nind",(ar(mk_const "N" ob,mk_ob "X"),
                   [("x0",ar(mk_const "1" ob,mk_ob "X")),
                    ("t",ar(mk_ob "X",mk_ob "X"))]))

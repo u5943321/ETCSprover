@@ -1,5 +1,9 @@
+structure Parse = struct val Term=readfq end
+
+fun readfq [QUOTE s] = readf s
+
 val ax1_5_applied = prove 
-(readf "ALL A.ALL B.ALL g. ALL f.ALL X.ALL h.(f: A ->B) o (h:X -> A) = g o h ==> (eqa(f, g) o eqinduce(f, g, h)) = h")
+“ALL A.ALL B.ALL g. ALL f.ALL X.ALL h.(f: A ->B) o (h:X -> A) = g o h ==> (eqa(f, g) o eqinduce(f, g, h)) = h”
 (repeat stp_tac >> drule
                  (conjE2 (specl ax1_5
                       (List.map readt 
@@ -10,7 +14,7 @@ val ax1_5_applied = prove
 
 val ax1_5_applied = 
     gen_all
-        (disch (readf "(f: A -> B) o (h: X -> A) = g o h")
+        (disch “(f: A -> B) o (h: X -> A) = g o h”
           (dimp_mp_r2l 
                (iff_trans
                     (inst_thm (mk_inst [(("x0",
@@ -264,7 +268,7 @@ val ax1_6_applied = prove
                                  "coeqinduce(f:A -> B, g: A -> B, h:B -> X)",
                                  "h: B ->X"])
                      )) >> assum_list rw_tac >> T_INTRO_TAC)
-
+ 
 
 val coeq_fac = proved_th 
 (expandf (repeat stp_tac >> drule (spec_all ax1_6_applied) >> 
@@ -779,6 +783,13 @@ ERR
 but expandf does not?
 *)
 
+
+(*TODO : rapf bug!
+ val f1 = rapf "~(EXISTS x1 : 1 -> X. EXISTS x0 : 1 -> X. i2(X, X) o t = i1(X, X) o x0 & i2(X, X) o (t:1->X) = i2(X, X) o x1)";
+Exception- UNIFY "occurs check(pt):pv X : psv  0 ptu  0" raised
+
+*)
+
 val i1_i2_disjoint = 
 let val f = rapf "EXISTS (x1 : 1 -> X). EXISTS (x0 : 1 -> X).i2(X, X) o t = i1(X, X) o x0 & i2(X, X) o t = i2(X, X) o x1"
 in
@@ -789,13 +800,15 @@ e
  assume_tac 
 (specl prop_5_lemma (List.map readt ["X","X","i2(X, X) o (t:1->X)"])) >> 
  by_tac (readf "EXISTS x1: 1 -> X. EXISTS x0 : 1 -> X. i2(X, X) o t = i1(X, X) o x0 & i2(X, X) o t = i2(X, X) o x1")
- >-- wexists_tac (readt "t:1-> X") >-- wexists_tac (readt "t:1-> X") 
+ >-- wexists_tac (readt "t:1-> X") >-- wexists_tac (readt "t:1-> X")  
  >-- arw_tac[] 
- >> assume_tac (negE (assume f) (assume (mk_neg f))) >> accept_tac (falseE [FALSE,f,mk_neg f] FALSE)
+ >> assume_tac (negE (assume f) (assume (mk_neg f))) >> accept_tac (falseE [FALSE,f,mk_neg f] FALSE
+)
 )
 (rpg "~ (i1(X,X) o (t:1->X) = i2(X,X) o t)")
 )
 end
+
 
 (*contradiction between forall and exists, TODO: derive such a thm*)
 (*
@@ -1040,6 +1053,32 @@ e
 )
 (rapg "id(N) = Nind(z,s)")
 )
+ 
+
+(*
+trans  ((c1) (readt "id(N) o s")) ((arg_conv c1)(readt " s"));
+Exception- ERR "equalities do not match(id(N) o s) = s s = s" raised
+> (c1) (readt "id(N) o s");
+val it =
+   
+   
+   |-
+   id(N) o s = s: thm
+>  (arg_conv c1)(readt " s");
+val it =
+   
+   
+   |-
+   s = s: thm
+> val th1 = (c1) (readt "id(N) o s");
+val th1 =
+   
+   
+   |-
+   id(N) o s = s: thm
+> val th2 = (arg_conv c1)(readt " s");
+val th2 =
+*)
 (*
 val N_ind_z_s_id = proved_th
 (
@@ -1428,6 +1467,8 @@ THEOREM pb_exists:
 (*TODO:AQ maybe have an abbrev_tac... better have the Q stuff
 OR just use let val... in ?
 
+may have a long composition, the point is adding a new symbol to represent the thing, but not add any variable
+
 *)
 
 (*
@@ -1487,7 +1528,38 @@ up to
 , if can put ax1_5' into assumption and drule with it, then will be nice.
 *)
 
+(*parser bug
+rapf "P(a) & P(b) ==> ALL s.Q(s) & Q(c)";
+Exception- ERR "err in parsing bound variable" raised
+*)
+
+
+(* 
+
+A /\ B ==>C 
+
+
+A ==> B ==> C
+
+A ==> !x. B x ==> C x
+
+--pull ! x. out !x. A ==> B x ==> C x
+--rw with A /\ Bx ==> Cx. 
+
+!x. ! y.  P(x,y) ==> Q(z)
+
+!x. P(x) /\ !y.P(y) ==>Q(z)
+
+TODO: fill the gap from match_mp_tac
+
+*)
+
+
+
 (*TODO: AQ
+
+Change GSYM to apply anywhere in a formula once_depth_conv
+
 goal is:
 
 eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = b
@@ -1556,6 +1628,12 @@ pb_fac_exists
 specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
 *)
 
+(*?a. ?b. P(a,b) 
+
+P(m,n) 
+qexistsl_tac
+
+X_CHOOSE_THEN n (X_CHOOSE_THEN m assume_tac)*)
 
 (*TODO:AQ one thing ugly about choose_tac is that is cannot use the map_every, since it takes two arguments, but there might be multiple quantifiers
 
@@ -1665,7 +1743,7 @@ TODO: is_mono_applied  should be p o h = p o k ==> h = k, not k = h, just comfus
 
 split the conjunct, but not all assumptions are conjunctions
 
- once_rw_tac[GSYM o_assoc] >> arw_tac[] works, once_rw_tac[GSYM o_assoc] does not 
+ once_rw_tac[GSYM o_assoc] >> arw_tac[] works, once_arw_tac[GSYM o_assoc] does not 
 
 again
 
@@ -1774,21 +1852,12 @@ e
 pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
 >> drule is_mono_thm
 >> first_assum (fn th => (assume_tac (specl th (List.map readt ["A","id(A)","(g:B->A) o (f:A->B)"]))))
->> first_assum match_mp_tac >> arw_tac[spec_all idR]
-(*
->> rule_assum_tac (fn th => specl th (List.map readt ["B","(f:A-> B) o (g:B->A)","id(B)"]))
->> by_tac (rapf "f o g o f = f:A->B")
->-- accept_tac (conjE2 (assume (rapf"(isepi(f) & f o g o f = f)")))
->> by_tac (rapf "(f o g) o f = id(B) o f")
->-- arw_tac[spec_all idL,spec_all o_assoc] 
->> accept_tac (mp (assume (rapf "(f o g) o f = id(B) o f ==> f o g = id(B)"))
-                  (assume (rapf "(f o g) o f = id(B) o f")))
-*)
+>> first_x_assum match_mp_tac >> arw_tac[spec_all idR] 
 )
 (rapg "(ismono(f) & f o g o f = f) ==> g o f = id(A)")
 )
 
-(*TODO:AQ want turn out pp and still get everything work. should I have a document which stores all types*)
+(*TODO:AQ want turn out pp and still get everything work. should I have a document which stores all types?*)
 
 
 

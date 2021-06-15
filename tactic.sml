@@ -102,6 +102,42 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
         ([(ct,asl,ant)], fn thl => mp (disch ant gth) (hd thl))
     end
 
+
+(*
+
+A ==> !x. C x
+---
+!x. A ==> C
+---
+
+both directions 
+
+
+A /\ B ==>C 
+
+<=>
+
+A ==> B ==> C
+
+prove as a thm and rw with this
+
+*)
+
+
+(*TODO:
+
+
+ ALL x. P(a) ==> Q(x) <=> P(a) ==> ALL x. Q(x): thm
+
+add ()
+
+ (ALL x. P(a) ==> Q(x)) <=> P(a) ==> ALL x. Q(x): thm
+*)
+
+
+(*TODO: change functions allE, specl, thm should be the last argument*)
+
+
 (*
  ALL (A : ob). ALL (x : 1() -> A). P(x) ==> Q(A)   -- test passed
 
@@ -323,10 +359,9 @@ fun fconv_canon th =
     let val th = spec_all th
         val f = concl th
     in 
-       (* if aconv f TRUE then [] else seems happens in HOL but not here*)
         if is_dimp f then [th] else
         if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
-        if is_neg f then [eqF_intro th] 
+        if is_neg f then [eqF_intro th]  
         else [eqT_intro th]
     end 
 
@@ -337,7 +372,7 @@ fun conv_canon th =
        (* if aconv f TRUE then [] else seems happens in HOL but not here*)
         if is_dimp f then [th] else
         if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
-        if is_neg f then [eqF_intro th] 
+        if is_neg f then [eqF_intro th]  
         else [th]
     end 
 
@@ -365,8 +400,14 @@ fun gen_rw_tac fc thl =
     in fconv_tac (fc conv fconv) 
     end
 
+(*TODO: Fix eqT_intro, eqF_intro!*)
 
+
+
+(* old rw_tac
 fun rw_tac thl = gen_rw_tac basic_fconv thl
+fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
+*)
 
 fun once_rw_tac thl = gen_rw_tac basic_once_fconv thl
 
@@ -376,10 +417,34 @@ fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
 
 fun rw_tac thl = 
     let 
-        val conv = first_conv (mapfilter rewr_conv (flatten (List.map conv_canon thl)))
-        val fconv = first_fconv (mapfilter rewr_fconv (flatten (List.map fconv_canon thl)))
+        val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
+        val fconv = first_fconv (mapfilter rewr_fconv (flatten (mapfilter fconv_canon thl)))
     in fconv_tac (basic_fconv conv fconv) 
     end
+
+
+
+(*
+
+TODO: Add to drule, to rw under quantifiers
+P <=> Q 
+
+
+<=>
+
+!x.P <=> !x. Q
+
+x allowed in P and Q, but not allowed to appear in assumption
+
+P <=> Q 
+
+<=>
+
+?x.P <=> ?x. Q
+
+*)
+
+(*conv_canon/ fconv_canon should never raise exception, check this*)
 
 (*
 fun rw_tac thl = 
@@ -402,6 +467,37 @@ fun by_tac f0 (G,fl,f) =
     ([(G',fl,f0),(G',f0::fl,f)],
      fn [th1,th2] => prove_hyp th1 th2)
     end
+
+
+(*
+exists na such that complicated term = na.
+
+use existsE to eliminate the na
+
+
+strip_assume_tac instead of existsE to deal with elimanation
+
+*)
+(*
+readf “P(f)”
+
+*)
+
+(*
+g: A-> B
+----------
+ALL g:A' -> B. P(g)
+
+TODO: check gen_tac do this. 
+
+
+f(x') = g(y')
+
+f(a) = g(b)
+ same as abbrev
+
+*)
+
 (*
 A ?- t
 ============== MP_TAC (A’ |- s) 
@@ -566,6 +662,60 @@ val conjuncts_then:thm_tactical = fn ttac => conjuncts_then2 ttac ttac
 
 val STRIP_THM_THEN = FIRST_TCL [conjuncts_then(*, DISJ_CASES_THEN, CHOOSE_THEN*)]
 
+
+
+(*disj_cases_then*)
+
+fun foo th m = mp (disch (concl th) (assume m)) th
+
+(*
+ A |- t1 \/ t2   ,   A1,t1 |- t   ,   A2,t2 |- t
+ *   -----------------------------------------------
+ *               A u A1 u A2 |- t
+ *
+ * fun DISJ_CASES th1 th2 th3 =
+ *   let val (t1,t2) = dest_disj(concl th1)
+ *       and t = concl th2
+ *       val th4 = SPEC t2 (SPEC t1 (SPEC t OR_ELIM_THM))
+ *   in
+ *   MP (MP (MP th4 th1) (DISCH t1 th2)) (DISCH t2 th3)
+ *   end
+ *   handle _ => ERR{function = "DISJ_CASES",message = ""};
+
+*)
+
+fun disj_cases th1 th2 th3 = 
+    let val (A,B) = dest_disj(concl th1)
+        val _ = (concl th2 = concl th3) orelse raise ERR "two concls no match"
+    in disjE A B (concl th2) th1 th2 th3
+    end
+
+
+fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
+   fn disth =>
+   let
+      val (disj1, disj2) = dest_disj (concl disth)
+   in
+      fn g  =>
+         let
+            val (gl1, prf1) = ttac1 (foo disth disj1) g
+(*               ttac1 (itlist add_assum (thm.hyp disth) (assume disj1)) g *)
+            and (gl2, prf2) = ttac2 (foo disth disj2) g
+(*              ttac2 (itlist add_assum (thm.hyp disth) (assume disj2)) g *)
+         in
+            (gl1 @ gl2,
+             fn thl =>
+               let
+                  val (thl1, thl2) = split_after (length gl1) thl
+               in
+                  disj_cases disth (prf1 thl1) (prf2 thl2)
+               end)
+         end
+   end
+   handle ERR _ => raise ERR "DISJ_CASES_THEN2"
+ 
+val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
+
 val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN check_assume_tac
 
 val STRIP_ASSUME_TAC0 = conjuncts_then assume_tac
@@ -577,6 +727,15 @@ fun find (ttac:thm_tactic) goal [] = raise ERR "find"
       ttac (assume a) goal handle ERR _ => find ttac goal L
  
 fun first_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) asl
+
+fun undisch_then f (ttac:thm_tactic): tactic = fn (ct,asl, w) =>
+      let val (_, A) = Lib.pluck ((curry eq_form) f) asl in ttac (assume f) (ct,A, w) end
+
+local
+    fun f ttac th = undisch_then (concl th) ttac
+in
+val first_x_assum = first_assum o f
+end
 
 (*what is the "name" in Tactical.find for?change above to first_opt?*)
 

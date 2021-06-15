@@ -42,6 +42,7 @@ val dest_eq: form -> term * term
 val dest_imp: form -> form * form
 val dest_dimp: form -> form * form
 val dest_conj: form -> form * form
+val dest_disj: form -> form * form
 val dest_pred: form -> string * term list
 val dest_exists: form -> (string * sort) * form
 val dest_all: form -> (string * sort) * form

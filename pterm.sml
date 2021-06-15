@@ -661,6 +661,8 @@ fun parse_ast_end (x:ast, l:token list) =
 
 fun read_ast_pf a = ast2pf (parse_ast_end (parse_ast (lex a))) empty
 
+fun read_ast_pt a = ast2pt (parse_ast_end (parse_ast (lex a))) empty
+
 fun parse_pt tl env = parse_pt_fix 0 (parse_pt_atom tl env)
 and parse_pt_atom tl env = 
     case tl of
@@ -908,6 +910,12 @@ val readf = fst o read_f
 
 val readt = fst o read_t
 
+fun read_ast_t t = 
+    let val (pt,env) = read_ast_pt t
+        val (ps,env0) = ps_of_pt pt env
+        val env1 = type_infer env0 pt ps
+    in (term_from_pt env1 pt,pdict env1)
+    end
 
 fun read_ast_f f = 
     let val (pf,env) = read_ast_pf f

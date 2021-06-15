@@ -271,7 +271,22 @@ fun basic_once_fconv c fc =
     once_depth_fconv (once_depth_conv c) 
                      (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
+(*
 
+fun top_depth_fconv c fc f =
+    (repeatfc fc thenfc
+             (sub_fconv c (top_depth_fconv c fc)) thenfc
+             ((fc thenfc (top_depth_fconv c fc)) 
+                  orelsefc all_fconv))
+        f
+
+fun top_depth_conv c t =
+    (repeatc c thenc
+             (sub_conv (top_depth_conv c)) thenc
+             ((c thenc (top_depth_conv c)) 
+                  orelsec all_conv))
+             t
+*)
 
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
@@ -282,6 +297,24 @@ fun basic_fconv c fc =
 fun conv_rule c th = dimp_mp_l2r th (c (concl th)) 
 
 
+
+
+fun right_imp_forall_fconv f  = 
+    let
+        val (ant,conc) = dest_imp f
+        val (ns,b) = dest_all conc
+        val asm1 = assume f 
+        val ath = assume ant 
+        val mpth = mp asm1 ath
+        val sth =  specl mpth [Var ns]
+        val gth = sth |> disch ant |> allI ns 
+        val asm2 = assume (concl gth)
+        val sasm2 = allE asm2 (Var ns) 
+        val mpsasm = mp sasm2 ath
+        val gmpasm = allI ns mpsasm
+        val dth' = disch ant gmpasm
+    in dimpI (disch f gth)  (disch (concl gth) dth')
+    end
 
 
 

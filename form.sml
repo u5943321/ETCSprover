@@ -139,6 +139,12 @@ fun dest_conj f =
         Conn("&",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not a conjunction"
 
+fun dest_disj f = 
+    case f of
+        Conn("|",[f1,f2]) => (f1,f2)
+      | _ => raise ERR "not a disjunction"
+ 
+
 fun dest_dimp f = 
     case f of 
         Conn("<=>",[L,R]) => (L,R)
