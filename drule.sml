@@ -386,29 +386,39 @@ fun all_iff (th as thm(G,A,C)) (n,s) =
         end
       | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
-(*
+
+fun all_iff (th as thm(G,A,C)) (n,s) = 
+    case C of 
+        Conn("<=>",[P,Q]) => 
+        let val allP = Quant("ALL", n, s, abstract (n,s) P)
+            val allQ = Quant("ALL", n, s, abstract (n,s) Q)
+            val allP2allQ = disch allP (allI (n,s) (dimp_mp_l2r (allE (assume allP) (Var(n,s))) th))
+            val allQ2allP = disch allQ (allI (n,s) (dimp_mp_r2l th (allE (assume allQ) (Var(n,s)))))
+        in
+            dimpI allP2allQ allQ2allP
+        end
+      | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
+
+fun exists_iff (th as thm(G,A,C)) (n,s) = 
+    let
+        val (P,Q) = dest_dimp C
+        val eP = Quant("EXISTS", n, s, abstract (n,s) P)
+        val eQ = Quant("EXISTS", n, s, abstract (n,s) Q)
+
+
 fun exists_iff (th as thm(G,A,C)) (n,s) = 
     let
         val (P,Q) = dest_dimp C
         val P2Q = undisch (conjE1 (dimpE th))
         val Q2P = undisch (conjE2 (dimpE th))
-        val L2R = disch (mk_exists n s P)
-                        (existsI
-                             (existsE (n,s) (assume (mk_exists n s P)) P2Q)
-                             (n,s) (Var(n,s)) Q)
-        val R2L = disch (mk_exists n s Q) 
-                        (existsI
-                             (existsE (n,s) (assume (mk_exists n s Q)) Q2P)
-                             (n,s) (Var(n,s)) P)
-    in
-        dimpI L2R R2L
+        val eP = Quant("EXISTS", n, s, abstract (n,s) P)        
+        val eQ = Quant("EXISTS", n, s, abstract (n,s) Q)
+        val P2eQ = existsI P2Q (n,s) (Var(n,s)) Q
+        val Q2eP = existsI Q2P (n,s) (Var(n,s)) P
+        val eP2eQ = existsE (n,s) (assume eP) P2eQ |> disch eP
+        val eQ2eP = existsE (n,s) (assume eQ) Q2eP |> disch eQ
+    in dimpI eP2eQ eQ2eP
     end
-        val f = Conn("<=>",[mk_exists n s P,mk_exists n s Q])
-    in
-        thm(fvf f,[],f)
-    end
-
-*)
 
 (*F_IMP: ~f ==> f ==> F*)
 fun F_imp f = assume f|> negE (assume (mk_neg f)) |> disch f |> disch (mk_neg f)

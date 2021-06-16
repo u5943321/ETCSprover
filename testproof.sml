@@ -1891,6 +1891,7 @@ val xth = th
 val n0 = "a"
 *)
 
+
 val epi_non_zero_pre_inv = proved_th(
 e
 (stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> drule non_zero_pinv >>
