@@ -81,7 +81,7 @@ val disch_all: thm -> thm
 val dischl: form list -> thm -> thm
 val conj_assum: form -> form -> thm -> thm
 
-
+val F_imp: form -> thm
 val F2f: form -> thm
 val CONTR: form -> thm -> thm
 (*

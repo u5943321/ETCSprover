@@ -1,6 +1,6 @@
-structure Parse = struct val Term=readfq end
-
 fun readfq [QUOTE s] = readf s
+
+structure Parse = struct val Term=readfq end
 
 val ax1_5_applied = prove 
 “ALL A.ALL B.ALL g. ALL f.ALL X.ALL h.(f: A ->B) o (h:X -> A) = g o h ==> (eqa(f, g) o eqinduce(f, g, h)) = h”
@@ -1328,7 +1328,7 @@ val psyms0 = insert_psym "ispb"
 val is_pb_def = define_pred (rapf 
 "ALL X. ALL Z. ALL f: X -> Z. ALL Y. ALL g:Y -> Z. ALL P. ALL p:P-> X. ALL q:P->Y. ispb(P,p,q,f,g) <=> f o p = g o q & (ALL A. ALL u: A -> X. ALL v: A -> Y. f o u = g o v ==> EXISTS a:A -> P. (p o a = u & q o a = v & ALL b:A -> P. (p o b = u & q o b = v) ==> a = b))"
 )
-
+}
 (*
 eq_equlity:
 ∀A B f g.
@@ -1864,9 +1864,41 @@ Theorem epi_non_zero_pre_inv:
 ∀A B f. f∶ A → B ∧ is_epi f ∧ ¬(A ≅ zero) ⇒ ∃g. g∶ B → A ∧ f o g = id B
 *)
 
+
+
+(*TODO: quotation for specl, and switch the order of input
+bug here, x_choose gives disch has extra variables
+
+*)
+
+
+
+(*TODO: introduce a machinary to check that at each step we have all the variables in the goal are in the context
+at this stage, think have less context makes the thm weaker, so something should be proved cannot be proved. 
+
+*)
+(*
+val th = thm(essps,[]:form list,“EXISTS x. P(x)”)
+
+assume_tac th (essps,[]:form list,FALSE)
+
+
+assume_tac (thm(essps,[]:form list,“EXISTS x. P(x)”)) (essps,[]:form list,FALSE)
+
+
+
+val xth = th
+val n0 = "a"
+*)
+
 val epi_non_zero_pre_inv = proved_th(
 e
-(stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> )
+(stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> drule non_zero_pinv >>
+ first_x_assum (fn th => assume_tac (specl th [readt "f:A->B"])) >>
+ first_x_assum (x_choose_then "a" assume_tac) >>
+ wexists_tac (readt "a:B->A") >> match_mp_tac epi_pinv_pre_inv >> 
+ arw_tac[]
+ (*choose_tac "g" (“EXISTS g : B -> A. f o g o f = f”)*))
 (rapg "isepi(f:A->B) & ~(areiso(A,0)) ==> EXISTS g:B ->A. f o g = id(B)")
 )
 

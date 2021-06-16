@@ -42,9 +42,17 @@ A1 |- t1 A2 |- t2
 
 *)
 
+(*
 val assume_tac:thm_tactic = 
     fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
     ([(G,concl th:: fl,f)], fn [a:thm] => prove_hyp th a)
+edited because of bug of missing variables in context
+*)
+
+
+val assume_tac:thm_tactic = 
+    fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
+    ([(HOLset.union(G,cont th),concl th:: fl,f)], fn [a:thm] => prove_hyp th a)
 
 val hyp = ant
 
@@ -94,7 +102,7 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
         val th2 = uncurry disch (itlist efn evs (ant, th1))
         val (gl,vs) = strip_all w
-        val env = match_form (cont th) con gl mempty
+        val env = match_form (fvfl (hyp th)) con gl mempty
         val ith = inst_thm env th2
         val gth = genl vs (undisch ith)
         val ant = fst (dest_imp (concl ith))
@@ -372,7 +380,8 @@ fun conv_canon th =
        (* if aconv f TRUE then [] else seems happens in HOL but not here*)
         if is_dimp f then [th] else
         if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
-        if is_neg f then [eqF_intro th]  
+        if is_neg f then [eqF_intro th]  else
+        if not (is_eqn f) then [eqT_intro th]
         else [th]
     end 
 

@@ -349,7 +349,7 @@ fun trans th1 th2 =
 
 do not require f1 in assumption, if not, add its variables into the context. *
  *---------------------------------------------------------------------------*)
-
+(*
 fun disch f1 (thm(G,A,f2)) =
     let 
         val _ = HOLset.isSubset(fvf f1,G) orelse
@@ -357,6 +357,13 @@ fun disch f1 (thm(G,A,f2)) =
     in
         thm (HOLset.union(G,fvf f1),ril f1 A,Conn ("==>",[f1,f2]))
     end
+
+*)
+
+fun disch f1 (thm(G,A,f2)) =
+        thm (HOLset.union(G,fvf f1),ril f1 A,Conn ("==>",[f1,f2]))
+ 
+
 
 
 (*-------------------------------------
