@@ -56,5 +56,7 @@ val first_assum: thm_tactic -> tactic
 
 val conv_canon: thm.thm -> thm.thm list
 val fconv_canon: thm.thm -> thm.thm list
+
+val map_every: ('a -> tactic) -> 'a list -> tactic
 end
 

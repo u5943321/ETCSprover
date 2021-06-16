@@ -1859,6 +1859,20 @@ pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
 
 (*TODO:AQ want turn out pp and still get everything work. should I have a document which stores all types?*)
 
+(*
+Theorem epi_non_zero_pre_inv:
+∀A B f. f∶ A → B ∧ is_epi f ∧ ¬(A ≅ zero) ⇒ ∃g. g∶ B → A ∧ f o g = id B
+*)
+
+val epi_non_zero_pre_inv = proved_th(
+e
+(stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> )
+(rapg "isepi(f:A->B) & ~(areiso(A,0)) ==> EXISTS g:B ->A. f o g = id(B)")
+)
+
+
+
+
 
 
 

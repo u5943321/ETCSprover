@@ -415,10 +415,19 @@ fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
 
 fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
 
+(*
 fun rw_tac thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
         val fconv = first_fconv (mapfilter rewr_fconv (flatten (mapfilter fconv_canon thl)))
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+*)
+
+fun rw_tac thl = 
+    let 
+        val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
+        val fconv = first_fconv (mapfilter rewr_fconv (flatten (mapfilter conv_canon thl)))
     in fconv_tac (basic_fconv conv fconv) 
     end
 
@@ -638,15 +647,11 @@ val CONTR_TAC: thm_tactic =
       end
       handle ERR _ => raise ERR "CONTR_TAC"
 
+
 fun first tacl = 
     case tacl of
-        [] => raise ERR "no tactic applies"
+        [] => all_tac
       | h :: t => h Orelse (first t)
-
-val check_assume_tac: thm_tactic =
-   fn gth =>
-      first [CONTR_TAC gth, accept_tac gth, (*OPPOSITE_TAC gth,
-             DISCARD_TAC gth,*) assume_tac gth]
 
 
 fun conjuncts_then2 ttac1 ttac2 =
@@ -660,9 +665,51 @@ fun conjuncts_then2 ttac1 ttac2 =
 
 val conjuncts_then:thm_tactical = fn ttac => conjuncts_then2 ttac ttac
 
-val STRIP_THM_THEN = FIRST_TCL [conjuncts_then(*, DISJ_CASES_THEN, CHOOSE_THEN*)]
 
 
+
+
+(*opposite_tac to be come back and check TODO:*)
+
+(* --------------------------------------------------------------------------*
+ * OPPOSITE_TAC: proves the goal using the theorem p and an assumption ~p.   *
+ * --------------------------------------------------------------------------*)
+
+(*
+val contr_tac: thm_tactic =
+   fn cth => fn (asl, w) =>
+      let
+         val th = CONTR w cth
+      in
+         ([], empty th)
+      end
+      handle HOL_ERR _ => raise ERR "CONTR_TAC" ""
+*)
+
+fun resolve th th' = mp (mp (F_imp (concl th)) th') th
+fun target_rule tm =
+      if is_neg tm then (dest_neg tm, Lib.C resolve) else (mk_neg tm, resolve)
+
+fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
+    let
+        val (opp, rule) = target_rule (concl th)
+    in
+        case List.find ((C (curry eq_form)) opp) asl of
+            NONE => raise ERR "OPPOSITE_TAC"
+          | SOME asm => CONTR_TAC (rule th (assume asm)) (ct,asl, w)
+    end
+
+(*discard_tac*)
+
+(* --------------------------------------------------------------------------*
+ * DISCARD_TAC: checks that a theorem is useless, then ignores it.           *
+ * Revised: 90.06.15 TFM.  TODO: do not quite understand why it is necessary                                                  *
+ * --------------------------------------------------------------------------*)
+
+fun DISCARD_TAC th (ct,asl, w) =
+   if Lib.exists ((curry eq_form) (concl th)) (TRUE :: asl)
+      then all_tac (ct,asl, w)
+   else raise ERR "DISCARD_TAC"
 
 (*disj_cases_then*)
 
@@ -716,9 +763,53 @@ fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
  
 val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
 
-val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN check_assume_tac
 
-val STRIP_ASSUME_TAC0 = conjuncts_then assume_tac
+(*choose_then*)
+
+
+fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
+   fn xth =>
+      let
+         val ((n,s),b) = dest_exists (concl xth)
+      in
+         fn (ct,asl,w) =>
+            let
+               val th = foo xth (subst_bound (Var (n0,s)) b)
+               val (gl,prf) = ttac th (ct,asl,w)
+            in
+               (gl, (existsE (n0,s) xth) o prf)
+            end
+      end
+      handle ERR _ => raise ERR "X_CHOOSE_THEN"
+
+val choose_then: thm_tactical =
+   fn ttac => fn xth =>
+      let
+         val (cot,hyp,conc) = dest_thm xth
+         val ((n,s),_) = dest_exists conc
+      in
+         fn (ct,asl,w) =>
+         let
+             val vd = HOLset.union(cot,ct)
+             val y = pvariantt vd (Var(n,s))|> dest_var|> fst
+         in
+            x_choose_then y ttac xth (ct,asl,w)
+         end
+      end
+      handle ERR _ => raise ERR "CHOOSE_THEN"
+
+val choose_tac' = choose_then assume_tac
+
+fun x_choose_tac x = x_choose_then x assume_tac
+
+val check_assume_tac: thm_tactic =
+   fn gth =>
+      first [CONTR_TAC gth, accept_tac gth, OPPOSITE_TAC gth,
+             DISCARD_TAC gth,assume_tac gth]
+
+val strip_thm_then = FIRST_TCL [conjuncts_then, disj_cases_then, choose_then]
+
+val STRIP_ASSUME_TAC = REPEAT_TCL strip_thm_then check_assume_tac
 
 val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
 

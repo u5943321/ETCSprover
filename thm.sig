@@ -6,6 +6,7 @@ type sort = term.sort
 type menv = form.menv
 datatype thm = thm of (string * sort) set * form list * form
 
+val dest_thm: thm -> (string * sort) set * form list * form
 val ril: ''a -> ''a list -> ''a list
 
 val ant: thm -> form list

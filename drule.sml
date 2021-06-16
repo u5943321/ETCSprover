@@ -410,6 +410,8 @@ fun exists_iff (th as thm(G,A,C)) (n,s) =
 
 *)
 
+(*F_IMP: ~f ==> f ==> F*)
+fun F_imp f = assume f|> negE (assume (mk_neg f)) |> disch f |> disch (mk_neg f)
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 

@@ -134,6 +134,12 @@ fun dest_imp f =
         Conn("==>",[f1,f2]) => (f1,f2)
       | _ => raise ERR "not an implication"
 
+fun dest_neg f = 
+    case f of
+        Conn("~",[f0]) => f0
+      | _ => raise ERR "not an negation"
+
+
 fun dest_conj f = 
     case f of
         Conn("&",[f1,f2]) => (f1,f2)

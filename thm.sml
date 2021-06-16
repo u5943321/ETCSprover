@@ -4,6 +4,8 @@ open token pterm_dtype term form pterm symbols
 
 datatype thm = thm of ((string * sort) set * form list * form) 
 
+fun dest_thm (thm(G,A,C)) = (G,A,C)
+
 fun ant (thm(_,A,_)) = A
 
 fun concl (thm(_,_,C)) = C 
