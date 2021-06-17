@@ -40,9 +40,8 @@ val imp_iff: thm -> thm -> thm
 val dimp_iff: thm -> thm -> thm
 
 val all_iff: thm -> string * sort -> thm
-(*
 val exists_iff: thm -> string * sort -> thm 
-*)
+
 
 
 val T_conj_1: thm
@@ -84,6 +83,8 @@ val conj_assum: form -> form -> thm -> thm
 val F_imp: form -> thm
 val F2f: form -> thm
 val CONTR: form -> thm -> thm
+
+val double_neg: form -> thm
 (*
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list

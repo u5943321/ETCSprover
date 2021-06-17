@@ -28,6 +28,7 @@ val ax1_5_applied =
                     (equivT (refl (readt "eqinduce(f:A -> B,g,h:X -> A)"))))
                (trueI [])))
 
+        
 val compose_assoc_5_4_left = gen_all
 (prove (rapf "(f5 o f4 o f3 o f2 o f1) = (f5 o (f4 o (f3 o f2))) o f1")
  (rw_tac [spec_all o_assoc]))
@@ -203,7 +204,7 @@ val o_bracket_left = proved_th
                          (expandf 
                               ((repeat gen_tac) >> rw_tac[spec_all o_assoc] >>
                                                 stp_tac >> 
-                                                accept_tac (assume (readf "((f:Z->A) o ((b:Y->Z) o (a:X ->Y)))=((g:Z ->A) o ((d:Y -> Z) o c))"))) 
+                                               accept_tac (assume (readf "((f:Z->A) o ((b:Y->Z) o (a:X ->Y)))=((g:Z ->A) o ((d:Y -> Z) o c))"))   ) 
                               (read_goal "ALL f:Z -> A. ALL b:Y -> Z. ALL a:X -> Y. ALL g:Z ->A. ALL d:Y -> Z. ALL c: X -> Y.f o b o a = g o d o c ==> (f o b) o a = (g o d) o c"))
 
 
@@ -1328,7 +1329,7 @@ val psyms0 = insert_psym "ispb"
 val is_pb_def = define_pred (rapf 
 "ALL X. ALL Z. ALL f: X -> Z. ALL Y. ALL g:Y -> Z. ALL P. ALL p:P-> X. ALL q:P->Y. ispb(P,p,q,f,g) <=> f o p = g o q & (ALL A. ALL u: A -> X. ALL v: A -> Y. f o u = g o v ==> EXISTS a:A -> P. (p o a = u & q o a = v & ALL b:A -> P. (p o b = u & q o b = v) ==> a = b))"
 )
-}
+
 (*
 eq_equlity:
 ∀A B f g.
@@ -1574,6 +1575,20 @@ in the proof below :
  once_arw_tac[GSYM o_assoc] >> arw_tac[] works, but once_arw_tac itself does not 
 *)
 
+
+
+(*TODO: BUG! in the commented out lines, if use:
+>-- accept_tac ((conjE1 o assume) (rapf 
+"(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
+                ))
+
+then :
+
+"variable to be abstract occurs in assumption" 
+
+do not understand why it is relevant to allI
+
+*)
 val pb_exists = proved_th(
 e
 (repeat stp_tac >> 
@@ -1604,25 +1619,21 @@ e
  (*proved the suffices*)
  >> match_mp_tac is_eqinduce >> arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa] >>
  match_mp_tac to_p_eq' >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
- by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X")
+ by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X") >>
+ pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[o_assoc]
+(*
  >-- accept_tac ((conjE1 o assume) (rapf 
 "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
                 ))
  >> once_arw_tac[GSYM o_assoc] >> arw_tac[] >>
  accept_tac ((conjE2 o assume) (rapf 
 "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
-                ))
+                ))*)
 )
 (rapg
 "ALL f:X->Z. ALL g:Y->Z. EXISTS P. EXISTS p:P->X. EXISTS q:P-> Y. ispb(P,p,q,f,g)")
 )
 
-(*
-pb_fac_exists
-∀X Y Z f g. g∶ Y → Z ∧  f∶ X → Z  ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
-            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
-             ∃a. a∶ A → P ∧ p o a = u ∧ q o a = v)
-*)
 
 (*TODO: BUG! spec_all pb_exists does not work, but (spec_all (gen_all pb_exists)) does
 specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
@@ -1633,14 +1644,10 @@ specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
 P(m,n) 
 qexistsl_tac
 
-X_CHOOSE_THEN n (X_CHOOSE_THEN m assume_tac)*)
+X_CHOOSE_THEN n (X_CHOOSE_THEN m assume_tac),
 
-(*TODO:AQ one thing ugly about choose_tac is that is cannot use the map_every, since it takes two arguments, but there might be multiple quantifiers
-
-may add existential to rw?
+choosel_tac
 *)
-
-(*TO-DO: implement and test first_assum here, seems irrelevant to mp_then stuff done*)
 
 (*TODO: a rule of turning unique existence into existence*)
 
@@ -1649,32 +1656,19 @@ e
 (repeat stp_tac >>
 mp_tac (spec_all (gen_all pb_exists)) >> rw_tac[spec_all is_pb_def] >>
 stp_tac >> 
-choose_tac "P" 
-(rapf "EXISTS P. EXISTS (p : P -> X). EXISTS (q : P -> Y). ispb(P, p, q, f:X->Z, g:Y->Z)") >>
-choose_tac "p"
-(rapf "EXISTS (p :P -> X).EXISTS (q: P -> Y). ispb(P, p, q, f:X->Z, g:Y->Z)") >>
-choose_tac "q"
-(rapf "EXISTS (q : P -> Y). ispb(P, p:P->X, q, f:X->Z, g:Y->Z)") >>
-rule_assum_tac (conv_rule (rewr_fconv (spec_all is_pb_def))) >>
+first_x_assum (x_choose_tac "P") >> 
+first_x_assum (x_choose_tac "p") >>first_x_assum (x_choose_tac "q") >>
 map_every wexists_tac (List.map readt ["P","p:P->X","q:P->Y"]) >>
-stp_tac
->-- accept_tac (conjE1 (assume 
-   (rapf "(f:X->Z) o (p:P->X) = g o q & ALL A. ALL (u : A -> X).ALL (v : A -> Y).f o u = g o v ==> EXISTS (a : A -> P). p o a = u & q o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"))) 
->> repeat stp_tac
+stp_tac >-- pop_assum_list (map_every STRIP_ASSUME_TAC) >-- arw_tac[] >>
+repeat stp_tac
 >> assume_tac 
 (mp
     (specl (conjE2 (assume 
                         (rapf "(f:X->Z) o (p:P->X) = g o q & ALL A. ALL (u : A -> X).ALL (v : A -> Y).f o u = g o v ==> EXISTS (a : A -> P). p o a = u & q o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"))) (List.map readt ["A","u:A->X","v:A->Y"]))
     (assume (rapf "(f:X->Z) o (u:A->X) = (g:Y->Z) o v"))
-) 
->> choose_tac "a" 
-(rapf "EXISTS (a : A -> P).(p:P->X) o a = u & (q:P->Y) o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b")
->> wexists_tac (readt "a:A->P") 
->> accept_tac (
-let val f = rapf "(p:P->X) o a = u & (q:P->Y) o a = v & ALL (b : A -> P). p o b = u & q o b = v ==> a = b"
-in
-conjI ((conjE1 o assume) f) ((conjE1 o conjE2 o assume) f)
-end)
+)  >> 
+first_x_assum (x_choose_tac "a") >> wexists_tac (readt "a:A->P") >>
+ pop_assum_list (map_every STRIP_ASSUME_TAC) >-- arw_tac[] 
 )
 (rapg 
 "ALL X. ALL Z. ALL f:X->Z. ALL Y. ALL g:Y->Z.EXISTS P. EXISTS p:P->X.EXISTS q:P->Y. f o p = g o q & (ALL A.ALL u:A->X.ALL v:A->Y. f o u = g o v ==>EXISTS a:A->P. p o a = u & q o a = v)")
@@ -1896,20 +1890,435 @@ val epi_non_zero_pre_inv = proved_th(
 e
 (stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> drule non_zero_pinv >>
  first_x_assum (fn th => assume_tac (specl th [readt "f:A->B"])) >>
- first_x_assum (x_choose_then "a" assume_tac) >>
+ first_x_assum (x_choose_tac "a") >>
  wexists_tac (readt "a:B->A") >> match_mp_tac epi_pinv_pre_inv >> 
- arw_tac[]
- (*choose_tac "g" (“EXISTS g : B -> A. f o g o f = f”)*))
+ arw_tac[])
 (rapg "isepi(f:A->B) & ~(areiso(A,0)) ==> EXISTS g:B ->A. f o g = id(B)")
 )
 
 
+(*
+mono_non_zero_post_inv:
+∀A B f. f∶ A → B ∧ is_mono f ∧ ¬(A ≅ zero) ⇒ ∃g. g∶ B → A ∧ g o f = id A
+*)
+
+val mono_non_zero_post_inv = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> drule non_zero_pinv >> 
+ first_x_assum (fn th => assume_tac (specl th [readt "f:A->B"])) >> 
+ first_x_assum (x_choose_tac "a") >>
+ wexists_tac (readt "a:B->A") >> match_mp_tac mono_pinv_post_inv >> arw_tac[])
+(rapg "ismono(f:A->B) & ~(areiso(A,0)) ==> EXISTS g:B ->A. g o f = id(A)")
+)
+
+
+(*
+o_mono_mono:
+∀A B C f g. is_mono f ∧ is_mono g ∧ f∶ A → B ∧ g∶ B → C ⇒ is_mono (g o f)
+*)
+
+(*TODO: edit stp_tac using 
+fun STRIP_GOAL_THEN ttac = FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac]
+tactic of removing assumption
+bug!
+first_x_assum match_mp_tac after the by_tac gives 
+     "VALIDInvalid tactic: theorem has bad hypothesis ALLX'.ALLg'.ALLh.(g o g') = (g o h)==>h = g'"
+   raised
+> # # # # # 
+
+rule assume tac on first rule which the function applies
+
+*)
+
+
+(*specl should just err if wrong input list*)
+
+
+val o_mono_mono = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >>
+ rule_assum_tac ((conv_rule o try_fconv) (rewr_fconv (spec_all ismono_def))) >>
+ match_mp_tac is_mono_applied >> repeat gen_tac >> 
+ rw_tac[o_assoc]  >> stp_tac >>
+ by_tac“(f:A->B) o g' = f o (h:X->A)” >--
+ (rule_assum_tac (fn th => specl th (List.map readt ["X","(f:A->B) o (g':X->A)",
+                                                    "(f:A->B) o (h:X->A)"])
+                          handle ERR _ => th) >>
+  first_x_assum drule >> arw_tac[]) >>
+ rule_assum_tac (fn th => specl th (List.map readt ["X","(g':X->A)", "(h:X->A)"])
+                          handle ERR _ => th)  >>
+ last_x_assum drule >> first_x_assum accept_tac
+ )
+(rapg "ismono(f:A->B) & ismono(g:B->C) ==> ismono(g o f)")
+)
+
+
+(*
+is_iso_thm:
+∀f A B. f∶ A → B ⇒
+        (is_iso f ⇔
+         ∃f'. f'∶ B → A ∧ f' o f = id A ∧ f o f' = id B)
+
+*)
+
+val psyms0 = insert_psym "isiso";
+
+val isiso_def = define_pred (readf "ALL A. ALL B. ALL f:A->B. isiso(f) <=> EXISTS g: B -> A. f o g = id(B) & g o f = id(A)") 
+
+
+(*is_iso_thm identical to def in this setting*)
+
+val is_iso_thm = isiso_def|> spec_all |> dimpl2r
+
+(*
+mono_o_iso_mono:
+!A B X f i. is_iso i /\ is_mono f /\ f∶ A → B /\ i∶ X → A ==> (is_mono (f o i))
+*)
+
+val mono_o_iso_mono = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> match_mp_tac is_mono_applied >> rw_tac[o_assoc] >>
+ repeat stp_tac >> drule is_iso_thm >> first_x_assum (x_choose_tac "i'") >> 
+ pop_assum STRIP_ASSUME_TAC >> drule is_mono_thm >> 
+ by_tac “(i:X->A) o (g:X'->X) = i o h” 
+ >-- (first_x_assum match_mp_tac >> arw_tac[]) >> 
+ by_tac “(i':A->X) o (i:X->A) o (g:X'->X) = i' o i o h” >-- arw_tac[] >>
+ by_tac “h:X' ->X = (i':A->X) o i o h” >-- arw_tac[idL,GSYM o_assoc] >>
+ by_tac “g:X' ->X = (i':A->X) o i o g” >-- once_rw_tac[GSYM o_assoc] >> once_arw_tac[] >> 
+ rw_tac[idL] >>
+ accept_tac (sym (assume “i' o i o g = (i':A->X) o (i:X->A) o (h:X'->X)”)))
+(rapg "isiso(i:X->A) & ismono(f:A->B) ==> ismono(f o i)")
+)
+
+(*
+o_mono_imp_mono:
+∀A B C f m. f∶ A → B ∧ m∶ B → C ∧ is_mono (m o f) ⇒ is_mono f
+*)
+
+
+val o_mono_imp_mono = proved_th(
+e
+(rw_tac[ismono_def] >> repeat stp_tac >> first_x_assum match_mp_tac >> 
+ rw_tac[o_assoc] >> arw_tac[])
+(rapg "ismono((m:B ->C) o (f:A->B)) ==> ismono(f)")
+)
+
+(*
+o_epi_imp_epi:
+∀A B C f e. f∶ A → B ∧ e∶ C → A ∧ is_epi (f o e) ⇒ is_epi f
+*) 
+
+val o_epi_imp_epi = proved_th(
+e
+(rw_tac[isepi_def] >> repeat stp_tac >>first_x_assum match_mp_tac >> rw_tac[GSYM o_assoc] >>
+arw_tac[])
+(rapg "isepi((f:A->B) o (e:C->A)) ==> isepi(f)")
+)
+
+
+(*TODO: tactic for solving contradiction among assumption list*)
+
+val fun_ext = proved_th(
+e
+(stp_tac >> ccontra_tac >> drule ax4 >> 
+first_x_assum (x_choose_tac "a") >> 
+rule_assum_tac (fn th => specl th [readt "a:1->A"] handle _ => th) >> 
+rule_assum_tac (fn th => negE (assume “(f:A->B) o (a:1->A) = g o a”) th handle _ => th) >>
+first_x_assum accept_tac)
+(rapg "(ALL a:1->A. f o a = g o a) ==> f = g")
+)
+
+(*TODO: really want specl_then assume_tac stuff...*)
+
+val surj_is_epi = proved_th(
+e
+(repeat stp_tac >> match_mp_tac is_epi_applied >> repeat stp_tac >> match_mp_tac fun_ext >>
+ stp_tac >> 
+ rule_assum_tac (fn th => specl th [readt "a:1->B"]  handle _ => th) >>
+ first_x_assum (x_choose_tac "b0") >> 
+ rule_assum_tac sym >> arw_tac[] >> rw_tac[GSYM o_assoc] >> arw_tac[])
+(rapg "(ALL b:1 ->B. EXISTS b0:1 ->A. f o b0 = b) ==> isepi(f)")
+)        
+
+val are_iso_is_iso = proved_th(
+e
+(rw_tac[areiso_def,isiso_def] >> dimp_tac >> repeat stp_tac >> first_x_assum accept_tac)
+(rapg "areiso(A,B) <=> EXISTS f:A->B. isiso(f)")
+)
+
+(*TODO: maybe drule: permute order of exists quantifier
+
+(A : ob),
+   (B : ob),
+   (f : B -> A),
+   (g : A -> B)
+   f o g = id(A) & g o f = id(B)
+   ----------------------------------------------------------------------
+   f o g = id(B) & g o f = id(A)
+
+can missing cont in goal
+
+if use same x_choose for both of the two directions
+
+*)
+val are_iso_is_iso' = proved_th(
+e
+(rw_tac[areiso_def,isiso_def] >> dimp_tac >> repeat stp_tac 
+ >--(first_x_assum (x_choose_tac "f") >>  first_x_assum (x_choose_tac "g") >> 
+    wexists_tac (readt "g: B-> A") >> wexists_tac (readt "f:A->B") >>
+     conj_tac >> arw_tac[]) 
+ >> first_x_assum (x_choose_tac "g") >>  first_x_assum (x_choose_tac "f") >>
+ wexists_tac (readt "f: A -> B") >> wexists_tac (readt "g:B->A") >>
+ conj_tac >> arw_tac[])
+(rapg "areiso(A,B) <=> EXISTS f:B->A. isiso(f)")
+)
+
+(*TODO: rw does not treat conunction for equality, so need snd pop_assum STRIP_ASSUME_TAC*)
+val o_iso_eq_eq = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> drule is_iso_thm >>
+ first_x_assum (x_choose_tac "j") >> 
+ suffices_tac “(f:B->C) o (i:A->B) o (j:B->A) = g o i o j” >>
+ pop_assum STRIP_ASSUME_TAC >--
+ (arw_tac[idR] >> stp_tac >> first_x_assum accept_tac) >> 
+ rw_tac[GSYM o_assoc] >> arw_tac[])
+(rapg "isiso(i) & f o i = g o i ==> f = g")
+) 
+
+(*
+want solve
+
+(A : ob),
+   (B : ob),
+   (f : A -> B),
+   (g : A -> B),
+   (i : 0 -> A)
+   f o i = g o
+     i,
+     isiso(i)
+   ----------------------------------------------------------------------
+   f = g
+
+from the thm
+
+   (A : ob),
+   (B : ob),
+   (C : ob),
+   (f : B -> C),
+   (g : B -> C),
+   (i : A -> B)
+   
+   |-
+   isiso(i) & f o i = g o i ==> f = g: thm
+
+TODO: bug match_mp
+if use match_mp_tac o_iso_eq_eq, then # Exception- ERR "VALIDInvalid tactic: theorem has extra variable involved i"
+   raised
+
+The i is the i:A->B, not the one from 0, and i is not matched anywhere.
+*)
+
+val from_iso_zero_eq = proved_th(
+e
+(rw_tac[are_iso_is_iso'] >> stp_tac >> first_x_assum (x_choose_tac "i") >> repeat stp_tac >>
+assume_tac (specl from0_unique 
+                  (List.map readt ["B","(f:A->B) o (i:0->A)","(g:A->B) o (i:0->A)"]))>>
+match_mp_tac (gen_all o_iso_eq_eq) >> wexists_tac (readt "0") >> wexists_tac (readt "i:0->A") >>
+conj_tac >> arw_tac[]
+)
+(rapg "areiso(A,0) ==> ALL f:A->B. ALL g.f = g")
+)
+
+
+val eq_pre_o_eq = proved_th(
+e
+(stp_tac >> arw_tac[GSYM o_assoc])
+(rapg "b o a = d o c ==> b o a o f = d o c o f")
+)
+
+
+(*NOTE, just a not cannot put 
+
+ assume_tac (specl to1_unique (List.map readt ["1","f:1->1","id(1)"])) >> stp_tac >> arw_tac[]
+
+then f is not in assumption by the time of spec the thm, so will involve extra variable
+
+*)
+val one_to_one_id = proved_th(
+e
+(stp_tac >> assume_tac (specl to1_unique (List.map readt ["1","f:1->1","id(1)"])) >> arw_tac[])
+(rapg "ALL f:1 -> 1. f = id(1)")
+)     
+   
+
+(*
+stp_tac >> pop_assum STRIP_ASSUME_TAC >> drule is_epi_thm >> 
+ contra_tac >> drule (gen_all from_iso_zero_eq) gives
+
+(f : A -> B)
+   ALL (f : A -> B). ALL (g : A -> B). f = g,
+     A areiso
+     0,
+     ALL X. ALL (f' : B -> X). ALL (g : B -> X). f' o f = g o f ==> f' = g,
+     ~B areiso
+     0,
+     isepi(f)
+   ----------------------------------------------------------------------
+   F(),
+
+want B to be ALL B.
+
+add the normalising procedure to drule?
+*)
+
+val from_iso_zero_eq' = from_iso_zero_eq |> undisch |> gen_all |> disch_all |> gen_all
+
+
+(*TODO: check x_choose works properly, and is a decent way to do it.
+
+ rw_tac[GSYM o_assoc] >-- once_arw_tac[] >-- rw_tac[] do not understand why loop
+
+BUG? if replace the last once arw with accept, then not work
+*)
+
+
+val no_epi_from_zero = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> drule is_epi_thm >> 
+ ccontra_tac >> drule from_iso_zero_eq' >> 
+rule_assum_tac (fn th => specl th 
+                               (List.map readt ["1+1","i1(1,1) o to1(B) o (f:A->B)",
+                                                "i2(1,1) o to1(B) o (f:A->B)"])
+                         handle _ => th) >>
+by_tac “(i1(1, 1) o to1(B)) o f = (i2(1, 1) o to1(B)) o (f:A->B)” >> arw_tac[o_assoc] >>
+first_x_assum drule >> drule ax6 >> first_x_assum (x_choose_tac "b") >> 
+by_tac “i1(1, 1) o to1(B) o (b:1->B) = i2(1, 1) o to1(B) o b” 
+>-- rw_tac[GSYM o_assoc] >-- once_arw_tac[] >-- rw_tac[]
+>> by_tac “to1(B) o b = id(1)”
+>-- assume_tac (specl one_to_one_id [readt "to1(B) o (b:1->B)"]) >-- once_arw_tac[] >-- rw_tac[]
+>> by_tac “i1(1, 1) = i2(1,1)” >>
+rule_assum_tac (
+let val fc = basic_fconv (rewr_conv (assume “to1(B) o b = id(1)”)) no_fconv
+in (fn th => dimp_mp_l2r th (fc (concl th)))
+end) >>
+rule_assum_tac (let val fc = basic_fconv (rewr_conv (spec_all idR)) no_fconv
+in (fn th => dimp_mp_l2r th (fc (concl th)))
+end) >> once_arw_tac[] >> rw_tac[] >>
+rule_assum_tac (fn th => negE th i1_ne_i2 handle _ => th) >> 
+first_x_assum accept_tac
+
+(*
+>-- suffices_tac “i1(1,1) o id(1) = i2(1,1) o id(1)” >-- rw_tac[idR] >-- stp_tac
+>-- once_arw_tac[] >-- rw_tac[] *))
+(rapg "isepi(f:A->B) & ~(areiso(B,0)) ==> ~(areiso(A,0))")
+)
+
+(*TODO: should we check contra tac work for both ~f f and f ~f? *)
+
+
+(*TODO: goal is proved after strip assume, understand this*)
+val epi_pre_inv = proved_th(
+e
+(stp_tac >> drule no_epi_from_zero >> match_mp_tac epi_non_zero_pre_inv >> conj_tac >>
+pop_assum_list (map_every STRIP_ASSUME_TAC))
+(rapg "isepi(f:A->B) & ~(areiso(B,0)) ==> EXISTS g:B->A. f o g = id(B)")
+)
+
+(*todo: put x_choose_then in sig and try it
+match_mp_tac (gen_all o_iso_eq_eq)
+same as before, need gen all
+
+*)
+val zero_no_mem = proved_th(
+e
+(ccontra_tac >> first_x_assum (x_choose_tac "f") >> 
+suffices_tac “ALL X. ALL f1:1->X. ALL f2:1->X. f1 = f2” 
+>-- assume_tac ax8 >-- first_x_assum (x_choose_tac "X")
+>-- first_x_assum (x_choose_tac "x1") >-- first_x_assum (x_choose_tac "x2") >> 
+stp_tac >--
+rule_assum_tac (fn th => specl th (List.map readt ["X","x1:1->X","x2:1->X"])
+                         handle _ => th) 
+>-- rule_assum_tac (fn th => negE th (assume “~(x1:1->X = x2)”) handle _=> th)
+>-- first_x_assum accept_tac >>
+(*return to main proof*)
+repeat stp_tac >> match_mp_tac (gen_all o_iso_eq_eq) >>
+wexists_tac (readt "0") >> wexists_tac (readt "to1(0)")>> conj_tac (*2 *)
+>-- (rw_tac[isiso_def] >> wexists_tac (readt "f:1->0") >> conj_tac
+    >-- accept_tac (specl to1_unique (List.map readt ["1","to1(0) o (f:1->0)","id(1)"]))
+    >-- accept_tac (specl from0_unique (List.map readt ["0","(f:1->0)o to1(0)","id(0)"])))
+>> accept_tac (specl from0_unique (List.map readt ["X","(f1:1->X) o to1(0)","(f2:1->X) o to1(0)"]))
+)
+(rapg "~(EXISTS f:1->0.T)")
+)
+
+val is_zero_no_mem = proved_th(
+e
+(rw_tac[are_iso_is_iso] >> repeat stp_tac >> last_x_assum (x_choose_tac "f0") >>
+first_x_assum (x_choose_tac "x") >>  
+by_tac “EXISTS x:1->0. T” 
+>-- (wexists_tac (readt "(f0:A->0) o (x:1->A)") >> rw_tac[]) >>
+rule_assum_tac (fn th => negE th zero_no_mem handle _ => th) >> first_x_assum accept_tac)
+(rapg "areiso(A,0) ==> ~(EXISTS x:1->A. T)")
+)
+
+(*
+Theorem is_epi_surj:
+∀A B f. is_epi f /\ f∶ A → B ==> (∀b. b∶ one → B ⇒ ∃b0. b0∶ one → A ∧ f o b0 = b)
+Proof
+rw[] >> Cases_on ‘B≅ zero’ (* 2 *)
+>- metis_tac[iso_zero_no_mem] >>
+‘¬(A≅ zero)’ by metis_tac[no_epi_from_zero] >>
+‘∃g. g∶B → A ∧ f ∘ g = id B’ by metis_tac[epi_non_zero_pre_inv] >>
+qexists_tac ‘g o b’ >> metis_tac[compose_hom,compose_assoc,idL]
+QED
+*)
+
+val is_epi_surj = proved_th(
+e
+(cases_on “areiso(B,0)”
+>-- (drule is_zero_no_mem >> repeat stp_tac >> 
+    by_tac “EXISTS x : 1 -> B. T” >-- (wexists_tac (readt "b:1->B") >> rw_tac[])
+    >-- rule_assum_tac (fn th => negE th (assume “~(EXISTS x : 1 -> B. T)”) handle _ => th) >>
+    accept_tac (falseE [FALSE] “EXISTS b0 : 1 -> A. (f:A->B) o b0 = b”))
+>> repeat stp_tac >> by_tac “~(areiso(A,0))”
+>-- (match_mp_tac no_epi_from_zero >> conj_tac >> first_x_assum accept_tac) >>
+by_tac “EXISTS g : B -> A. f o g = id(B)”
+>-- (match_mp_tac epi_non_zero_pre_inv >> conj_tac >> first_x_assum accept_tac) >>
+first_x_assum (x_choose_tac "g") >>
+wexists_tac (readt "(g:B->A) o (b:1->B)")  >> rw_tac[GSYM o_assoc] >> arw_tac[] >> 
+rw_tac[idL]
+)
+(rapg "isepi(f:A->B) ==> ALL b:1->B. EXISTS b0:1->A. f o b0 = b")
+)
+   
+
+Theorem distinct_endo_2:
+copa (i1 one one) (i2 one one) ∶ (one + one) → (one + one) ∧
+copa (i2 one one) (i1 one one) ∶ (one + one) → (one + one) ∧
+copa (i1 one one) (i2 one one) ≠ copa (i2 one one) (i1 one one)
+Proof
+‘copa (i1 one one) (i2 one one) ∶ (one + one) → (one + one) ∧
+copa (i2 one one) (i1 one one) ∶ (one + one) → (one + one)’ by metis_tac[ax1_4] >>
+rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
+‘copa (i1 one one) (i2 one one) o (i1 one one)= (i1 one one) ∧
+ copa (i2 one one) (i1 one one) o (i1 one one) = (i2 one one)’ by metis_tac[ax1_4] >>
+metis_tac[from_cop_eq,i1_ne_i2]
+QED
+
+
+        
+Theorem distinct_endo_exists:
+∃X e1 e2. e1∶ X → X ∧ e2∶ X → X ∧ e1 ≠ e2
+Proof
+metis_tac[distinct_endo_2]        
+QED
 
 
 
 
-
-
-
-
-
+Theorem not_to_zero:
+∀f A. f∶ A → zero ⇒ A ≅ zero
+Proof
+SPOSE_NOT_THEN ASSUME_TAC >> fs[] >> drule ax6 >> strip_tac >>
+metis_tac[zero_no_mem,compose_hom]
+QED             

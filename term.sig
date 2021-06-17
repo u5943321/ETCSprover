@@ -32,7 +32,7 @@ val dest_fun: term -> string * sort * term list
 val dest_var: term -> string * sort
 val dest_ar: sort -> term * term
 val dest_pair: term -> term * term
-
+val dest_o: term -> term * term
 
 exception no_sort
 val one: term

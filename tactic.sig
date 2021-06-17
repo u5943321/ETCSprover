@@ -13,6 +13,7 @@ val conj_tac: tactic
 val disj1_tac: tactic
 val disj2_tac: tactic
 val contra_tac: tactic
+val ccontra_tac: tactic
 val imp_tac: tactic
 val dimp_tac: tactic
 val wexists_tac: term -> tactic
@@ -25,6 +26,7 @@ val all_tac: tactic
 val repeat: tactic -> tactic 
 val assum_list: (thm.thm list -> tactic) -> tactic
 val pop_assum_list: (thm.thm list -> tactic) -> tactic
+val pop_assum: thm_tactic -> tactic
 val mp_tac: thm_tactic
 val rw_tac: thm.thm list -> tactic
 val T_INTRO_TAC: tactic
@@ -52,8 +54,12 @@ val STRIP_ASSUME_TAC: thm_tactic
 
 val STRIP_ASM_CONJ_TAC: thm_tactic
 
+val x_choose_tac: string -> thm_tactic 
+
 val first_assum: thm_tactic -> tactic
 val first_x_assum: thm_tactic -> tactic
+val last_assum: thm_tactic -> tactic
+val last_x_assum: thm_tactic -> tactic
 
 val conv_canon: thm.thm -> thm.thm list
 val fconv_canon: thm.thm -> thm.thm list

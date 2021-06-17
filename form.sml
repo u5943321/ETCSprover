@@ -360,7 +360,7 @@ fun strip_all f =
         let val (b1,l) = strip_all (subst_bound (Var(n,s)) b) in
             (b1,(n,s) :: l) end
       | _ => (f,[])
-
+(*
 fun pvariantt vd t = 
     case t of 
         Var(n,s) => 
@@ -373,6 +373,16 @@ and pvariants vl s =
     case s of  
         ob => ob
       | ar(t1,t2) => ar(pvariantt vl t1,pvariantt vl t2)
+*)
+fun pvariantt vd t = 
+    case t of 
+        Var(n,s) => 
+        if (*HOLset.member (vd,(n,s)) *)
+            mem n (List.map fst (HOLset.listItems vd))
+        then Var (n ^ "'",s)
+        else Var (n, s)
+      | Fun(f,s,l) => Fun(f,s,List.map (pvariantt vd) l)
+      | _ => t
 
 fun inst_term (env:menv) t = 
     case t of 

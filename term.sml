@@ -64,8 +64,10 @@ exception no_sort
 
 
 
-fun dest_pair (Fun ("po",s,[A,B])) = (A,B)
+fun dest_pair (Fun ("*",s,[A,B])) = (A,B)
   | dest_pair _ =  raise Fail "dest_pair : Error"
+
+fun dest_o t = case t of (Fun("o",s,[f,g])) => (f,g)
 
 fun sort_of t = 
     case t of Var (_,s) => s

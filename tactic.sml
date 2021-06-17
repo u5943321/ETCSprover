@@ -20,7 +20,7 @@ val T_INTRO_TAC:tactic =
     if w = TRUE then ([],fn [] => trueI asl)
     else raise ERR "the goal is not T"
 
-
+(*
 fun gen_tac (ct,asl,w) = 
     case w of
         Quant("ALL",n,s,b) =>
@@ -32,6 +32,20 @@ fun gen_tac (ct,asl,w) =
         end
         | _ => raise ERR "goal is not universally quantified"
 
+
+*)
+
+fun gen_tac (ct,asl,w) = 
+    case w of
+        Quant("ALL",n,s,b) =>
+        let val t0 = pvariantt ct (Var(n,s))
+            val w' = subst_bound t0 b 
+            val ct' = HOLset.union(ct,fvt t0) 
+        in
+            ([(ct',asl,w')], fn [th] => allI (dest_var t0) th
+                   | _ => raise ERR "incorrect length of list")
+        end
+        | _ => raise ERR "goal is not universally quantified"
 
 
 (*
@@ -92,6 +106,8 @@ fun efn (n,s) (f,th) =
         (ef,existsE (n,s) (assume ef) th)
     end
 
+fun hyp (thm(_,A,_))= A
+
 
 fun match_mp_tac th (ct:cont,asl:form list,w) = 
     let
@@ -100,7 +116,7 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
         val (con,cvs) = strip_all (conseq)
         val th1 = specl (undisch (specl th (List.map Var gvs))) (List.map Var cvs) 
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
-        val th2 = uncurry disch (itlist efn evs (ant, th1))
+        val th2 = uncurry disch (itlist efn evs (ant, th1)) 
         val (gl,vs) = strip_all w
         val env = match_form (fvfl (hyp th)) con gl mempty
         val ith = inst_thm env th2
@@ -230,6 +246,18 @@ fun contra_tac (g:goal as (G,fl,f)) =
         ([(G,A::fl,FALSE):goal], fn [th] => negI th A
                           | _ => raise ERR "incorrect number of list items")
       | _ => raise ERR "not a negation"
+
+
+fun ccontra_tac (g:goal as (G,fl,f)) = 
+    case f of
+        Conn("~",[A]) => 
+        ([(G,A::fl,FALSE):goal], fn [th] => negI th A
+                          | _ => raise ERR "incorrect number of list items")
+      | _ => 
+        ([(G,(mk_neg f)::fl,FALSE):goal], fn [th] => dimp_mp_l2r (negI th (mk_neg f)) (double_neg f)
+                          | _ => raise ERR "incorrect number of list items")
+
+
 
 (*
 fun F_INTRO_TAC cf (g:goal as (G,fl,f)) = 
@@ -543,6 +571,9 @@ fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
     fn (G,asl, w) => asltac (map assume asl) (G,[], w)
 
+fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
+  | pop_assum   _   (_,[], _) = raise ERR "POP_ASSUM:no assum"
+
 fun stp_rw thl g = 
     repeat (stp_tac >> rw_tac thl) g
 
@@ -655,6 +686,16 @@ val CONTR_TAC: thm_tactic =
          ([], empty th)
       end
       handle ERR _ => raise ERR "CONTR_TAC"
+
+(*
+  A,"~t" |- F                                                             *
+ *   --------------                                                          *
+ *       A |- t    
+
+fun CCONTR f th = 
+    let val f0 = dest_neg f 
+        val _ = fmem f (ant th) orelse raise "CCONTR: formula not in assumption" 
+*)
 
 
 fun first tacl = 
@@ -775,6 +816,7 @@ val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
 
 (*choose_then*)
 
+fun foo th m = mp (disch (concl th) (assume m)) th
 
 fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
    fn xth =>
@@ -783,7 +825,8 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
       in
          fn (ct,asl,w) =>
             let
-               val th = foo xth (subst_bound (Var (n0,s)) b)
+               val th = add_cont (foo xth (subst_bound (Var (n0,s)) b)) 
+                                 (HOLset.add(essps,(n0,s)))
                val (gl,prf) = ttac th (ct,asl,w)
             in
                (gl, (existsE (n0,s) xth) o prf)
@@ -828,6 +871,8 @@ fun find (ttac:thm_tactic) goal [] = raise ERR "find"
  
 fun first_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) asl
 
+fun last_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) (rev asl)
+
 fun undisch_then f (ttac:thm_tactic): tactic = fn (ct,asl, w) =>
       let val (_, A) = Lib.pluck ((curry eq_form) f) asl in ttac (assume f) (ct,A, w) end
 
@@ -835,6 +880,7 @@ local
     fun f ttac th = undisch_then (concl th) ttac
 in
 val first_x_assum = first_assum o f
+val last_x_assum = last_assum o f
 end
 
 (*what is the "name" in Tactical.find for?change above to first_opt?*)

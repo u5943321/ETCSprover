@@ -399,11 +399,6 @@ fun all_iff (th as thm(G,A,C)) (n,s) =
         end
       | _ => raise ERR ("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
-fun exists_iff (th as thm(G,A,C)) (n,s) = 
-    let
-        val (P,Q) = dest_dimp C
-        val eP = Quant("EXISTS", n, s, abstract (n,s) P)
-        val eQ = Quant("EXISTS", n, s, abstract (n,s) Q)
 
 
 fun exists_iff (th as thm(G,A,C)) (n,s) = 
@@ -623,11 +618,14 @@ fun specl th l =
     if is_all (concl th) then 
         case l of [] => th
                 | h :: t => 
-                  let val f1 = allE th h handle ERR _ => th
+                  let val f1 = allE th h  (*handle ERR _ => th*)
                   in 
                       specl f1 t
                   end
     else th 
+
+
+(*issue caused by pvariant also rename the sorts*)
 
 
 fun spec_all th = 
@@ -776,4 +774,7 @@ fun F2f f = disch FALSE (falseE [FALSE] f)
 fun CONTR f th =
    mp (F2f f) th handle ERR _ => raise ERR "CONTR"
 
+
+fun double_neg_th th = 
+    dimp_mp_r2l (double_neg (concl th)) th
 end

@@ -176,7 +176,32 @@ fun dimp_fconv fc f =
         dimp_iff (try_fconv fc p) (try_fconv fc q)
       | _ => raise ERR "not an iff"
 
+fun forall_fconv fc f = 
+    case f of
+        (Quant("ALL",n,s,b)) => 
+        all_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
+      | _ => raise ERR "not an all"
 
+fun exists_fconv fc f = 
+    case f of
+        (Quant("EXISTS",n,s,b)) => 
+        exists_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
+      | _ => raise ERR "not an all"
+
+(*
+val th = 
+(a : ob),
+   (b : ob),
+   (c : ob)
+   
+   |-
+   P(a, b, c) <=> a Q c: thm
+
+val f = “EXISTS b. P(a,b,c)”
+val fc = rewr_fconv th
+
+for testing, passed
+*)
 val reflTob = equivT (refl (Var("a",ob)))
 
 val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
@@ -192,6 +217,8 @@ fun sub_fconv c fc =
                  disj_fconv fc,
                  imp_fconv fc,
                  dimp_fconv fc,
+                 forall_fconv fc,
+                 exists_fconv fc,
                  pred_fconv c])
 
 

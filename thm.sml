@@ -63,7 +63,7 @@ fun inst_thm env th =
 fun ril i l = 
     case l of [] => []
             | h :: t => 
-              if h = i then t else h :: (ril i t)
+              if eq_form(h,i) then t else h :: (ril i t)
 
 
 fun asml_U (asml:(form list) list) = 
@@ -183,7 +183,7 @@ fun negI (thm (G,A,C)) f =
 
 fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
     let 
-        val _ = (C2 = Conn("~",[C1])) orelse 
+        val _ = eq_form(C2,Conn("~",[C1])) orelse 
                 raise ERR "not a pair of contradiction"
     in
         thm (contl_U [G1,G2],asml_U [A1,A2],FALSE)
@@ -193,9 +193,10 @@ fun falseE fl f =
     let val _ = fmem FALSE fl orelse 
                 raise ERR "FALSE is not in the list"
     in
-        thm(fvfl fl,fl,f)
+        thm(fvfl (f::fl),fl,f)
     end
 
+        
 fun trueI A = thm (fvfl A,A,TRUE)
 
 fun dimpI (thm (G1,A1,I1)) (thm (G2,A2,I2)) =
