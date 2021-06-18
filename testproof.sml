@@ -2292,33 +2292,50 @@ rw_tac[idL]
 )
    
 
-Theorem distinct_endo_2:
-copa (i1 one one) (i2 one one) ∶ (one + one) → (one + one) ∧
-copa (i2 one one) (i1 one one) ∶ (one + one) → (one + one) ∧
-copa (i1 one one) (i2 one one) ≠ copa (i2 one one) (i1 one one)
-Proof
-‘copa (i1 one one) (i2 one one) ∶ (one + one) → (one + one) ∧
-copa (i2 one one) (i1 one one) ∶ (one + one) → (one + one)’ by metis_tac[ax1_4] >>
-rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
-‘copa (i1 one one) (i2 one one) o (i1 one one)= (i1 one one) ∧
- copa (i2 one one) (i1 one one) o (i1 one one) = (i2 one one)’ by metis_tac[ax1_4] >>
-metis_tac[from_cop_eq,i1_ne_i2]
-QED
+(*rapf bug 
+
+(rapg "~(copa(i1(1,1),i2(1,1)) = copa(i2(1,1),i1(1,1)))")
+
+# Exception- UNIFY "occurs check(pt):i1 psv  4(1 pob,1 pob) ptu  4" raised
+*)
+
+(*TODO: copa as [], understand all the tactics about contradiction*)
+(*
+rule_assum_tac (
+let val fc = basic_fconv (rewr_conv (assume “to1(B) o b = id(1)”)) no_fconv
+in (fn th => dimp_mp_l2r th (fc (concl th)))
+end)
+
+*)
+
+val distinct_endo_2 = proved_th(
+e
+(ccontra_tac >> drule (from_cop_eq |> iff_swap |> dimpl2r) >> 
+ pop_assum_list (map_every STRIP_ASSUME_TAC) >>
+rule_assum_tac (
+let val fc = basic_fconv (rewr_conv (spec_all i1_of_copa)) no_fconv
+in (fn th => dimp_mp_l2r th (fc (concl th)))
+end ) >> 
+rule_assum_tac (fn th => negE th i1_ne_i2 handle _ => th) >> first_x_assum accept_tac)
+(rpg "~(copa(i1(1,1),i2(1,1)) = copa(i2(1,1),i1(1,1)))")
+)
 
 
-        
-Theorem distinct_endo_exists:
-∃X e1 e2. e1∶ X → X ∧ e2∶ X → X ∧ e1 ≠ e2
-Proof
-metis_tac[distinct_endo_2]        
-QED
+val distinct_endo_exists = proved_th(
+e
+(wexists_tac (readt "1+1") >> wexists_tac (readt "copa(i1(1,1),i2(1,1))") >>
+             wexists_tac (readt "copa(i2(1,1),i1(1,1))") >> 
+accept_tac distinct_endo_2)
+(rapg "EXISTS X. EXISTS e1: X -> X. EXISTS e2:X->X. ~(e1 = e2)")
+)
 
-
-
-
-Theorem not_to_zero:
-∀f A. f∶ A → zero ⇒ A ≅ zero
-Proof
-SPOSE_NOT_THEN ASSUME_TAC >> fs[] >> drule ax6 >> strip_tac >>
-metis_tac[zero_no_mem,compose_hom]
-QED             
+val not_to_zero = proved_th(
+e
+(stp_tac >> ccontra_tac >> drule ax6 >> 
+ assume_tac zero_no_mem >> 
+ by_tac “EXISTS f:1 -> 0. T” >-- first_x_assum (x_choose_tac "x")
+ >-- wexists_tac (readt "(f:A->0) o (x:1->A)") >-- first_x_assum accept_tac >>
+ rule_assum_tac (fn th => negE th (assume “~(EXISTS f : 1 -> 0. T)”) handle _ => th) >> 
+ first_x_assum accept_tac)
+(rapg "ALL f:A -> 0. areiso(A,0)")
+)
