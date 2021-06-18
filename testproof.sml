@@ -2600,3 +2600,37 @@ e
  drule iso_trans >> first_x_assum accept_tac)
 (rapg "areiso(X,A) & areiso(Y,A) ==> areiso(X,Y)")
 )
+
+
+(*
+
+Theorem fac_through_eq_iff:
+∀f g h. f∶ A → B ∧ g∶ A → B ∧ h∶ X → A ⇒
+        ((∃h0. h0∶ X → eqo f g ∧ (eqa f g) o h0 = h) ⇔
+         f o h = g o h)
+Proof
+rw[EQ_IMP_THM] (* 2 *)
+>- metis_tac[fac_through_eq]
+>- (qexists_tac ‘eq_induce f g h’ >> metis_tac[eq_induce_hom,eq_fac])
+QED
+*)
+
+(*TODO: maybe a thm says eq(f,g) = eq(g,f)*)
+
+val fac_through_eq = proved_th(
+e
+(stp_tac >> rule_assum_tac sym >> arw_tac[] >> 
+suffices_tac “f o eqa(f,g) = g o eqa(f:B->C,g:B->C)”
+>-- (stp_tac >> rw_tac[GSYM o_assoc] >> arw_tac[]) >> 
+assume_tac ((specl ax_eq' (List.map readt ["B","C","f:B->C","g:B->C"]))|>conjE1)>> arw_tac[])
+(rapg "eqa(f,g) o h0 = h ==> f o h = g o h")
+)
+
+val fac_through_eq_iff = proved_th(
+e
+(dimp_tac >> stp_tac >> pop_assum STRIP_ASSUME_TAC (* 2 *)
+ >-- (drule fac_through_eq >> first_x_assum accept_tac) >> 
+ wexists_tac (readt "eqinduce(f:A->B,g:A->B,h:X->A)") >> 
+ drule eq_fac >> first_x_assum accept_tac)
+(rapg "(EXISTS h0: X-> eqo(f,g).eqa(f,g) o h0 = h) <=> f o h = g o h")
+)
