@@ -64,6 +64,6 @@ val last_x_assum: thm_tactic -> tactic
 val conv_canon: thm.thm -> thm.thm list
 val fconv_canon: thm.thm -> thm.thm list
 
-
+val cases_on: form.form -> tactic
 end
 
