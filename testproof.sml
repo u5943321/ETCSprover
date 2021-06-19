@@ -2462,55 +2462,34 @@ e
       pop_assum mp_tac >> once_arw_tac[] >> rw_tac[GSYM o_assoc] >>
       once_arw_tac[] >> stp_tac >> rw_tac[])
  >-- (assume_tac (specl to1_unique (List.map readt ["1","x0':1->1","id(1)"])) >>
-     )
-)
+      suffices_tac “EXISTS x0 : 1 -> A. (a:A->X) o x0 = x”
+      >-- (stp_tac >> rule_assum_tac (fn th => negE th (assume ``~(EXISTS x0 : 1 -> A. (a:A->X) o x0 = x)``) handle _ => th) >> accept_tac (falseE [FALSE] “(h:X'->A+1) o (a':1->X') = g o a'”)) >>
+      wexists_tac (readt "x0:1->A") >> 
+      by_tac “copa(a,x) o i2(A,1) o (x0':1->1) = copa(a:A->X,x:1->X) o i1(A,1) o (x0:1->A)”
+      >-- (arw_tac[] >> arw_tac[GSYM o_assoc]) >>
+      pop_assum mp_tac >> rw_tac[GSYM o_assoc,i1_of_copa,i2_of_copa] >> arw_tac[idR] >>
+      stp_tac >> pop_assum (mp_tac o GSYM) >> stp_tac >> first_x_assum accept_tac)
+>-- (assume_tac (specl to1_unique (List.map readt ["1","x0:1->1","id(1)"])) >> 
+     suffices_tac “EXISTS x0 : 1 -> A. (a:A->X) o x0 = x”
+      >-- (stp_tac >> rule_assum_tac (fn th => negE th (assume ``~(EXISTS x0 : 1 -> A. (a:A->X) o x0 = x)``) handle _ => th) >> accept_tac (falseE [FALSE] “(h:X'->A+1) o (a':1->X') = g o a'”)) >>
+      wexists_tac (readt "x0':1->A") >> 
+      by_tac “copa(a,x) o i2(A,1) o (x0:1->1) = copa(a:A->X,x:1->X) o i1(A,1) o (x0':1->A)”
+      >-- (arw_tac[] >> arw_tac[GSYM o_assoc]) >> 
+      pop_assum mp_tac >> rw_tac[GSYM o_assoc,i1_of_copa,i2_of_copa] >> arw_tac[idR] >> 
+      stp_tac >> pop_assum (mp_tac o GSYM) >> stp_tac >> first_x_assum accept_tac) >> 
+assume_tac (specl to1_unique (List.map readt ["1","x0:1->1","x0':1->1"])) >> 
+suffices_tac “i2(A, 1) o x0' = i2(A, 1) o (x0:1->1)” 
+>-- (arw_tac[] >> repeat stp_tac >> pop_assum (mp_tac o GSYM) >> stp_tac >> 
+    first_x_assum accept_tac) >> 
+rule_assum_tac (fn th => GSYM th handle _ => th) >> once_arw_tac[] >> rw_tac[])
 (rpg "(ismono(a:A->X) & ~(EXISTS x0:1->A. a o x0 = x)) ==> ismono(copa(a,x))")
 )
         
-Theorem copa_not_mem_mono_mono:
-is_mono a ∧ a∶ A → X ∧ x∶ one → X ∧
- ¬(∃x0. x0∶ one → A ∧ a o x0 = x) ⇒ is_mono (copa a x)
-Proof
-rw[] >> irule is_mono_applied >>
-qexistsl_tac [‘A + one’,‘X’] >> rw[] >>
-irule fun_ext >> qexistsl_tac [‘X'’,‘(A + one)’] >> rw[] >>
-rename [‘x'∶ one → X'’] >>
-‘∃f0. f0∶ one → A ∧ (i1 A one) o f0 = f o x' ∨
- ∃f0. f0∶ one → one ∧ (i2 A one) o f0 = f o x'’
- by metis_tac[to_copa_fac] (* 2 *)
->- (‘∃g0. g0∶ one → A ∧ (i1 A one) o g0 = g o x' ∨
-    ∃g0. g0∶ one → one ∧ (i2 A one) o g0 = g o x'’
-     by metis_tac[to_copa_fac] (* 2 *)
-  >-[i1_of_copa] >>
-       ‘f0 = g0’ by metis_tac[is_mono_property] >>
-    >- (‘a o f0 = x’ suffices_by metis_tac[] >>
-       ‘a o f0 = x o g0'’ by metis_tac[i1_of_copa,i2_of_copa] >>
-       ‘g0' = id one’ by metis_tac[id1,to1_unique] >>
-       ))
->- (‘∃g0. g0∶ one → A ∧ (i1 A one) o g0 = g o x' ∨
-    ∃g0. g0∶ one → one ∧ (i2 A one) o g0 = g o x'’
-     by metis_tac[to_copa_fac] (* 2 *)
-    >- (‘a o g0 = x’ suffices_by metis_tac[] >>
-       ‘copa a x ∘ f o x' = copa a x ∘ g o x'’
-        by metis_tac[compose_assoc] >>
-       ‘copa a x o i2 A one ∘ f0' = copa a x o i1 A one ∘ g0’
-        by metis_tac[] >>
-       ‘copa a x o i2 A one ∘ f0' = (copa a x o i2 A one) ∘ f0'’
-        by metis_tac[compose_assoc,i2_hom] >>
-       ‘copa a x o i1 A one ∘ g0 = (copa a x o i1 A one) ∘ g0’
-        by metis_tac[compose_assoc,i1_hom] >>
-       ‘x o f0' = a o g0’ by metis_tac[i1_of_copa,i2_of_copa] >> 
-       ‘f0' = id one’ by metis_tac[id1,to1_unique] >>
-       metis_tac[idR])
-    >- (‘f0' = g0'’ by metis_tac[to1_unique] >>
-        metis_tac[]))
-QED
-
      
 
 
 
-*)
+
 
 (*TODO: 
 
