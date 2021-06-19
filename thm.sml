@@ -103,11 +103,11 @@ fun disjI2 f (thm (G,A,C)) = thm (G,A,Conn ("|",[f,C]))
 
 fun disjE A B C (thm (G1,A1,AorB)) (thm (G2,A2,C1)) (thm (G3,A3,C2)) = 
     let 
-        val _ = (AorB = Conn("|",[A,B])) orelse 
+        val _ = eq_form(AorB, Conn("|",[A,B])) orelse 
                 raise ERR "theorem #1 unexpected"
-        val _ = (C1 = C) orelse 
+        val _ = eq_form(C1,C) orelse 
                 raise ERR "theorem #2 unexpected"
-        val _ = (C2 = C) orelse 
+        val _ = eq_form(C2,C) orelse 
                 raise ERR "theorem #3 unexpected"
         val _ = fmem A A2 orelse
                 raise ERR "first disjunct not in theorem #2"
