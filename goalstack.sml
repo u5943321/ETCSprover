@@ -150,7 +150,7 @@ fun PPtac_result printdepth _ rst = let val s =  pptac_result rst
 
 
 fun pptac_results trs =
-    case trs of [] => add_string ""
+    case (rev trs) of [] => add_string ""
               | h :: t => pptac_result h >> add_newline >> pptac_results t
 
 fun ppgstk (GSTK{prop:proposition, stack: tac_result list}) = 

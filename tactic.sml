@@ -439,6 +439,16 @@ fun gen_rw_tac fc thl =
 
 (*TODO: Fix eqT_intro, eqF_intro!*)
 
+(*
+fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
+   rw_func (REWRITES_CONV (add_rewrites rws thl));
+
+fun GEN_REWRITE_RULE f rws = Conv.CONV_RULE o GEN_REWRITE_CONV f rws;
+
+fun GEN_REWRITE_TAC f rws = Tactic.CONV_TAC o GEN_REWRITE_CONV f rws;
+*)
+
+
 
 
 (* old rw_tac
@@ -446,7 +456,7 @@ fun rw_tac thl = gen_rw_tac basic_fconv thl
 fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
 *)
 
-fun once_rw_tac thl = gen_rw_tac basic_once_fconv thl
+fun once_rw_tac thl = gen_rw_tac basic_once_fconv  (flatten (mapfilter conv_canon thl))
 
 fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
 
@@ -753,7 +763,7 @@ fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
 
 (* --------------------------------------------------------------------------*
  * DISCARD_TAC: checks that a theorem is useless, then ignores it.           *
- * Revised: 90.06.15 TFM.  TODO: do not quite understand why it is necessary                                                  *
+ *  TODO: do not quite understand why it is necessary                                                  *
  * --------------------------------------------------------------------------*)
 
 fun DISCARD_TAC th (ct,asl, w) =
@@ -783,7 +793,7 @@ fun foo th m = mp (disch (concl th) (assume m)) th
 
 fun disj_cases th1 th2 th3 = 
     let val (A,B) = dest_disj(concl th1)
-        val _ = (concl th2 = concl th3) orelse raise ERR "two concls no match"
+        val _ = eq_form(concl th2, concl th3) orelse raise ERR "two concls no match"
     in disjE A B (concl th2) th1 th2 th3
     end
 
@@ -796,9 +806,7 @@ fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
       fn g  =>
          let
             val (gl1, prf1) = ttac1 (foo disth disj1) g
-(*               ttac1 (itlist add_assum (thm.hyp disth) (assume disj1)) g *)
             and (gl2, prf2) = ttac2 (foo disth disj2) g
-(*              ttac2 (itlist add_assum (thm.hyp disth) (assume disj2)) g *)
          in
             (gl1 @ gl2,
              fn thl =>
@@ -833,6 +841,11 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
             end
       end
       handle ERR _ => raise ERR "X_CHOOSE_THEN"
+
+val SPECL = C specl
+
+fun specl_then tl (ttac: thm_tactic): thm_tactic = 
+    fn th => ttac (SPECL tl th)
 
 val choose_then: thm_tactical =
    fn ttac => fn xth =>
@@ -883,34 +896,15 @@ val first_x_assum = first_assum o f
 val last_x_assum = last_assum o f
 end
 
-(*what is the "name" in Tactical.find for?change above to first_opt?*)
-
-(*
-conjuncts_THEN f (A |- l /\ r) = f (A |- l) THEN f (A |- r) so
-*)
-
-(*
-Suppose we have a goal of the following form:
-{a /\ b, c, (d /\ e) /\ f} ?- t
-Then we can split the conjunctions in the assumption list apart by applying the tactic: POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC)
-which results in the new goal: {a, b, c, d, e, f} ?- t
-Uses
-page 722
-
-STRIP_ASSUME_TAC page 978
-*)
-
-(*
-fun CONJUNCTS_THEN ttac th =
-      let val (c1, c2) = (CONJUNCT1 th, CONJUNCT2 th)
-      in ttac c1 THEN ttac c2
-      end
-
-in Thm_cont
 
 
-*)
-
+fun rewr_rule thl =
+    let 
+        val c = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
+        val fc = first_fconv (mapfilter rewr_fconv (flatten (mapfilter conv_canon thl)))
+    in
+        conv_rule (basic_fconv c fc)
+    end
 
 end
     

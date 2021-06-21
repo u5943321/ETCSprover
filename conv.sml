@@ -343,6 +343,13 @@ fun right_imp_forall_fconv f  =
     in dimpI (disch f gth)  (disch (concl gth) dth')
     end
 
+fun sym_fconv f = 
+    case f of 
+    Pred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (Pred("=",[t2,t1])) |> sym |> disch_all)
+  | Conn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (Conn("<=>", [f2,f1]))|> iff_swap |> disch_all)
+  | _ => raise ERR "not an iff or equality"
 
+
+val GSYM = conv_rule (once_depth_fconv no_conv sym_fconv)
 
 end

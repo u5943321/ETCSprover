@@ -65,5 +65,6 @@ val conv_canon: thm.thm -> thm.thm list
 val fconv_canon: thm.thm -> thm.thm list
 
 val cases_on: form.form -> tactic
+val specl_then: term.term list -> thm_tactic -> thm_tactic
 end
 

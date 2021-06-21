@@ -613,7 +613,7 @@ fun eqF_intro th =
 
 
 (*spec_all*)
-
+(*
 fun specl th l = 
     if is_all (concl th) then 
         case l of [] => th
@@ -623,6 +623,17 @@ fun specl th l =
                       specl f1 t
                   end
     else th 
+
+*)
+
+fun specl th l = 
+    case l of [] => th 
+            | h :: t => if is_all (concl th) then 
+                            let val f1 = allE th h  (*handle ERR _ => th*)
+                            in 
+                                specl f1 t
+                            end
+                        else raise ERR "thm is not universally quantified"
 
 
 (*issue caused by pvariant also rename the sorts*)
@@ -751,7 +762,24 @@ fun dischl l th =
 
 fun disch_all th = dischl (ant th) th
 
-fun GSYM th =  sym (spec_all th)
+(*new GSYM*)
+
+
+
+
+
+
+(*
+readf "f <=> g";
+val it = f <=> g: form
+> val f = it;
+val f = f <=> g: form
+> # Exception- ERR "f <=> g is not a double implication" raised
+
+check what does it read...
+*)
+
+(*fun GSYM th =  sym (spec_all th) *)
 
 (*f1,f2 |- C maps to f1 /\ f2 |- C*)
 
