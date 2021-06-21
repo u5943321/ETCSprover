@@ -54,7 +54,11 @@ val STRIP_ASSUME_TAC: thm_tactic
 
 val STRIP_ASM_CONJ_TAC: thm_tactic
 
+val x_choose_then: string -> thm_tactic -> thm_tactic
+val x_choosel_then: string list -> thm_tactic -> thm_tactic
+
 val x_choose_tac: string -> thm_tactic 
+val x_choosel_tac: string -> thm_tactic 
 
 val first_assum: thm_tactic -> tactic
 val first_x_assum: thm_tactic -> tactic

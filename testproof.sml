@@ -584,20 +584,6 @@ contra)
 end
 
 
-(*suggesions on 
-(A : ob),
-   (B : ob),
-   (C : ob),
-   (f : A + B -> C),
-   (g : A + B -> C)
-   
-   ----------------------------------------------------------------------
-   f = copa(g o i1(A, B), g o i2(A, B)) <=> f = g
-
-?
-
-*)
-
 (*
 e
 (rw_tac[spec_all ax_copr,refl (readt "(fg:A + B -> C) o i1(A,B)"),
@@ -638,43 +624,13 @@ val from_cop_components =
                                                 "(fg:A+B->X) o i2(A,B)"]))))
 
 
-(*TODO:need once_rw_tac[spec_all from_cop_components] >> once_rw_tac[]! otherwise get g = g remains *)
-
 val from_cop_eq = proved_th
 (
 e (rw_tac[spec_all ax_copr] >> dimp_tac >> stp_tac >> arw_tac[]
          >> rw_tac [spec_all from_cop_components])
-         (*fconv_tac (sub_fconv (rewr_conv (GSYM from_cop_components)) no_fconv) ) *)
-      (*   >> once_rw_tac [GSYM from_cop_components] *)
-         
 (rapg "f o i1(A,B) = g o i1(A,B) & f o i2(A,B) = g o i2(A,B) <=> f = g")
 
 )
-
-
-
-(*
- # val it =
-   (A : ob),
-   (B : ob)
-   
-   |-
-   ALL (x : 1 -> A + B).
-       ~EXISTS (x1 : 1 -> B).
-         EXISTS (x0 : 1 -> A). x = i1(A, B) o x0 & x = i2(A, B) o x1: thm
-
-
-should complain in that case
-
-*)
-
-
-(*e says:
-ERR
-     "formula has the wrong formEXISTSx0.((X i2 X) o t) = ((X i1 X) o t)&((X i2 X) o t) = ((X i2 X) o t)"
-
-but expandf does not?
- *)
 
 
 val i1_i2_disjoint = 
@@ -758,12 +714,6 @@ e
 (rapg "areiso(A * 1,A)")
 )
 
-(*
-∀A B C D P Q f g i j. f∶ A → C ∧ g∶ B → D ∧ i∶ C → P ∧ j∶ D → Q ⇒
-                      ⟨i o p1 C D,j o p2 C D⟩ o ⟨f o p1 A B, g o p2 A B⟩ =
-                      ⟨i o f o p1 A B, j o g o p2 A B⟩
-*)
-
 val parallel_p_compose = proved_th(
 e
 (match_mp_tac to_p_eq' >> conj_tac
@@ -788,13 +738,6 @@ by_tac
 (rapg "<i o p1(C,D),j o p2(C,D)> o <f o p1(A,B), g o p2(A,B)> =<i o f o p1(A,B), j o g o p2(A,B)>")
 )
 
-(*
-Theorem parallel_p_one_side:
-∀A B C D f g.f∶ B → C ∧ g∶ C→ D ⇒
-             ⟨p1 A B,g o f o p2 A B⟩ =
-             ⟨p1 A C, g o p2 A C⟩ o ⟨p1 A B, f o p2 A B⟩
-
-*)
 
 val parallel_p_one_side = proved_th(
 e
@@ -814,13 +757,6 @@ e
 (rw_tac[spec_all o_assoc] >> accept_tac parallel_p_one_side)
 (rapg "<p1(A,B),(g o f) o p2(A,B)> = <p1(A,C), g o p2(A,C)> o <p1(A,B),f o p2(A,B)>")
 )
-(*
-Theorem parallel_p_one_side_three:
-∀A B C D E f g h.
-         f∶B → C ∧ g∶C → D /\ h ∶ D → E ⇒
-         ⟨p1 A B,(h o g ∘ f) ∘ p2 A B⟩ =
-         ⟨p1 A D, h ∘ p2 A D⟩ o ⟨p1 A C,g ∘ p2 A C⟩ ∘ ⟨p1 A B,f ∘ p2 A B⟩
-*)
 
 (*maybe TODO:
 
@@ -853,51 +789,12 @@ once_rw_tac[GSYM o_assoc] >> rw_tac[spec_all p1_of_pa]
 (rapg "<p1(A,B),(h o g o f) o p2(A,B)> =<p1(A,D),h o p2(A,D)> o <p1(A,C),g o p2(A,C)> o <p1(A,B),f o p2(A,B)>")
 )
 
-(*
-iterated_p_eq:
-∀X A B C f g. f∶X → ((A×B)×C) ∧ g∶X → ((A×B)×C) ⇒
-              (f = g ⇔
-              (p1 A B) o (p1 (A×B) C) o f =  (p1 A B) o (p1 (A×B) C) o g ∧
-              (p2 A B) o (p1 (A×B) C) o f =  (p2 A B) o (p1 (A×B) C) o g ∧
-              (p2 (A×B) C) o f = (p2 (A×B) C) o g)
-*)
-
-(*TODO: where is the procedure of splitting the assumptions done?*)
-(*TODO: really want split conjunction rw_tac for dealing with 
- (A : ob),
-   (B : ob),
-   (C : ob),
-   (D : ob),
-   (f : D -> (A * B) * C),
-   (g : D -> (A * B) * C)
-   p1(A, B) o p1((A * B), C) o f = p1(A, B) o p1((A * B), C) o g &
-       p2(A, B) o p1((A * B), C) o f = p2(A, B) o p1((A * B), C) o g &
-         p2((A * B), C) o f = p2((A * B), C) o g
-   ----------------------------------------------------------------------
-   p2((A * B), C) o f = p2((A * B), C) o g
-
-*)
 
 val iterated_p_eq = proved_th(
 e
 (dimp_tac >> repeat stp_tac >> arw_tac[] >> 
-match_mp_tac to_p_eq' >> conj_tac
->-- accept_tac
-(conjE2 (conjE2 (assume 
-                     (rapf "p1(A,B) o p1 (A * B,C) o f = p1(A,B) o p1(A * B,C) o g & p2(A,B) o p1(A*B,C) o f = p2(A,B) o p1(A*B,C) o g& p2(A*B,C) o f =p2(A*B,C) o g")
-        ))
-)
->> match_mp_tac to_p_eq' >> conj_tac (* 2 *)
->-- accept_tac
-(conjE1 (conjE2 (assume 
-                     (rapf "p1(A,B) o p1 (A * B,C) o f = p1(A,B) o p1(A * B,C) o g & p2(A,B) o p1(A*B,C) o f = p2(A,B) o p1(A*B,C) o g& p2(A*B,C) o f =p2(A*B,C) o g")
-        ))
-)
->-- accept_tac
-(conjE1 (assume 
-                     (rapf "p1(A,B) o p1 (A * B,C) o f = p1(A,B) o p1(A * B,C) o g & p2(A,B) o p1(A*B,C) o f = p2(A,B) o p1(A*B,C) o g& p2(A*B,C) o f =p2(A*B,C) o g")
-        ))
-)
+match_mp_tac to_p_eq' >> conj_tac >> arw_tac[] >> 
+match_mp_tac to_p_eq' >> conj_tac >> arw_tac[])
 (rapg 
 "f = g <=> p1(A,B) o p1 (A * B,C) o f = p1(A,B) o p1(A * B,C) o g & p2(A,B) o p1(A*B,C) o f = p2(A,B) o p1(A*B,C) o g& p2(A*B,C) o f =p2(A*B,C) o g")
 )
@@ -905,104 +802,14 @@ match_mp_tac to_p_eq' >> conj_tac
 
 val iterated_p_eq_applied = (conjE2 o dimpE) iterated_p_eq
 
-(*
-Theorem N_ind_z_s_id:
-id N = N_ind z s
-*)
-
-(*TODO: maybe serious problem: rw_tac[spec_all idL,spec_all idR] does not solve
-
-
-   ----------------------------------------------------------------------
-   id(N) o z = z & id(N) o s = s o id(N) 
-and even do not solve them individually
-*)
-
 val N_ind_z_s_id = proved_th
 (
 e 
 (match_mp_tac
- (dimpl2r (specl ax_N (List.map readt ["N","z","id(N)","s"]))) >>
- conj_tac
- >-- accept_tac (specl idL (List.map readt ["1","N","z"]))
- >> accept_tac (trans (specl idL (List.map readt ["N","N","s"])) 
-                      (sym (specl idR (List.map readt ["N","N","s"]))))
- 
-)
+ (dimpl2r (specl ax_N (List.map readt ["N","z","id(N)","s"]))) >> rw_tac[idL,idR])
 (rapg "id(N) = Nind(z,s)")
 )
  
-
-(*
-trans  ((c1) (readt "id(N) o s")) ((arg_conv c1)(readt " s"));
-Exception- ERR "equalities do not match(id(N) o s) = s s = s" raised
-> (c1) (readt "id(N) o s");
-val it =
-   
-   
-   |-
-   id(N) o s = s: thm
->  (arg_conv c1)(readt " s");
-val it =
-   
-   
-   |-
-   s = s: thm
-> val th1 = (c1) (readt "id(N) o s");
-val th1 =
-   
-   
-   |-
-   id(N) o s = s: thm
-> val th2 = (arg_conv c1)(readt " s");
-val th2 =
-*)
-(*
-val N_ind_z_s_id = proved_th
-(
-e 
-(match_mp_tac
- (dimpl2r (specl ax_N (List.map readt ["N","z","id(N)","s"]))) >> conj_tac >>
- rw_tac[idL,idR] >> rw_tac[idL](*
- >-- accept_tac (specl idL (List.map readt ["1","N","z"]))
- >> accept_tac (trans (specl idL (List.map readt ["N","N","s"])) 
-                      (sym (specl idR (List.map readt ["N","N","s"]))))
- *)
-)
-(rapg "id(N) = Nind(z,s)")
-)
-*)
-(*
- basic_fconv (rewr_conv (spec_all idL)) no_fconv (readf "id(A) o f = f");
-val it =
-   ( 6 : ob),
-   (A : ob),
-   (f :  6 -> A)
-   
-   |-
-   id(A) o f = f <=> T(): thm
-> basic_fconv (rewr_conv (spec_all idL)) no_fconv (readf "id(N) o z = z");
-val it =
-   
-   
-   |-
-   id(N) o z = z <=> id(N) o z = z: thm
-> basic_fconv (rewr_conv (spec_all idL)) no_fconv (readf "id(N) o f = f");
-val it =
-   ( 5 : ob),
-   (f :  5 -> N)
-   
-   |-
-   id(N) o f = f <=> T(): thm
-
-something wrong with the constants
-
-*)
-
-(*
-Theorem comm_with_s_id:
-∀f. f∶ N → N ∧ f o z = z ∧ f o s = s o f ⇒ f = id N
-*)
 
 (*TODO: if without gen_all, will display as: current 
 Exception- ERR "current term not alloed to be instantiated" raised
@@ -1019,19 +826,11 @@ if rw can split the assumptions in assumption list, then should solve the goal
 val comm_with_s_id = proved_th(
 expandf 
 (stp_tac >> rw_tac[N_ind_z_s_id] >>
-match_mp_tac (gen_all (dimpl2r (spec_all ax3))) >>
-accept_tac (assume (rapf "f o z = z & f o s = s o f"))
+match_mp_tac (gen_all (dimpl2r (spec_all ax3))) >> arw_tac[]
  )
 (rapg "f o z = z & f o s = s o f ==> f = id(N)")
 )
 
-(*
-to_p_eq_one_side:
-∀A B f g. f∶ A → B ∧ g∶ A → B ∧ ⟨id A,f⟩ = ⟨id A,g⟩ ⇒ f = g
-
-*)
-
-(*TODO: test rule_assum_tac on this*)
 
 val to_p_eq_one_side = proved_th(
 e
@@ -1049,55 +848,13 @@ accept_tac (assume (rapf "f:A -> B = g"))
 (rapg "<id(A),f> = <id(A),g> ==> f = g")
 )
 
-
-(*
-Definition is_inc_def:
-is_inc a b A ⇔ is_subset a A ∧ is_subset b A ∧ ∃h. h∶(dom a) → (dom b) ∧ b o h = a
-End
-
-*)
 val psyms0 = insert_psym "isinc";
 
 val isinc_def = define_pred(rapf "ALL A.ALL A0.ALL a:A0 ->A.ALL A1. ALL b:A1 ->A. isinc(a,b,A) <=> EXISTS h. b o h = a")
 
-(*is_mono_thm:
-∀A B m. m∶ A → B ⇒
-        (is_mono m ⇔
-        (∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g))*)
-
 val is_mono_thm = (gen_all o dimpl2r o spec_all) ismono_def
 
-
-(*
-is_mono_applied:
-∀A B m. m∶ A → B ∧
-        (∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g) ⇒
-        is_mono m
-
-TO-DO: check the applied works for match_mp_tac (done)
-*)
 val is_mono_applied = (gen_all o dimpr2l o spec_all) ismono_def
-
-(*
-is_mono_property:
-∀A B m. is_mono m ∧ m∶ A → B ⇒
-(∀X f g. f∶ X → A ∧ g∶ X → A ∧ m o f = m o g ⇒ f = g)
-
-same as is_mono_thm here
-
-Definition is_mono_def:   
-  is_mono f ⇔
-  ∀g1 g2. dom g1 = dom g2 ∧ cod g1 = dom f ∧ cod g2 = dom f ∧
-          f o g1 = f o g2 ⇒ g1 = g2
-
-maybe not useful thms here, we need them before, not sure if useful here.
-*)
-
-(*
-Theorem post_inv_mono:
-∀A B m i. m∶ A → B ∧ i∶ B → A ∧ (i o m) = id A ⇒ is_mono m
-*)
-
 
 
 (* TODO:
@@ -1125,16 +882,6 @@ rw_tac[spec_all o_assoc] >> arw_tac[]
 (rapg "i o m = id(A) ==> ismono(m)")
 )
 
-(*
-
-previous is_epi_def uses dom/cod stuff, now is_epi_thm can just be def
-
-Theorem is_epi_thm:
-∀e A B. e∶ A → B ⇒
-       (is_epi e ⇔ (∀X f g. f∶ B → X ∧ g∶ B → X ∧ f o e = g o e ⇒ f = g))
-
-*)
-
 val psyms0 = insert_psym "isepi";
 
 (*
@@ -1149,13 +896,6 @@ val isepi_def = define_pred (readf "ALL A. ALL B. ALL e: A -> B. isepi(e) <=> AL
 val is_epi_thm = (gen_all o dimpl2r o spec_all) isepi_def
 
 val is_epi_applied = (gen_all o dimpr2l o spec_all) isepi_def
-
-(*have already checked that thm and applied look the same for mono and epi*)
-
-(*
-pre_inv_epi:
-∀A B e i. e∶ A → B ∧ i∶ B → A ∧ e o i = id B ⇒ is_epi e
-*)
 
 val post_inv_mono = proved_th(
 e
@@ -1185,38 +925,26 @@ e
 (rapg "e o i = id(B) ==> isepi(e)")
 )
 
-(*
-
-Definition is_pb_def:
-is_pb P p q f g <=> cod f = cod g /\ p∶ P → dom f ∧ q∶ P → dom g /\
-                      f o p = g o q ∧
-                      (∀A u v. u∶ A → dom f ∧ v∶ A → dom g ∧ f o u = g o v ⇒
-                      ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)
-*)
 
 val psyms0 = insert_psym "ispb"
 
-(*TODO: remove () and check it works*)
+
+val is_pb_def = define_pred (rapf 
+"ALL X. ALL Z. ALL f: X -> Z. ALL Y. ALL g:Y -> Z. ALL P. ALL p:P-> X. ALL q:P->Y. ispb(P,p,q,f,g) <=> f o p = g o q & ALL A. ALL u: A -> X. ALL v: A -> Y. f o u = g o v ==> EXISTS a:A -> P. p o a = u & q o a = v & ALL b:A -> P. p o b = u & q o b = v ==> a = b"
+)
+(*
+(*TO-DO: remove () and check it works*)
 val is_pb_def = define_pred (rapf 
 "ALL X. ALL Z. ALL f: X -> Z. ALL Y. ALL g:Y -> Z. ALL P. ALL p:P-> X. ALL q:P->Y. ispb(P,p,q,f,g) <=> f o p = g o q & (ALL A. ALL u: A -> X. ALL v: A -> Y. f o u = g o v ==> EXISTS a:A -> P. (p o a = u & q o a = v & ALL b:A -> P. (p o b = u & q o b = v) ==> a = b))"
 )
 
-(*
-eq_equlity:
-∀A B f g.
-         f∶A → B ∧ g∶A → B ⇒ f ∘ eqa f g = g ∘ eqa f g
+seems works
 *)
 
 val eq_equality = (conjE1 o spec_all) ax_eq'
 
 val coeq_equality = (conjE1 o spec_all) ax_coeq'
 
-(*
-coeq_of_equal:
-!f A B. f∶ A → B ==> ?ki. ki∶ coeqo f f → B /\ ki o (coeqa f f) = id B
-*)
-
-(*already checked that type inference works for coeqinduce*)
 
 val coeq_of_equal = proved_th(
 e
@@ -1226,39 +954,13 @@ match_mp_tac ax1_6_applied >> rw_tac[]
 (rapg "EXISTS ki. ki o (coeqa(f,f)) = id(B)")
 )
 
-(*
-eqa_is_mono:
-∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_mono (eqa f g)
-*)
-
-
-(*if use arw for 
-(A : ob),
-   (B : ob),
-   (X : ob),
-   (f1 : A -> B),
-   (f2 : A -> B),
-   (g : X -> eqo(f1, f2)),
-   (h : X -> eqo(f1, f2))
-   h = eqinduce(f1, f2, eqa(f1, f2) o g), g =
-     eqinduce(f1, f2, eqa(f1, f2) o g), eqa(f1, f2) o g = eqa(f1, f2) o h
-   ----------------------------------------------------------------------
-   h = g
-
-then loop, not surprise
-
-and once_arw leaves this:
-
- eqinduce(f1, f2, eqa(f1, f2) o g) = eqinduce(f1, f2, eqa(f1, f2) o g)
-*)
 
 (*TODO:AQ want match_mp_tac to work for 
 f o h = g o h ==>
                      eqa(f, g) o x0 = h ==> x0 = eqinduce(f, g, h): thm
+
+still to write the canon function...
 *)
-
-
-
 
 val is_eqinduce = (gen_all o disch_all o 
                    (conj_assum
@@ -1292,9 +994,6 @@ e
 (rapg "ismono(eqa(f1,f2))")
 )
 
-(*coeqa_is_epi:
-∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_epi (coeqa f g)*)
-
 val coeqa_is_epi = proved_th(
 e
 (match_mp_tac is_epi_applied >> repeat stp_tac >> 
@@ -1314,14 +1013,6 @@ e
 )
 
 
-(*
-THEOREM pb_exists:
-∀X Y Z f g. f∶ X → Z ∧ g∶ Y → Z ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
-            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
-             ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)
-*)
-
-
 (*TODO: type inference for ispb does not work
  (f : ob),
    (g : ob)
@@ -1331,12 +1022,7 @@ THEOREM pb_exists:
 *)
 
 
-(*TODO:AQ maybe have an abbrev_tac... better have the Q stuff
-OR just use let val... in ?
-
-may have a long composition, the point is adding a new symbol to represent the thing, but not add any variable
-
-*)
+(*TODO:test abbrev tac*)
 
 (*
 TODO:
@@ -1357,28 +1043,6 @@ does but once_rw_tac[GSYM o_assoc,GSYM eq_equality] does not work for:
 
 *)
 
-
-(*
-TODO: pp: assumption list ugly indented like:
-
-  (f o p1(X, Y)) o pa(u, v) = (g o p2(X, Y)) o
-     pa(u, v),
-     f o u = g o
-     v,
-     f o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o
-     eqa(f o p1(X, Y), g o p2(X, Y))
-
-Have new lines though.
-
-(f o p1(X, Y)) o pa(u, v) = (g o p2(X, Y)) o
-     pa(u, v),
-     f o u = g o
-     v,
-     f o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o
-     eqa(f o p1(X, Y), g o p2(X, Y))
-
-newly added assumption appears in the top, need reverse. 
-*)
 
 
 (*TODO:
@@ -1419,23 +1083,6 @@ TODO: fill the gap from match_mp_tac
 
 
 
-(*TODO: AQ
-
-Change GSYM to apply anywhere in a formula once_depth_conv
-
-goal is:
-
-eqinduce(f o p1(X, Y), g o p2(X, Y), pa(u, v)) = b
-
-want to apply match_mp on ... ==> x0 = eqinduce ...
-
-need a tactic which applies a rule on the goal, is it fconv_tac?
-
-test the strip_assume_tac here
-
-in the proof below :
- once_arw_tac[GSYM o_assoc] >> arw_tac[] works, but once_arw_tac itself does not 
-*)
 
 
 
@@ -1501,16 +1148,6 @@ e
 specl pb_exists (List.map readt ["f:X->Z","g:Y->Z"]) does the correct thing
 *)
 
-(*?a. ?b. P(a,b) 
-
-P(m,n) 
-qexistsl_tac
-
-X_CHOOSE_THEN n (X_CHOOSE_THEN m assume_tac),
-
-choosel_tac
-*)
-
 (*TODO: a rule of turning unique existence into existence*)
 
 val pb_fac_exists = proved_th(
@@ -1518,8 +1155,7 @@ e
 (repeat stp_tac >>
 mp_tac (spec_all (gen_all pb_exists)) >> rw_tac[spec_all is_pb_def] >>
 stp_tac >> 
-first_x_assum (x_choose_tac "P") >> 
-first_x_assum (x_choose_tac "p") >>first_x_assum (x_choose_tac "q") >>
+first_x_assum (x_choosel_tac ["P","p","q"]) >>
 map_every wexists_tac (List.map readt ["P","p:P->X","q:P->Y"]) >>
 stp_tac >-- pop_assum_list (map_every STRIP_ASSUME_TAC) >-- arw_tac[] >>
 repeat stp_tac
@@ -1607,7 +1243,6 @@ arw_tac[spec_all o_assoc] works.
 
 seems like once and arw not same as once rw and then arw
 
-Check the () works for >--
 *)
 
 
@@ -1647,15 +1282,8 @@ rw_tac[spec_all o_assoc] >> arw_tac[]
 end
 )
 
-(*non_zero_pinv:∀A B f. f∶ A → B ∧ ¬(A ≅ zero) ⇒ ∃g. g∶B → A ∧ f ∘ g ∘ f = f
-also need the tactic for existence
 
-Already have choose_tac, this is a simple example for test exists relative things
-*)
-
-(*TODO: ASM_ACCEPT_TAC, accepts an assumption*)
-
-(*Q: Want to extract the current goal for testing tactic form the goal stack, how to do this?*)
+(*!!!!!!Q: Want to extract the current goal for testing tactic form the goal stack, how to do this?*)
 
 
 val non_zero_pinv = proved_th(
@@ -1710,19 +1338,6 @@ bug here, x_choose gives disch has extra variables
 at this stage, think have less context makes the thm weaker, so something should be proved cannot be proved. 
 
 *)
-(*
-val th = thm(essps,[]:form list,“EXISTS x. P(x)”)
-
-assume_tac th (essps,[]:form list,FALSE)
-
-
-assume_tac (thm(essps,[]:form list,“EXISTS x. P(x)”)) (essps,[]:form list,FALSE)
-
-
-
-val xth = th
-val n0 = "a"
-*)
 
 
 val epi_non_zero_pre_inv = proved_th(
@@ -1758,9 +1373,6 @@ first_x_assum match_mp_tac after the by_tac gives
 rule assume tac on first rule which the function applies
 
 *)
-
-
-(*specl should just err if wrong input list*)
 
 
 val o_mono_mono = proved_th(
@@ -1820,7 +1432,7 @@ arw_tac[])
 )
 
 
-(*TODO: tactic for solving contradiction among assumption list
+(*TODO: 
 first_x_assum specl_then bug.Exception- ERR "the given variable occurs unexpectedly" raised
 *)
 
@@ -1880,7 +1492,8 @@ e
 (rapg "areiso(A,B) <=> EXISTS f:B->A. isiso(f)")
 )
 
-(*TODO: rw does not treat conunction for equality, so need snd pop_assum STRIP_ASSUME_TAC*)
+(*TODO: rw does not treat connction for equality, so need snd pop_assum STRIP_ASSUME_TAC,unexpected∀*)
+
 
 val o_iso_eq_eq = proved_th(
 e
@@ -1945,13 +1558,6 @@ e
 )
 
 
-(*NOTE, just a not cannot put 
-
- assume_tac (specl to1_unique (List.map readt ["1","f:1->1","id(1)"])) >> stp_tac >> arw_tac[]
-
-then f is not in assumption by the time of spec the thm, so will involve extra variable
-
-*)
 val one_to_one_id = proved_th(
 e
 (stp_tac >> assume_tac (specl to1_unique (List.map readt ["1","f:1->1","id(1)"])) >> arw_tac[])
@@ -1982,7 +1588,7 @@ add the normalising procedure to drule?
 val from_iso_zero_eq' = from_iso_zero_eq |> undisch |> gen_all |> disch_all |> gen_all
 
 
-(*TODO: check x_choose works properly, and is a decent way to do it.
+(*TODO:
 
  rw_tac[GSYM o_assoc] >-- once_arw_tac[] >-- rw_tac[] do not understand why loop
 
@@ -2029,7 +1635,7 @@ pop_assum_list (map_every STRIP_ASSUME_TAC))
 (rapg "isepi(f:A->B) & ~(areiso(B,0)) ==> EXISTS g:B->A. f o g = id(B)")
 )
 
-(*todo: put x_choose_then in sig and try it
+(*todo: 
 match_mp_tac (gen_all o_iso_eq_eq)
 same as before, need gen all
 
@@ -2203,8 +1809,6 @@ by_tac “EXISTS x:1->1.T”
 first_x_assum OPPOSITE_TAC)
 (rapg "~ (areiso(1,0))")
 )
-    
-(*thankfully the proof of this is much shorter than that in HOL*)
 
 val tp_elements_ev = proved_th(
 e
@@ -2295,8 +1899,6 @@ e
 )
 
 (*
-good thing is shorter than original
-
 TODO: check rename variable here for EXISTS
 *)
 
@@ -2326,13 +1928,7 @@ e
  )
 (rapg "areiso(X,Y) & areiso(Y,Z) ==> areiso(X,Z)")
 )
-(*
-Theorem iso_to_same:
-∀X Y A. X ≅ A ∧ Y ≅ A ⇒ X ≅ Y
-Proof
-metis_tac[iso_symm,iso_trans]
-QED       
-
+(*     
 TODO: match_mp_tac iso_trans gives the wrong thing
 (A : ob),
    (X : ob),
@@ -2520,17 +2116,6 @@ e
    F()
 does not add the x:1->X if do strip assume bug! x_choose_tac works
 *)
-(*
-|-
-   ismono(a) &
-         ismono(b) &
-           ALL (x : 1 -> A).
-             ALL (xb : 1 -> X).
-               a o xb = x ==> EXISTS (xb' : 1 -> Y). b o xb' = x ==>
-       EXISTS (h : X -> Y). b o h = a: thm
-
-should heve ()
-*)
 
 
 val prop_2_corollary = proved_th(
@@ -2560,7 +2145,7 @@ e
 
 TODO: maybe have a function which takes a thm to move quantifier innermost, current gen_all of to_0_0 does nothing with f since it is not in the concl
 
-have a tactic which removes assumptions
+test remove_asm_tac
 *)
 
 

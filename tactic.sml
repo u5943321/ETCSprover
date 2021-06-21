@@ -512,10 +512,7 @@ fun rw_tac thl =
 
 *)
 
-(*
 
-val simp_trace = ref false
-*)
 fun by_tac f0 (G,fl,f) = 
     let 
         val G' = HOLset.union(G,fvf f0) 
@@ -524,41 +521,6 @@ fun by_tac f0 (G,fl,f) =
      fn [th1,th2] => prove_hyp th1 th2)
     end
 
-
-(*
-exists na such that complicated term = na.
-
-use existsE to eliminate the na
-
-
-strip_assume_tac instead of existsE to deal with elimanation
-
-*)
-(*
-readf “P(f)”
-
-*)
-
-(*
-g: A-> B
-----------
-ALL g:A' -> B. P(g)
-
-TODO: check gen_tac do this. 
-
-
-f(x') = g(y')
-
-f(a) = g(b)
- same as abbrev
-
-*)
-
-(*
-A ?- t
-============== MP_TAC (A’ |- s) 
-A ?- s ==> t
-*)
 
 fun suffices_tac f0 (G,fl,f) = 
     let
@@ -834,6 +796,11 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
       end
       handle ERR _ => raise ERR "X_CHOOSE_THEN"
 
+fun x_choosel_then nl (ttac: thm_tactic):thm_tactic =
+    case nl of
+        [] => ttac 
+      | h :: t => x_choose_then h (x_choosel_then t ttac)
+
 val SPECL = C specl
 
 fun specl_then tl (ttac: thm_tactic): thm_tactic = 
@@ -858,6 +825,8 @@ val choose_then: thm_tactical =
 val choose_tac' = choose_then assume_tac
 
 fun x_choose_tac x = x_choose_then x assume_tac
+
+fun x_choosel_tac xs = x_choosel_then xs assume_tac 
 
 val check_assume_tac: thm_tactic =
    fn gth =>
