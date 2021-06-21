@@ -319,8 +319,6 @@ fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
                     (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
-(* fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th *)
-
 fun conv_rule c th = dimp_mp_l2r th (c (concl th)) 
 
 

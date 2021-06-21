@@ -416,7 +416,7 @@ fun exists_iff (th as thm(G,A,C)) (n,s) =
     end
 
 (*F_IMP: ~f ==> f ==> F*)
-fun F_imp f = assume f|> negE (assume (mk_neg f)) |> disch f |> disch (mk_neg f)
+fun F_imp f = assume f|> (C negE) (assume (mk_neg f)) |> disch f |> disch (mk_neg f)
 
 (*theorems with fVars to be matched, to deal with propositional taut*)
 
@@ -762,11 +762,6 @@ fun dischl l th =
 
 fun disch_all th = dischl (ant th) th
 
-(*new GSYM*)
-
-
-
-
 
 
 (*
@@ -792,13 +787,13 @@ fun conj_assum f1 f2 (th as thm(G,A,C)) =
           (conjE2 (assume (mk_conj f1 f2)))
     end
 
-(*
-fun conj_asl fl th = 
-case fl
 
-*)
+(*F2f f = |-F ⇒ f *)
 fun F2f f = disch FALSE (falseE [FALSE] f)
 
+(*for a th with concl FALSE, A |- F. 
+CONTR f th = A |- f
+*)
 fun CONTR f th =
    mp (F2f f) th handle ERR _ => raise ERR "CONTR"
 

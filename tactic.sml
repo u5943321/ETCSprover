@@ -688,6 +688,7 @@ val NO_THEN: thm_tactical = fn ttac => fn th => raise ERR "NO_THEN"
 val FIRST_TCL = List.foldr (op ORELSE_TCL) NO_THEN
 
 
+
 val CONTR_TAC: thm_tactic =
    fn cth => fn (ct,asl, w) =>
       let
@@ -697,15 +698,6 @@ val CONTR_TAC: thm_tactic =
       end
       handle ERR _ => raise ERR "CONTR_TAC"
 
-(*
-  A,"~t" |- F                                                             *
- *   --------------                                                          *
- *       A |- t    
-
-fun CCONTR f th = 
-    let val f0 = dest_neg f 
-        val _ = fmem f (ant th) orelse raise "CCONTR: formula not in assumption" 
-*)
 
 
 fun first tacl = 
@@ -735,18 +727,18 @@ val conjuncts_then:thm_tactical = fn ttac => conjuncts_then2 ttac ttac
  * OPPOSITE_TAC: proves the goal using the theorem p and an assumption ~p.   *
  * --------------------------------------------------------------------------*)
 
-(*
-val contr_tac: thm_tactic =
-   fn cth => fn (asl, w) =>
-      let
-         val th = CONTR w cth
-      in
-         ([], empty th)
-      end
-      handle HOL_ERR _ => raise ERR "CONTR_TAC" ""
+(*F_imp f = ~f ⇒ f ⇒ F
+ 
+th = A |- C 
+
+th' =  A' |- ~C
+
+~C ⇒ C ⇒ F 
+A,A' |- F
 *)
 
 fun resolve th th' = mp (mp (F_imp (concl th)) th') th
+
 fun target_rule tm =
       if is_neg tm then (dest_neg tm, Lib.C resolve) else (mk_neg tm, resolve)
 
@@ -905,6 +897,26 @@ fun rewr_rule thl =
     in
         conv_rule (basic_fconv c fc)
     end
+
+fun abbrev_tac eq0:tactic = 
+    fn (ct,asl,w) => 
+       let 
+           val (lhs,rhs) = dest_eq eq0
+           val (n,s) = dest_var rhs
+           val _ = HOLset.isSubset(fvt lhs,ct) orelse
+                   raise ERR "the term to be abbrev has unknown variable" 
+           val _ = not (mem n (List.map fst (HOLset.listItems ct)))
+                   orelse raise ERR "name of the abbrev is already used"
+           val eth =  existsI (refl rhs) (n,s) rhs (Pred("=",[rhs,Var(n,s)]))
+       in
+           ([(HOLset.add(ct,(n,s)),eq0::asl,w)],fn [th] => existsE (n,s) eth th)
+       end
+
+fun remove_asm_tac f: tactic = 
+    fn (ct,asl,w) =>
+       if fmem f asl then 
+           ([(ct,ril f asl,w)], fn [th] => add_assum f th)
+       else raise ERR "assumption to be removed is not in the assumption list"
 
 end
     
