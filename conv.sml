@@ -256,7 +256,7 @@ val taut_forall_fconv =
 val taut_exists_fconv = 
     first_fconv 
         (List.map rewr_fconv 
-                  [exists_true_ar,exists_true_ob,
+                  [(*exists_true_ar,*)exists_true_ob,
                    exists_false_ar,exists_false_ob])
 
 

@@ -668,7 +668,7 @@ fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
  * --------------------------------------------------------------------------*)
 
 fun DISCARD_TAC th (ct,asl, w) =
-   if Lib.exists ((curry eq_form) (concl th)) (TRUE :: asl)
+   if Lib.exists ((curry eq_form) (concl th)) (TRUE :: asl) andalso HOLset.isSubset(cont th,ct)
       then all_tac (ct,asl, w)
    else simple_fail"DISCARD_TAC"
 

@@ -1508,17 +1508,22 @@ e
 
 
 
-(*TODO: tocheck! bug!
-suffices_tac “EXISTS f0: A ->0. T” 
- >-- (stp_tac >> first_x_assum (x_choose_tac "a0")>>
-      accept_tac (specl not_to_zero [readt "a0:A->0"]) *)
- (*>> pop_assum mp_tac >> rw_tac[areiso_def]
 
-original proof compliains extra variable a, there are not even any variable called A!
-
-Proved, but serious bug is not fixed!!!!!!!
+(*TODO: rethink exists taut rws, original problem fixed
 *)
+val to_zero_zero = proved_th(
+expandf
+(repeat stp_tac >> 
+ suffices_tac “EXISTS f0: A ->0. T” 
+ >-- (stp_tac >> first_x_assum (x_choose_tac "a0")>>
+      accept_tac (specl not_to_zero [readt "a0:A->0"])) >> 
+      pop_assum mp_tac >> rw_tac[areiso_def] >> stp_tac >>
+  first_x_assum (x_choose_tac "f1") >> wexists_tac (readt "(f1:B->0) o (f:A->B)") >>
+rw_tac[])
+(rapg "ALL f:A->B. areiso(B,0) ==> areiso(A,0)")
+)
 
+(*
 val to_zero_zero = proved_th(
 e
 (repeat stp_tac >> match_mp_tac have_to_0 >> 
@@ -1529,6 +1534,7 @@ end) >> first_x_assum (x_choose_tac "f1") >> wexists_tac (readt "(f1:B->0) o (f:
 rw_tac[])
 (rapg "ALL f:A->B. areiso(B,0) ==> areiso(A,0)")
 )
+*)
 
 
 val to_iso_zero_iso = proved_th(
@@ -1733,7 +1739,6 @@ TODO:
 
 pp line length
 
-AQ: how to allow longer line length? and indenting? does not find this parameter...
 *)
 
 val inc_inc_iso0 = proved_th(
@@ -1836,56 +1841,10 @@ e
 
 
 (*
-val prop_2_half2 = proved_th(
-e
-(repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> cases_on “areiso(Y,0)”
->-- by_tac “areiso(X,0)”  >-- ccontra_tac  (*
- 
- >-- (by_tac “areiso(X,0)” >-- (ccontra_tac >> drule ax6 >> pop_assum STRIP_ASSUME_TAC) )*)
-)
-(rapg "ismono(a:X->A) & ismono(b:Y->A) & (ALL x:1->A. ALL xb:1->X. a o xb = x ==> EXISTS xb':1->Y. b o xb' = x) ==>EXISTS h:X->Y. b o h = a")
-)
-
-*)
-
-
-
-
-(*
 
 AQ3: cannot solve by arw tac because negation is normalised to be false, but the goal is not. Should I change conv_canon or also normalise the goal when rw? 
 
-I think all first_x_assum accept_tac can just be arw
-
-val prop_2_half2 = proved_th(
-e
-(repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> cases_on “areiso(Y,0)”
- >-- (by_tac “areiso(X,0)” 
-      >-- (ccontra_tac >> drule ax6 >> first_x_assum (x_choose_tac "x") >> 
-          by_tac “EXISTS xb':1->Y. T” 
-          >-- (first_x_assum (specl_then (List.map readt ["(a:X->A) o (x:1->X)","x:1->X"]) assume_tac) >> 
-              by_tac “(a:X->A) o (x:1->X) = a o x” >-- rw_tac[] >>
-              first_x_assum drule >> first_x_assum (x_choose_tac "xb'") >> 
-              wexists_tac (readt "xb':1->Y") >> rw_tac[]) >>
-          drule is_zero_no_mem >> first_x_assum OPPOSITE_TAC) >> 
-      drule from_iso_zero_eq' >>
-      pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> rw_tac[areiso_def,isiso_def] >> 
-      repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >>
-      wexists_tac (readt "(g':0->Y) o (f:X->0)") >>
-      first_x_assum (specl_then (List.map readt ["A","(b:Y->A) o (g':0->Y) o (f:X->0)","a:X->A"]) assume_tac) >> first_x_assum accept_tac) >>
- by_tac “EXISTS g:A->Y. g o b = id(Y)”
- >-- (match_mp_tac mono_non_zero_post_inv >> arw_tac[] >> arw_tac[] (* >> 
-      first_x_assum accept_tac *)) (*>>
- pop_assum STRIP_ASSUME_TAC >> wexists_tac (readt "(g:A->Y) o (a:X->A)") >> 
- match_mp_tac fun_ext >> stp_tac >> rw_tac[o_assoc] >>
- first_x_assum (specl_then (List.map readt ["(a:X->A) o (a':1->X)","a':1->X"]) assume_tac) >> 
- by_tac “(a:X->A) o (a':1->X) = a o a'” >-- rw_tac[] >> first_x_assum drule >> 
- pop_assum STRIP_ASSUME_TAC >> 
- pop_assum (mp_tac o GSYM) >> stp_tac >> arw_tac[] >> 
- by_tac “b o g o b o xb' = (b:Y->A) o ((g:A->Y) o (b:Y->A)) o (xb':1->Y)” >-- rw_tac[o_assoc] >>
- arw_tac[idL] *))
-(rapg "ismono(a:X->A) & ismono(b:Y->A) & (ALL x:1->A. ALL xb:1->X. a o xb = x ==> EXISTS xb':1->Y. b o xb' = x) ==>EXISTS h:X->Y. b o h = a")
-)
+I think all first_x_assum accept_tac can just be arw in prop_half2
 
 *)
 
@@ -1893,18 +1852,6 @@ e
 (*TODO:|-
    A areiso 0 ==> ~EXISTS (x : 1 -> A). T(): thm work for goal F
 
- EXISTS (x : 1 -> X). T(),
-     ~X areiso
-     0,
-     Y areiso
-     0,
-     ALL (x : 1 -> A).
-       ALL (xb : 1 -> X). a o xb = x ==> EXISTS (xb' : 1 -> Y). b o xb' = x,
-     ismono(b),
-     ismono(a)
-   ----------------------------------------------------------------------
-   F()
-does not add the x:1->X if do strip assume bug! x_choose_tac works
 *)
 
 

@@ -330,9 +330,16 @@ fun exists_true (n,s) =
 
 (*more general version use term instead of variable?*)
 
+(*?a:A->B.F <=> F *)
 
 fun exists_false (n,s) = 
-    thm(essps,[],mk_dimp (mk_exists n s FALSE) FALSE)
+    let val F2eF = disch FALSE (falseE [FALSE] (Quant("EXISTS",n,s,FALSE)))
+        val eF2F = disch (Quant("EXISTS",n,s,FALSE))
+                         (existsE (n,s) (assume (Quant("EXISTS",n,s,FALSE))) (assume FALSE))
+    in
+        dimpI eF2F F2eF
+    end
+
 
 
 (* TODO: cj_asm: A1,A2 |- B <=> A1/\ A2 |- B *)
@@ -371,20 +378,6 @@ fun dimp_iff (th1 as thm(G1,A1,C1)) (th2 as thm(G2,A2,C2)) =
         in dimpI P1iffQ12P2iffQ2 P2iffQ22P1iffQ1
         end
       | _ => simple_fail("not a pair of iff" ^ string_of_form C1 ^ " , " ^ string_of_form C2)
-
-
-
-fun all_iff (th as thm(G,A,C)) (n,s) = 
-    case C of 
-        Conn("<=>",[P,Q]) => 
-        let val allP = Quant("ALL", n, s, P)
-            val allQ = Quant("ALL", n, s, Q)
-            val allP2allQ = disch allP (allI (n,s) (dimp_mp_l2r (allE (assume allP) (Var(n,s))) th))
-            val allQ2allP = disch allQ (allI (n,s) (dimp_mp_r2l th (allE (assume allQ) (Var(n,s)))))
-        in
-            dimpI allP2allQ allQ2allP
-        end
-      | _ => simple_fail("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
 
 
 fun all_iff (th as thm(G,A,C)) (n,s) = 
