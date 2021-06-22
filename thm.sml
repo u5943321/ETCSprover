@@ -135,15 +135,6 @@ fun thml_eq_pairs (th:thm,(ll,rl,asml)) =
 
 (*avoid EQ_psym/fsym using by hand*)
 
-fun EQ_fsym f s thml = 
-    let 
-        val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
-    in 
-        thm (contl_U (List.map cont thml),asml,
-             Pred("=",[Fun(f,s,ll),Fun(f,s,rl)]))
-    end
-
-
 
 fun EQ_fsym f thml = 
     case lookup_fun fsyms0 f of 

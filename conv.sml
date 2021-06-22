@@ -298,22 +298,6 @@ fun basic_once_fconv c fc =
     once_depth_fconv (once_depth_conv c) 
                      (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
-(*
-
-fun top_depth_fconv c fc f =
-    (repeatfc fc thenfc
-             (sub_fconv c (top_depth_fconv c fc)) thenfc
-             ((fc thenfc (top_depth_fconv c fc)) 
-                  orelsefc all_fconv))
-        f
-
-fun top_depth_conv c t =
-    (repeatc c thenc
-             (sub_conv (top_depth_conv c)) thenc
-             ((c thenc (top_depth_conv c)) 
-                  orelsec all_conv))
-             t
-*)
 
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 

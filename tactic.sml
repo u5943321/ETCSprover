@@ -439,37 +439,12 @@ fun gen_rw_tac fc thl =
 
 (*TODO: Fix eqT_intro, eqF_intro!*)
 
-(*
-fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
-   rw_func (REWRITES_CONV (add_rewrites rws thl));
-
-fun GEN_REWRITE_RULE f rws = Conv.CONV_RULE o GEN_REWRITE_CONV f rws;
-
-fun GEN_REWRITE_TAC f rws = Tactic.CONV_TAC o GEN_REWRITE_CONV f rws;
-*)
-
-
-
-
-(* old rw_tac
-fun rw_tac thl = gen_rw_tac basic_fconv thl
-fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
-*)
 
 fun once_rw_tac thl = gen_rw_tac basic_once_fconv  (flatten (mapfilter conv_canon thl))
 
 fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
 
 fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
-
-(*
-fun rw_tac thl = 
-    let 
-        val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
-        val fconv = first_fconv (mapfilter rewr_fconv (flatten (mapfilter fconv_canon thl)))
-    in fconv_tac (basic_fconv conv fconv) 
-    end
-*)
 
 fun rw_tac thl = 
     let 
@@ -480,37 +455,8 @@ fun rw_tac thl =
 
 
 
-(*
-
-TODO: Add to drule, to rw under quantifiers
-P <=> Q 
-
-
-<=>
-
-!x.P <=> !x. Q
-
-x allowed in P and Q, but not allowed to appear in assumption
-
-P <=> Q 
-
-<=>
-
-?x.P <=> ?x. Q
-
-*)
 
 (*conv_canon/ fconv_canon should never raise exception, check this*)
-
-(*
-fun rw_tac thl = 
-    let 
-        val conv = first_conv (mapfilter rewr_conv thl)
-        val fconv = first_fconv (mapfilter rewr_fconv thl)
-    in fconv_tac (basic_fconv conv fconv) 
-    end
-
-*)
 
 
 fun by_tac f0 (G,fl,f) = 
@@ -619,7 +565,7 @@ fun error f t e =
              case e of
                  Ant h => ("bad hypothesis", string_of_form h)
                | Concl c => ("wrong conclusion", string_of_form c)
-               | Cont ns => ("extra variable involved",string_of_term (Var ns))
+               | Cont ns => ("extra variable involved",(string_of_term (Var ns))^ ":" ^ (string_of_sort (snd ns)))
        in
          raise ERR (f^pfx ^ desc ^ " " ^ t)
        end
