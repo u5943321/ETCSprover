@@ -15,7 +15,9 @@ Pred of string * term list
 | Conn of string * form list
 | Quant of string * string * sort * form
 | fVar of string;
-exception ERR of string
+
+exception ERR of string * sort list * term list * form list 
+val simple_fail: string -> 'a 
 
 val is_conj: form -> bool
 val is_dimp: form -> bool

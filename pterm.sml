@@ -238,7 +238,7 @@ fun t2pt t =
     case t of 
         Var(n,s) => pVar(n,s2ps s)
       | Fun(f,s,l) => pFun(f,s2ps s,map t2pt l)
-      | _ => raise ERR "bounded variable cannot be converted into pterm"
+      | _ => simple_fail"bounded variable cannot be converted into pterm"
 and s2ps s = 
     case s of
         ob => pob
@@ -284,7 +284,7 @@ fun fgt_name_pt pt (nd:(string , string) dict) env =
         in
             (pFun(f,ps1,ptl1),nd2,env2)
         end
-      | _ => raise ERR ("unexpected pretype constructor" ^ (stringof_pt pt))
+      | _ => simple_fail("unexpected pretype constructor" ^ (stringof_pt pt))
 and fgt_name_ps ps nd env = 
     case ps of 
         pob => (pob,nd,env)
@@ -294,7 +294,7 @@ and fgt_name_ps ps nd env =
         in 
             (par(t1',t2'),nd2,env2)
         end
-      | _ => raise ERR "unexpected presort variable"
+      | _ => simple_fail"unexpected presort variable"
 
 fun nps2ptUVar (n,ps) nd env = fgt_name_pt (pVar(n,ps)) nd env
 
@@ -332,7 +332,7 @@ fun type_infer_pfun env t ty =
              end
            | _ => env)
         end
-      | _ => raise ERR ("not a function term" ^ (stringof_pt t))
+      | _ => simple_fail("not a function term" ^ (stringof_pt t))
 and type_infer env t ty = 
     case t of 
         pFun(f,ps,ptl) => type_infer_pfun env t ty
@@ -373,7 +373,7 @@ fun type_infer_args env pf =
                             end)
                         env
                         ptl)
-      | _ => raise ERR "not a predicate" 
+      | _ => simple_fail"not a predicate" 
    
 fun type_infer_pf env pf = 
     case pf of 
@@ -523,7 +523,7 @@ and parse_ast_atom tl =
            val (astl,tl2) = rparen ">" (parse_arepeat1 (",",parse_ast) tl)
        in (aApp("pa",astl),tl2)
        end
-     | _ => raise ERR ""
+     | _ => simple_fail""
 
 
 (*
@@ -539,12 +539,12 @@ Exception- ERR "" raised
 fun pPred_cons pf pt = 
     case pf of 
         pPred(p,tl) => pPred(p,pt :: tl)
-      | _ => raise ERR "not a pPred"
+      | _ => simple_fail"not a pPred"
 
 fun pFun_cons pt0 pt = 
     case pt0 of 
         pFun(f,ps,tl) => pFun(f,ps,pt :: tl)
-      | _ => raise ERR "not a pFun"
+      | _ => simple_fail"not a pFun"
  
 
 (*clear ps when move out of a env*)
@@ -553,7 +553,7 @@ fun ast2pf ast (env:env) =
         aId(a) => 
         if a = "T" then (pPred("T",[]),env) else 
         if a = "F" then (pPred("F",[]),env) else
-        raise ERR ("variable:" ^ a ^ " is parsed as a predicate")
+        simple_fail("variable:" ^ a ^ " is parsed as a predicate")
       | aApp("~",[ast]) => 
         let val (pf,env1) = ast2pf ast env in
             (pConn("~",[pf]),env)
@@ -567,7 +567,7 @@ fun ast2pf ast (env:env) =
                     val (pt,env2) = ast2pt h env1
                 in (pPred_cons pf pt,env2)
                 end
-        else raise ERR ("not a predicate symbol: "^ str)
+        else simple_fail("not a predicate symbol: "^ str)
       | aInfix(ast1,str,ast2) => 
         if mem str ["&","|","<=>","==>"] then
             let
@@ -583,7 +583,7 @@ fun ast2pf ast (env:env) =
             in
                 (pPred(str,[pt1,pt2]),env2)
             end else
-        raise ERR "not an infix operator"
+        simple_fail"not an infix operator"
       | aBinder(str,ns,b) => 
         if str = "ALL" orelse str = "EXISTS" then
             let val (pt,env1) = ast2pt ns env in 
@@ -598,9 +598,9 @@ fun ast2pf ast (env:env) =
                     let val (pf,env2) = ast2pf b env1 in
                         (mk_pQuant str n ps pf,clear_ps n env2)
                     end
-                  | _ => raise ERR "err in parsing bound variable"
+                  | _ => simple_fail"err in parsing bound variable"
             end
-        else raise ERR "not a quantifier"
+        else simple_fail"not a quantifier"
 and ast2pt ast env = 
     case ast of 
         aId(a) =>
@@ -625,7 +625,7 @@ and ast2pt ast env =
                     val (pt,env2) = ast2pt h env1
                 in (pFun_cons pt0 pt,env2)
                 end
-        else raise ERR ("not a function symbol: " ^ str) 
+        else simple_fail("not a function symbol: " ^ str) 
       | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) => 
         let 
             val (pt1,env1) = ast2pt ast1 env
@@ -651,9 +651,9 @@ and ast2pt ast env =
             in
                 (pFun(str,psvar Av,[pt1,pt2]),env3)
             end
-        else raise ERR "not an infix operator"
+        else simple_fail"not an infix operator"
       | aBinder(str,ns,b) => 
-        raise ERR "quantified formula parsed as a term!"
+        simple_fail "quantified formula parsed as a term!"
 
 fun parse_ast_end (x:ast, l:token list) =
     if l = [] then x

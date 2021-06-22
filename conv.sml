@@ -188,20 +188,6 @@ fun exists_fconv fc f =
         exists_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
       | _ => raise ERR "not an all"
 
-(*
-val th = 
-(a : ob),
-   (b : ob),
-   (c : ob)
-   
-   |-
-   P(a, b, c) <=> a Q c: thm
-
-val f = “EXISTS b. P(a,b,c)”
-val fc = rewr_fconv th
-
-for testing, passed
-*)
 val reflTob = equivT (refl (Var("a",ob)))
 
 val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
@@ -244,10 +230,13 @@ val taut_disj_fconv =
         (List.map rewr_fconv 
                   [T_disj_1,T_disj_2,F_disj_1,F_disj_2])
 
+val f2f = disch (fVar "f0") (assume (fVar "f0"))
+val f2f_T  = eqT_intro f2f
+
 val taut_imp_fconv = 
     first_fconv 
         (List.map rewr_fconv 
-                  [T_imp_1,T_imp_2,F_imp_1,F_imp_2])
+                  [T_imp_1,T_imp_2,F_imp_1,F_imp_2,f2f_T])
 
 val taut_dimp_fconv = 
     first_fconv 

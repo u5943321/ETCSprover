@@ -105,17 +105,37 @@ fun e tac = expandf (VALID tac)
 do valid check on each step.
 *)
 
+fun ppintf (n,f) = add_string (int_to_string n) >> add_string"." >> 
+                              block HOLPP.CONSISTENT 10 (ppform false f)
+
+fun n2l n = 
+    if n > 0 then n :: (n2l (n - 1)) else [] 
+
+fun ppobl l = 
+    case l of [] => add_string ""
+             | h ::t => add_string h >> add_break (1,0) >> add_string "," >> 
+                                   add_break (1,0) >>  ppobl t
+
+fun ppcont c = 
+    let val (obs,ars) = partition (fn (n,s) => s = ob) (HOLset.listItems c)
+        val Gvl = List.map Var ars
+    in block HOLPP.CONSISTENT 10 (ppobl (List.map fst obs) >> add_break (2,0)) >> 
+       add_newline >> 
+       block HOLPP.CONSISTENT 10
+       (pr_list (ppterm true (LR (NONE,NONE))) 
+                (add_string "," >> add_break (1,0)) Gvl) 
+    end
+
 fun ppgoal (G,A,C) = 
     let
         val Gvl = List.map Var (HOLset.listItems G)
     in
-        pr_list (ppterm true (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
-                block HOLPP.INCONSISTENT 2 
-                (pr_list (ppform false) (add_string "," >> add_newline) (rev A)) >>
+        ppcont G >> add_newline >>
+               (pr_list ppintf (add_break (1,0)) (rev(zip (n2l (List.length A)) A))) >>
                 add_newline >>
                 add_string "----------------------------------------------------------------------" >>
                 add_newline >>
-                block HOLPP.INCONSISTENT 2 
+                block HOLPP.CONSISTENT 10
                 (ppform false C)
     end 
 
@@ -154,13 +174,17 @@ fun pptac_results trs =
               | h :: t => pptac_result h >> add_newline >> pptac_results t
 
 fun ppgstk (GSTK{prop:proposition, stack: tac_result list}) = 
-    ppprop prop >> add_newline >> pptac_results stack
+    case stack of [] => ppprop prop | h :: t => pptac_result h
 
 fun PPgstk printdepth _ (gstk:gstk) = let val s = ppgstk gstk
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
 
+
+(*print out the hd of tac result list, do not print out the prop*)
 val _ = PolyML.addPrettyPrinter PPgstk
+
+
 
 end

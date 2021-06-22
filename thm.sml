@@ -16,7 +16,7 @@ fun eq_forml (l1:form list) (l2:form list) =
     case (l1,l2) of 
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
-      | _ => raise ERR "incorrect length of list"
+      | _ => simple_fail"incorrect length of list"
 
 fun fmem f fl = List.exists (curry eq_form f) fl
 
@@ -58,7 +58,7 @@ fun inst_thm env th =
         in
             thm(G,A,C)
         end
-    else raise ERR "bad environment"
+    else simple_fail"bad environment"
 
 fun ril i l = 
     case l of [] => []
@@ -104,15 +104,15 @@ fun disjI2 f (thm (G,A,C)) = thm (G,A,Conn ("|",[f,C]))
 fun disjE A B C (thm (G1,A1,AorB)) (thm (G2,A2,C1)) (thm (G3,A3,C2)) = 
     let 
         val _ = eq_form(AorB, Conn("|",[A,B])) orelse 
-                raise ERR "theorem #1 unexpected"
+                simple_fail"theorem #1 unexpected"
         val _ = eq_form(C1,C) orelse 
-                raise ERR "theorem #2 unexpected"
+                simple_fail"theorem #2 unexpected"
         val _ = eq_form(C2,C) orelse 
-                raise ERR "theorem #3 unexpected"
+                simple_fail"theorem #3 unexpected"
         val _ = fmem A A2 orelse
-                raise ERR "first disjunct not in theorem #2"
+                simple_fail"first disjunct not in theorem #2"
         val _ = fmem B A3 orelse
-                raise ERR "first disjunct not in theorem #3"
+                simple_fail"first disjunct not in theorem #3"
     in
         thm (contl_U [G1,G2,G3], asml_U [ril A A2, ril B A3, A1],C)
     end
@@ -131,14 +131,14 @@ fun thml_eq_pairs (th:thm,(ll,rl,asml)) =
             (l::ll,r::rl,asml_U [asm,asml])
         end
     else 
-        raise ERR "input theorem is not an equality" 
+        simple_fail"input theorem is not an equality" 
 
 (*avoid EQ_psym/fsym using by hand*)
 
 
 fun EQ_fsym f thml = 
     case lookup_fun fsyms0 f of 
-        NONE => raise ERR ("function:" ^ f ^ " is not found")
+        NONE => simple_fail("function:" ^ f ^ " is not found")
       | SOME(s,l) => 
         let 
             val sl = List.map (fst o dest_eq o concl) thml
@@ -165,9 +165,9 @@ fun tautI f = thm(fvf f,[],Conn("|",[f,mk_neg f]))
 fun negI (thm (G,A,C)) f = 
     let 
         val _ = (C = FALSE) orelse 
-                raise ERR "conclusion is not FALSE"
+                simple_fail"conclusion is not FALSE"
         val _ = fmem f A orelse
-                raise ERR "formula to be negated not in assumption"
+                simple_fail"formula to be negated not in assumption"
     in
         thm (G,ril f A, (Conn("~",[f])))
     end
@@ -175,14 +175,14 @@ fun negI (thm (G,A,C)) f =
 fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
     let 
         val _ = eq_form(C2,Conn("~",[C1])) orelse 
-                raise ERR "not a pair of contradiction"
+                simple_fail"not a pair of contradiction"
     in
         thm (contl_U [G1,G2],asml_U [A1,A2],FALSE)
     end
 
 fun falseE fl f = 
     let val _ = fmem FALSE fl orelse 
-                raise ERR "FALSE is not in the list"
+                simple_fail"FALSE is not in the list"
     in
         thm(fvfl (f::fl),fl,f)
     end
@@ -195,7 +195,7 @@ fun dimpI (thm (G1,A1,I1)) (thm (G2,A2,I2)) =
         val (f1,f2) = dest_imp I1
         val (f3,f4) = dest_imp I2
         val _ = (f1 = f4 andalso f2 = f3) orelse
-                raise ERR "no match"
+                simple_fail"no match"
     in
         thm (contl_U[G1,G2],asml_U[A1,A2],Conn("<=>",[f1,f2]))
     end
@@ -215,11 +215,11 @@ fun allI (a,s) (thm(G,A,C)) =
         val G0 = HOLset.delete(G,(a,s)) 
                  handle _ => G
         val _ = HOLset.isSubset(fvs s,G0) orelse 
-                raise ERR "sort of the variable to be abstract has extra variable(s)"
+                simple_fail"sort of the variable to be abstract has extra variable(s)"
         val _ = not (HOLset.member(fvfl A,(a,s))) orelse
-                raise ERR "variable to be abstract occurs in assumption" 
+                simple_fail"variable to be abstract occurs in assumption" 
     (*    val _ = HOLset.isSubset(fvfl A,G0) orelse
-                raise ERR "variable to be abstract occurs in assumption" *)
+                simple_fail"variable to be abstract occurs in assumption" *)
     in thm(G0,A,mk_all a s C)
     end
 
@@ -238,7 +238,7 @@ fun allE (thm(G,A,C)) t =
     let 
         val ((_,s),b) = dest_all C
         val _ = (sort_of t = s) orelse 
-                raise ERR ("sort inconsistant"
+                simple_fail("sort inconsistant"
                            ^ (string_of_sort (sort_of t)) ^ " " ^ 
                            string_of_sort s)
     in
@@ -266,9 +266,9 @@ fun existsI (thm(G,A,C)) (a,s) t f =
     let 
         val _ = HOLset.isSubset(fvt t,G)
         val _ = (sort_of t = s) orelse 
-                raise ERR "term and variable to be abstract of different sorts"
+                simple_fail"term and variable to be abstract of different sorts"
         val _ = eq_form (C, substf ((a,s),t) f) orelse
-                raise ERR ("formula has the wrong form" ^ string_of_form C)
+                simple_fail("formula has the wrong form" ^ string_of_form C)
     in
         thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))
     end
@@ -293,12 +293,12 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
         val ((n,s),b) = dest_exists C1
         val _ = fmem (subst_bound (Var(a,s0)) b) A2
         val _ = (s = s0) orelse 
-                raise ERR "the given variable has unexpected sort"
+                simple_fail"the given variable has unexpected sort"
         val _ = (HOLset.member
                      (HOLset.union
                           (fvfl (ril (subst_bound (Var(a,s0)) b) A2),
                            fvf C2),(a,s0)) = false) orelse
-                raise ERR "the given variable occurs unexpectedly"
+                simple_fail"the given variable occurs unexpectedly"
     in
         thm(contl_U[G1,delete'(G2,(a,s0))],
             asml_U[A1,(ril (subst_bound (Var(a,s0)) b) A2)],C2)
@@ -312,18 +312,18 @@ fun sym th =
             val (l,r) = dest_eq (concl th)
         in thm(cont th,ant th,Pred("=",[r,l]))
         end
-    else raise ERR ("not an equality" ^ string_of_form (concl th))
+    else simple_fail("not an equality" ^ string_of_form (concl th))
 
 fun trans th1 th2 = 
     let 
         val _ = is_eqn (concl th1) orelse 
-                raise ERR "first theorem not an equality"
+                simple_fail"first theorem not an equality"
         val _ = is_eqn (concl th2) orelse
-                raise ERR "second thoerem not an equality"
+                simple_fail"second thoerem not an equality"
         val (t1,t2) = dest_eq ((fst o strip_all) (concl th1))
         val (t3,t4) = dest_eq ((fst o strip_all) (concl th2))
         val _ = (t2 = t3) orelse
-                raise ERR ("equalities do not match" ^ 
+                simple_fail("equalities do not match" ^ 
                            (string_of_form (concl th1)) ^ " " ^ 
                            string_of_form (concl th2))
     in 
@@ -345,7 +345,7 @@ do not require f1 in assumption, if not, add its variables into the context. *
 fun disch f1 (thm(G,A,f2)) =
     let 
         val _ = HOLset.isSubset(fvf f1,G) orelse
-                raise ERR "formula to be disch has extra variable(s)"
+                simple_fail"formula to be disch has extra variable(s)"
     in
         thm (HOLset.union(G,fvf f1),ril f1 A,Conn ("==>",[f1,f2]))
     end
@@ -371,7 +371,7 @@ fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
     let
         val (A,B) = dest_imp C1
         val _ = eq_form(C2,A) orelse 
-                raise ERR 
+                simple_fail
                       ("no match" ^ (string_of_form C1) ^ " " ^ 
                        string_of_form C2)
     in
@@ -411,17 +411,17 @@ fun ctn_ukn_fsym f = (no_ukn_fsym f = false)
 
 fun define_pred f = 
     let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse raise ERR "formula has unexpected free variables"
+        val _ = HOLset.isEmpty fvs orelse simple_fail"formula has unexpected free variables"
         val (body,bvs) = strip_all f 
         val (l,r) = dest_dimp body 
         val (P,args) = dest_pred l 
-        val _ = List.all is_var args orelse raise ERR "input arguments is not a variable list"
+        val _ = List.all is_var args orelse simple_fail"input arguments is not a variable list"
         val _ = HOLset.isSubset (fvf r,fvf l) 
-                orelse raise ERR "unexpected free variable on RHS"
-        val _ = (lookup_pred psyms0 P = NONE) orelse raise ERR ("redefining predicate: " ^ P)
-        val _ = all_distinct args orelse raise ERR "input arguments are not all distinct"
-        val _ = no_ukn_psym r orelse raise ERR "RHS contains unknown predicate"
-        val _ = no_ukn_fsym r orelse raise ERR "RHS contains unknown function"
+                orelse simple_fail"unexpected free variable on RHS"
+        val _ = (lookup_pred psyms0 P = NONE) orelse simple_fail("redefining predicate: " ^ P)
+        val _ = all_distinct args orelse simple_fail"input arguments are not all distinct"
+        val _ = no_ukn_psym r orelse simple_fail"RHS contains unknown predicate"
+        val _ = no_ukn_fsym r orelse simple_fail"RHS contains unknown function"
         (*check P is a fresh name if not then fail*)
         (*check RHS variables are subset of LHS ones*)
         (*check arguments are all distinct*)
@@ -451,15 +451,15 @@ allow this, and put Q(a) in the output thm as well.
 
 fun define_fun f = 
     let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse raise ERR "formula has unexpected free variables"
+        val _ = HOLset.isEmpty fvs orelse simple_fail"formula has unexpected free variables"
         val (body,bvs) = strip_all f 
         val (l,r) = dest_eq body 
         val (nf,sf,args) = dest_fun l 
-        val _ = List.all is_var args orelse raise ERR "input arguments is not a variable list"
+        val _ = List.all is_var args orelse simple_fail"input arguments is not a variable list"
         val _ = HOLset.isSubset (fvt r,fvt l) 
-                orelse raise ERR "unexpected free variable on RHS"
-        val _ = (lookup_fun fsyms0 nf = NONE) orelse raise ERR ("redefining predicate: " ^ nf)
-        val _ = all_distinct args orelse raise ERR "input arguments are not all distinct"
+                orelse simple_fail"unexpected free variable on RHS"
+        val _ = (lookup_fun fsyms0 nf = NONE) orelse simple_fail("redefining predicate: " ^ nf)
+        val _ = all_distinct args orelse simple_fail"input arguments are not all distinct"
         val fsyms0 = new_fun nf (sf,(List.map dest_var args))
     in thm(essps,[],f)
     end
@@ -472,7 +472,7 @@ fun read_thm thstr =
     let
         val f = readf thstr
         val _ = HOLset.equal(fvf f,essps) orelse
-                raise ERR "formula has free variables"
+                simple_fail"formula has free variables"
     in
         thm(essps,[],f)
     end
