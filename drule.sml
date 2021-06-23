@@ -792,4 +792,35 @@ fun CONTR f th =
 
 fun double_neg_th th = 
     dimp_mp_r2l (double_neg (concl th)) th
+
+fun elim_double_neg th = 
+    dimp_mp_l2r th (double_neg(dest_neg (dest_neg (concl th)))) 
+
+fun exist_all (n,s) = 
+    let val d1 = negI
+                 (existsE (n,s) (assume (Quant("EXISTS",n,s,fVar "f0")))
+                 (negE (assume (fVar "f0")) 
+                   (allE (assume (Quant("ALL",n,s,mk_neg (fVar "f0"))))
+                         (Var(n,s)))))
+                 (Quant("ALL","a",ob,mk_neg (fVar "f0"))) |>
+                 disch (Quant("EXISTS","a",ob,fVar "f0"))
+        val d2 = elim_double_neg
+                     (negI
+                          (negE
+                               (allI (n,s)
+                                     (negI 
+                                          (negE
+                                               (existsI (add_cont (assume (fVar "f0")) (HOLset.add(essps,(n,s))))
+                                                        (n,s) (Var(n,s)) (fVar "f0"))
+                                               (assume (mk_neg (Quant("EXISTS",n,s,fVar "f0")))))
+                                          (fVar "f0")))
+                               (assume (mk_neg (Quant("ALL",n,s,mk_neg (fVar "f0")))))
+)
+                          (mk_neg (Quant("EXISTS",n,s,fVar "f0"))))|>
+                     disch (mk_neg (Quant("ALL",n,s,mk_neg (fVar "f0"))))
+    in dimpI d1 d2
+    end
+
+
+(*todo: a rule for eleminating ~~ taking an ~~ formula*)
 end

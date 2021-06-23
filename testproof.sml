@@ -599,6 +599,16 @@ e
 )
 end
 
+(*todo: maybe let the inst rename if discovered different bounded names*)
+
+
+
+
+val th = thm(essps,[],mk_dimp (Quant("EXISTS","a",ob,fVar "f0")) 
+                              (mk_neg(Quant("ALL","a",ob,mk_neg (fVar "f0")))))
+
+
+
 
 (*contradiction between forall and exists, TODO: derive such a thm*)
 
@@ -635,7 +645,7 @@ e
  rw_tac[spec_all idR]
  >-- by_tac (rapf "p2(A, 1) o pa(id(A), to1(A)) o p1(A, 1)=(p2(A, 1) o pa(id(A), to1(A))) o p1(A, 1)") 
  >-- rw_tac[spec_all o_assoc] >-- arw_tac[spec_all p2_of_pa](*
- >-- rw_tac[spec_all to1_unique] TODO: if do so, then loops *)
+ >-- rw_tac[spec_all to1_unique] TODO: if do so, then loops,better approch? *)
  >-- accept_tac (specl to1_unique (List.map readt ["A * 1","to1(A) o p1(A, 1)","p2(A, 1)"]))
  >> by_tac (rapf "p1(A, 1) o pa(id(A), to1(A)) o p1(A, 1)=(p1(A, 1) o pa(id(A), to1(A))) o p1(A, 1)")
  >> rw_tac[spec_all o_assoc] >> arw_tac[spec_all p1_of_pa] >>
@@ -1991,3 +2001,13 @@ e
 (rapg "(ismono(a:X->A) & ismono(b:Y->A) & (ALL y:1->Y. EXISTS x:1->X. a o x = b o y) & (ALL x:1->X. EXISTS y:1->Y. a o x = b o y)) ==>EXISTS h1:X->Y. EXISTS h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)")
 )
     
+
+(*
+Theorem aa:
+a = a
+Proof
+cheat
+QED
+
+“a = b” rw[aa]
+*)

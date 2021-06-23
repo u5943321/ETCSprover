@@ -74,6 +74,7 @@ fun arg_conv c t =
         Fun (f,s,l) => 
         (EQ_fsym f (List.map (try_conv c) l))
       | _ => refl t
+
                
 fun sub_conv c = first_conv [arg_conv c, all_conv]
 
@@ -91,6 +92,18 @@ fun top_depth_conv c t =
              ((c thenc (top_depth_conv c)) 
                   orelsec all_conv))
              t
+
+fun changed_conv (c:term -> thm) t = 
+    if eq_thm (c t) (refl t) then raise unchanged 
+    else c t
+
+ 
+(*
+fun TOP_DEPTH_CONV conv tm =
+   (REPEATC conv THENC
+    TRY_CONV (CHANGED_CONV (SUB_CONV (TOP_DEPTH_CONV conv)) THENC
+              TRY_CONV (conv THENC TOP_DEPTH_CONV conv))) tm
+*)
 
 (*fconvs*)
 
