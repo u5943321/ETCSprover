@@ -64,6 +64,8 @@ val first_assum: thm_tactic -> tactic
 val first_x_assum: thm_tactic -> tactic
 val last_assum: thm_tactic -> tactic
 val last_x_assum: thm_tactic -> tactic
+val pick_assum: form.form -> thm_tactic -> tactic
+val pick_x_assum: form.form -> thm_tactic -> tactic
 
 val conv_canon: thm.thm -> thm.thm list
 val fconv_canon: thm.thm -> thm.thm list

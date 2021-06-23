@@ -48,7 +48,10 @@ use "goalstack.sig";
 use "goalstack.sml";
 
 open goalstack;
+(*
+use "proofmanager.sml";
+open proofmanager;
 
-
+*)
 
 

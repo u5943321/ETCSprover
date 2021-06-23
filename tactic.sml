@@ -792,6 +792,8 @@ fun find (ttac:thm_tactic) goal [] = simple_fail"find"
  
 fun first_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) asl
 
+fun pick_assum f ttac = fn (ct,asl, w) => ttac (assume f) (ct,asl, w)
+
 fun last_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) (rev asl)
 
 fun undisch_then f (ttac:thm_tactic): tactic = fn (ct,asl, w) =>
@@ -802,6 +804,7 @@ local
 in
 val first_x_assum = first_assum o f
 val last_x_assum = last_assum o f
+fun pick_x_assum f0 = (pick_assum f0) o f
 end
 
 
@@ -837,6 +840,7 @@ fun remove_asm_tac f: tactic =
  
 
 val once_rwl_tac = map_every (fn th => once_rw_tac[th])
+val once_arwl_tac = map_every (fn th => once_arw_tac[th])
 
 end
     

@@ -923,22 +923,6 @@ TODO: fill the gap from match_mp_tac
 
 
 
-(*TODO: BUG! in the commented out lines, if use:
->-- accept_tac ((conjE1 o assume) (rapf 
-"(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X & (p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))) o b = v:A->Y"
-                ))
-
-then :
-
-"variable to be abstract occurs in assumption" 
-
-do not understand why it is relevant to allI
-
-AQ: EXAMPLE OF need check validation in middle of proof!!
-
-*)
-
-
 val pb_exists = proved_th(
 e
 (repeat stp_tac >> 
@@ -1811,7 +1795,7 @@ val prop_2_half2 = proved_th(
 e
 (repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> cases_on “areiso(Y,0)”
  >-- (by_tac “areiso(X,0)” 
-      >-- (ccontra_tac >> drule ax6 >> first_x_assum (x_choose_tac "x") >> 
+      >-- (ccontra_tac >> drule ax6 >> pop_assum STRIP_ASSUME_TAC(*first_x_assum (x_choose_tac "x") *)>> 
           by_tac “EXISTS xb':1->Y. T” 
           >-- (first_x_assum (specl_then (List.map readt ["(a:X->A) o (x:1->X)","x:1->X"]) assume_tac) >> 
               by_tac “(a:X->A) o (x:1->X) = a o x” >-- rw_tac[] >>
@@ -1948,4 +1932,62 @@ val issymm_def = define_pred(rapf "ALL X. ALL Y. ALL f0:X->Y. ALL f1:X->Y. issym
 val istrans_def = define_pred(rapf "ALL A. ALL B. ALL f0:A->B. ALL f1:A->B. istrans(f0,f1) <=> (ALL X. ALL h0:X->A. ALL h1:X->A. f1 o h0 = f0 o h1 ==> EXISTS u:X->A. f0 o u = f0 o h0 & f1 o u = f1 o h1)")
 
 
- 
+val to_zero_zero' = to_zero_zero|> spec_all|> undisch
+                                |> allI (dest_var (readt "f:A->B"))|> gen_all
+                                |> disch_all |> gen_all
+
+(*TODO: example of goal order messed up
+ALL B. areiso(B?, 0) ==> ALL A. ALL (f : A? -> B?). areiso(A?, 0): thm does not work on commented out line, may add normalisation procedure that transforms the thm into 
+ALL B. ALL A. areiso(B?, 0) /\ ?f:A->B. T ==> areiso(A,0)
+*)
+
+val inc_inc_iso_as_subobj = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> cases_on “areiso(X,0)” >> cases_on “areiso(Y,0)”
+ >-- (stp_tac (*2*)>> match_mp_tac from_iso_zero_eq' >> arw_tac[])
+ >-- (suffices_tac “areiso(Y,0)”
+     >-- (stp_tac >> first_x_assum OPPOSITE_TAC) >>
+     assume_tac (to_zero_zero |> gen_all |> ((C specl) (List.map readt ["Y","X","h2:Y->X"]))|> ((C mp) (assume “areiso(X,0)”))) >> arw_tac[])
+     (*match_mp_tac (spec_all to_zero_zero') instead of assum*)
+ >-- (suffices_tac “areiso(X,0)”
+     >-- (stp_tac >> first_x_assum OPPOSITE_TAC) >>
+     assume_tac (to_zero_zero |> gen_all |> ((C specl) (List.map readt ["X","Y","h1:X->Y"]))|> ((C mp) (assume “areiso(Y,0)”))) >> arw_tac[]) >>
+by_tac “EXISTS a':A ->X. a' o a = id(X)”
+>-- (match_mp_tac mono_non_zero_post_inv >> stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[]) >>
+by_tac “EXISTS b':A ->Y. b' o b = id(Y)”
+>-- (match_mp_tac mono_non_zero_post_inv >> stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[]) >> 
+conj_tac (*2 *)
+>-- (pop_assum_list (map_every STRIP_ASSUME_TAC) >>
+    suffices_tac “(b':A->Y) o (b:Y->A) o (h1:X->Y) o (h2:Y->X) = id(Y)”
+    >-- (rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[idL,o_assoc]) >>
+    suffices_tac “(b':A->Y) o ((b:Y->A) o (h1:X->Y)) o (h2:Y->X) = id(Y)”
+    >-- rw_tac[o_assoc] >>
+    once_arw_tac[] >> once_arw_tac[] >> arw_tac[]) >> 
+pop_assum_list (map_every STRIP_ASSUME_TAC) >>
+suffices_tac “(a':A->X) o (a:X->A) o (h2:Y->X) o (h1:X->Y) = id(X)”
+>-- (rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[idL,o_assoc]) >> 
+suffices_tac “(a':A->X) o ((a:X->A) o (h2:Y->X)) o (h1:X->Y) = id(X)”
+>-- rw_tac[o_assoc] >> arw_tac[]
+)
+(rpg "(ismono(a:X->A) & ismono(b:Y->A) & b o h1 = a & a o h2 = b) ==> h1 o h2 = id(Y) & h2 o h1 = id(X)")
+)
+
+val prop_2_corollary_as_subobj = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> 
+ by_tac “EXISTS h1:X->Y. (b:Y->A) o h1 = a”
+ >-- (match_mp_tac prop_2_half2 >> arw_tac[] >> repeat stp_tac >> 
+     first_x_assum (specl_then [readt "xb:1->X"] assume_tac) >> 
+     first_x_assum (x_choose_tac "xb'") >> wexists_tac (readt "xb':1->Y") >> 
+     pop_assum (mp_tac o GSYM) >> once_arw_tac[] >> stp_tac >> once_arw_tac[] >> rw_tac[]) >>
+ by_tac “EXISTS h2:Y->X. (a:X->A) o h2 = b”
+ >-- (match_mp_tac prop_2_half2 >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> 
+     repeat stp_tac >-- first_x_assum accept_tac >-- first_x_assum accept_tac >> 
+      first_x_assum (specl_then [readt "xb:1->Y"] assume_tac) >>
+      first_x_assum (x_choose_tac "xb'") >> wexists_tac (readt "xb':1->X") >> 
+      pop_assum (mp_tac o GSYM) >> once_arw_tac[] >> stp_tac >> once_arw_tac[] >> rw_tac[]) >>
+ pop_assum_list (map_every STRIP_ASSUME_TAC) >> wexists_tac (readt "h1:X->Y") >>
+ wexists_tac (readt "h2:Y->X") >> arw_tac[] >> match_mp_tac inc_inc_iso_as_subobj >> arw_tac[])
+(rapg "(ismono(a:X->A) & ismono(b:Y->A) & (ALL y:1->Y. EXISTS x:1->X. a o x = b o y) & (ALL x:1->X. EXISTS y:1->Y. a o x = b o y)) ==>EXISTS h1:X->Y. EXISTS h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)")
+)
+    
