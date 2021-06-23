@@ -725,20 +725,10 @@ e
 )
  
 
-(*TODO: if without gen_all, will display as: current 
-Exception- ERR "current term not alloed to be instantiated" raised
-
-
-f o z = z & f o s = s o f
-   ----------------------------------------------------------------------
-   f o z = z & f o s = s o f
-
-*)
-
 val comm_with_s_id = proved_th(
 expandf 
 (stp_tac >> rw_tac[N_ind_z_s_id] >>
-match_mp_tac (gen_all (dimpl2r (spec_all ax3))) >> arw_tac[]
+match_mp_tac (dimpl2r (spec_all ax3)) >> arw_tac[]
  )
 (rapg "f o z = z & f o s = s o f ==> f = id(N)")
 )
@@ -1148,11 +1138,6 @@ e
 (*TODO: edit stp_tac using 
 fun STRIP_GOAL_THEN ttac = FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac]
 add a tactic of removing assumption
-bug!
-first_x_assum match_mp_tac after the by_tac gives 
-     "VALIDInvalid tactic: theorem has bad hypothesis ALLX'.ALLg'.ALLh.(g o g') = (g o h)==>h = g'"
-   raised
-> # # # # # 
 
 rule assume tac on first rule which the function applies
 
@@ -1166,9 +1151,8 @@ e
  match_mp_tac is_mono_applied >> repeat gen_tac >> 
  rw_tac[o_assoc]  >> stp_tac >>
  by_tac“(f:A->B) o g' = f o (h:X->A)”>--
- (first_x_assum drule >> arw_tac[]) >>
- first_x_assum (specl_then (List.map readt ["X","(g':X->A)", "(h:X->A)"]) assume_tac) >>
- pop_assum drule >> first_x_assum accept_tac
+ (first_x_assum drule >> arw_tac[]) >> 
+ first_x_assum match_mp_tac >> arw_tac[]
  )
 (rapg "ismono(f:A->B) & ismono(g:B->C) ==> ismono(g o f)")
 )
@@ -1517,19 +1501,6 @@ rw_tac[])
 (rapg "ALL f:A->B. areiso(B,0) ==> areiso(A,0)")
 )
 
-(*
-val to_zero_zero = proved_th(
-e
-(repeat stp_tac >> match_mp_tac have_to_0 >> 
- rule_assum_tac (
-let val fc = basic_fconv no_conv (rewr_fconv (spec_all areiso_def))
-in (fn th => dimp_mp_l2r th (fc (concl th)))
-end) >> first_x_assum (x_choose_tac "f1") >> wexists_tac (readt "(f1:B->0) o (f:A->B)") >>
-rw_tac[])
-(rapg "ALL f:A->B. areiso(B,0) ==> areiso(A,0)")
-)
-*)
-
 
 val to_iso_zero_iso = proved_th(
 e
@@ -1687,18 +1658,18 @@ e
  )
 (rapg "areiso(X,Y) & areiso(Y,Z) ==> areiso(X,Z)")
 )
-(*     
-TODO: match_mp_tac iso_trans gives the wrong thing
-(A : ob),
-   (X : ob),
-   (Y : ob)
-   Y areiso
-     A,
-     X areiso A
-   ----------------------------------------------------------------------
-   X areiso Y & Y areiso Y
 
- *)
+val iso_to_same = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >>
+ by_tac “areiso(A,Y)” 
+ >-- (drule (iso_symm |> dimpl2r) >> first_x_assum accept_tac) >>
+ by_tac “areiso(X,A) & areiso(A,Y)”
+ >-- (conj_tac>> arw_tac[]) >> 
+ drule iso_trans >> first_x_assum accept_tac)
+(rapg "areiso(X,A) & areiso(Y,A) ==> areiso(X,Y)")
+)
+
 
 val iso_to_same = proved_th(
 e
@@ -1795,12 +1766,6 @@ e
 (rapg "areiso(A,0) ==> ALL X. EXISTS x0:A->X. ALL x1:A->X. x1 = x0")
 )
 
-
-(*TODO: the first_x_assum accept_tac should be solved by arw[], but currently not
-
-*)
-
-
 val prop_2_half2 = proved_th(
 e
 (repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> cases_on “areiso(Y,0)”
@@ -1816,7 +1781,7 @@ e
       pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> rw_tac[areiso_def,isiso_def] >> 
       repeat stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >>
       wexists_tac (readt "(g':0->Y) o (f:X->0)") >>
-      first_x_assum (specl_then (List.map readt ["A","(b:Y->A) o (g':0->Y) o (f:X->0)","a:X->A"]) assume_tac) >> first_x_assum accept_tac)  >>
+      first_x_assum (specl_then (List.map readt ["A","(b:Y->A) o (g':0->Y) o (f:X->0)","a:X->A"]) assume_tac) >> arw_tac[])  >>
  by_tac “EXISTS g:A->Y. g o b = id(Y)”
  >-- (match_mp_tac mono_non_zero_post_inv >> conj_tac >> first_x_assum accept_tac) >>
  pop_assum STRIP_ASSUME_TAC >> wexists_tac (readt "(g:A->Y) o (a:X->A)") >> 
@@ -1839,12 +1804,6 @@ e
 AQ3: cannot solve by arw tac because negation is normalised to be false, but the goal is not. Should I change conv_canon or also normalise the goal when rw? 
 
 I think all first_x_assum accept_tac can just be arw in prop_half2
-
-*)
-
-
-(*TODO:|-
-   A areiso 0 ==> ~EXISTS (x : 1 -> A). T(): thm work for goal F
 
 *)
 

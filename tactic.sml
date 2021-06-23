@@ -127,6 +127,8 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
     end
 
 
+fun match_mp_canon th = 
+    th |> undisch_all |> conj_all_assum 
 (*
 
 A ==> !x. C x

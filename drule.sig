@@ -84,6 +84,7 @@ val F2f: form -> thm
 val CONTR: form -> thm -> thm
 
 val double_neg: form -> thm
+val undisch_all: thm -> thm
 (*
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list

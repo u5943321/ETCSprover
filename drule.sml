@@ -29,6 +29,11 @@ fun cj_imp1 pq = disch pq (conjE1 (assume pq))
 
 fun cj_imp2 pq = disch pq (conjE2 (assume pq))
 
+fun undisch_all th = 
+    case (concl th) of 
+        (Conn("==>",[f1,f2])) => undisch_all (undisch th) 
+      | _ => th
+
 (*given |- A1 <=> A2 , |- B1 <=> B2, return |- A1 /\ B1 <=> A2 /\ B2*)
 
 (*conj_swap conj_comm*)
@@ -605,18 +610,7 @@ fun eqF_intro th =
 
 
 (*spec_all*)
-(*
-fun specl th l = 
-    if is_all (concl th) then 
-        case l of [] => th
-                | h :: t => 
-                  let val f1 = allE th h  (*handle ERR _ => th*)
-                  in 
-                      specl f1 t
-                  end
-    else th 
 
-*)
 
 fun specl th l = 
     case l of [] => th 
@@ -626,9 +620,6 @@ fun specl th l =
                                 specl f1 t
                             end
                         else simple_fail"thm is not universally quantified"
-
-
-(*issue caused by pvariant also rename the sorts*)
 
 
 fun spec_all th = 
@@ -778,6 +769,26 @@ fun conj_assum f1 f2 (th as thm(G,A,C)) =
     in mp (mp th1 (conjE1 (assume (mk_conj f1 f2))))
           (conjE2 (assume (mk_conj f1 f2)))
     end
+
+fun conj_all_assum (th as thm(G,A,C)) = 
+    case A of 
+        [] => th
+       |[h] => th
+       |h1 :: h2 :: t => conj_all_assum (conj_assum h1 h2 (thm(G,A,C)))
+
+(*~f |-> f ==> F*)
+
+fun notf_f2F f = 
+    let val d1 = negE (assume f) (assume (mk_neg f))|> disch f |> disch (mk_neg f)
+        val d2 = (assume (mk_imp f FALSE)) |> undisch |> (C negI) f|> disch (mk_imp f FALSE)
+    in
+        dimpI d1 d2
+    end
+
+fun strip_neg th = 
+    case (concl th) of 
+        (Conn("~",[f])) => dimp_mp_l2r th (notf_f2F f)
+      | _ => th
 
 
 (*F2f f = |-F ⇒ f *)
