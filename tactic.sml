@@ -126,9 +126,9 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
         ([(ct,asl,ant)], fn thl => mp (disch ant gth) (hd thl))
     end
 
-
+(*
 fun match_mp_canon th = 
-    th |> undisch_all |> conj_all_assum 
+    th |> undisch_all |> conj_all_assum *)
 (*
 
 A ==> !x. C x

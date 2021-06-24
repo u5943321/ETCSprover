@@ -42,6 +42,7 @@ fun current_tac_result (GSTK{prop,stack:tac_result list}) =
         [] => raise ERR "no remaining goal"
       | h :: t => h
 
+fun current_goal ({goals:goal list,validation:validation}:tac_result) = hd goals
 (*
 
 fun current_goal ({goals: goal list,validation : thm list -> thm}:tac_result) = 
@@ -97,6 +98,8 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
          val gs = return(GSTK{prop=prop,
                               stack={goals=glist, validation=vf} :: stack})
      in expand_msg dpth gs ; gs end
+
+
 
 fun e tac = expandf (valid tac) 
 
@@ -157,10 +160,10 @@ fun PPprop printdepth _ th = let val s = ppprop th
 val _ = PolyML.addPrettyPrinter PPprop
 
 fun ppgoals goals = 
-    case (rev goals) of [] => add_string ""
+    case goals of [] => add_string ""
                 | h :: t => (ppgoal h) >> add_newline >> (ppgoals t)
 
-fun pptac_result ({goals:goal list,validation:thm list -> thm}) = ppgoals goals
+fun pptac_result ({goals:goal list,validation:thm list -> thm}) = ppgoals (rev goals)
     
 
 fun PPtac_result printdepth _ rst = let val s =  pptac_result rst
@@ -168,13 +171,15 @@ fun PPtac_result printdepth _ rst = let val s =  pptac_result rst
                          in pretty
                          end
 
-
-fun pptac_results trs =
-    case (rev trs) of [] => add_string ""
-              | h :: t => pptac_result h >> add_newline >> pptac_results t
+(*val _ = PolyML.addPrettyPrinter PPtac_result*)
 
 fun ppgstk (GSTK{prop:proposition, stack: tac_result list}) = 
     case stack of [] => ppprop prop | h :: t => pptac_result h
+
+(*
+fun ppgstk (GSTK{prop:proposition, stack = ({goals,...}::_)}) = ppgoals goals
+  | ppgstk (GSTK{prop:proposition, stack = []}) = ppprop prop 
+*)
 
 fun PPgstk printdepth _ (gstk:gstk) = let val s = ppgstk gstk
                              val SOME (pretty,_,_) = lower s ()

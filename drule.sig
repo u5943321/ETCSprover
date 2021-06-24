@@ -85,6 +85,10 @@ val CONTR: form -> thm -> thm
 
 val double_neg: form -> thm
 val undisch_all: thm -> thm
+val elim_double_neg:thm -> thm
+val strip_neg: thm -> thm
+val exists_all: (string * sort) -> thm
+val conj_all_assum: thm -> thm
 (*
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list

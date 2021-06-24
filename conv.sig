@@ -56,4 +56,5 @@ val try_fconv: fconv -> fconv
 val simp_trace: bool ref
 val conv_rule: fconv -> thm -> thm
 val GSYM: thm -> thm
+val right_imp_forall_fconv: fconv
 end

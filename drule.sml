@@ -807,7 +807,7 @@ fun double_neg_th th =
 fun elim_double_neg th = 
     dimp_mp_l2r th (double_neg(dest_neg (dest_neg (concl th)))) 
 
-fun exist_all (n,s) = 
+fun exists_all (n,s) = 
     let val d1 = negI
                  (existsE (n,s) (assume (Quant("EXISTS",n,s,fVar "f0")))
                  (negE (assume (fVar "f0")) 

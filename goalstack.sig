@@ -14,4 +14,6 @@ sig
     val expandf: tactic.tactic -> gstk -> gstk
     val ppgstk: gstk -> ('a, unit) t
     val e: tactic.tactic -> gstk -> gstk
+    val current_goal: tac_result -> abbrev.goal
+    val current_tac_result: gstk -> tac_result
 end

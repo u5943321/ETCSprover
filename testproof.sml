@@ -1960,6 +1960,9 @@ e
 (rapg "(ismono(a:X->A) & ismono(b:Y->A) & (ALL y:1->Y. EXISTS x:1->X. a o x = b o y) & (ALL x:1->X. EXISTS y:1->Y. a o x = b o y)) ==>EXISTS h1:X->Y. EXISTS h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)")
 )
     
+e
+(repeat stp_tac>-- by_tac “P(b)”)
+(rapg "P(a) &Q(b) & R(c)")
 
 (*
 Theorem aa:
