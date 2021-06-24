@@ -299,6 +299,28 @@ val ev_eq_eq =
                          (List.map readt ["A","B","X","f:A * X -> B"]))))
 
 
+(*
+Theorem ev_eq_eq:
+∀A B X f g. f∶ X →(exp A B) ∧ g∶X → (exp A B) ∧
+            (ev A B) o ⟨p1 A X,f o (p2 A X)⟩ =
+            (ev A B) o ⟨p1 A X,g o (p2 A X)⟩ ⇒
+            f = g
+Proof
+rw[] >>
+‘f = tp ((ev A B) o ⟨p1 A X,f o (p2 A X)⟩)’
+ by metis_tac[is_tp,ev_of_pair_hom] >>
+‘g = tp ((ev A B) o ⟨p1 A X,g o (p2 A X)⟩)’
+ by metis_tac[is_tp,ev_of_pair_hom] >>
+metis_tac[]
+QED
+*)
+val ev_eq_eq = proved_th(
+e
+(stp_tac >> drule is_tp >> last_x_assum (assume_tac o GSYM) >> drule is_tp >> once_arw_tac[] >>
+ first_x_assum (K all_tac) >> last_x_assum (K all_tac) >> once_arw_tac[] >> rw_tac[])
+(rapg "ev(A,B) o <p1(A,X),f o p2(A,X)> = ev(A,B) o <p1(A,X),g o p2(A,X)> ==> f = g")
+)
+
 
 val to_p_components = 
     gen_all
@@ -1683,28 +1705,9 @@ e
 )
 
 (*match_mp_tac (gen_all iso_to_same) and without genall gives different things
-another place to test goals are ordered
-
-TODO:
- ~X areiso
-     0,
-     ~Y areiso
-     0,
-     ismono(b),
-     ismono(a),
-     a o h2 =
-     b,
-     b o h1 =
-     a,
-     a' o a =
-     id(X),
-     b' o b = id(Y)
-   ----------------------------------------------------------------------
-   B' o b o h1 = b' o a
-
-pp line length
 
 *)
+
 
 val inc_inc_iso0 = proved_th(
 e
@@ -1796,7 +1799,7 @@ e
 )
 
 
-(*AQ: order of goal list is annoying,sometimes the goal which is working on is in the middle also do not understand why strip asm does not work here*)
+(*AQ:do not understand why strip asm does not work here*)
 
 
 (*
@@ -1905,7 +1908,7 @@ val to_zero_zero' = to_zero_zero|> spec_all|> undisch
                                 |> allI (dest_var (readt "f:A->B"))|> gen_all
                                 |> disch_all |> gen_all
 
-(*TODO: example of goal order messed up
+(*TODO: 
 ALL B. areiso(B?, 0) ==> ALL A. ALL (f : A? -> B?). areiso(A?, 0): thm does not work on commented out line, may add normalisation procedure that transforms the thm into 
 ALL B. ALL A. areiso(B?, 0) /\ ?f:A->B. T ==> areiso(A,0)
 *)
@@ -1960,9 +1963,6 @@ e
 (rapg "(ismono(a:X->A) & ismono(b:Y->A) & (ALL y:1->Y. EXISTS x:1->X. a o x = b o y) & (ALL x:1->X. EXISTS y:1->Y. a o x = b o y)) ==>EXISTS h1:X->Y. EXISTS h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)")
 )
     
-e
-(repeat stp_tac>-- by_tac “P(b)”)
-(rapg "P(a) &Q(b) & R(c)")
 
 (*
 Theorem aa:
@@ -1972,4 +1972,129 @@ cheat
 QED
 
 “a = b” rw[aa]
+*)
+
+
+(*Thm1*)
+
+(*
+Theorem Thm1_case_1_comm_condition_left:
+∀B f g. f∶ N → B ∧ g∶ one → B ⇒
+          (f o z = g  ⇔ ⟨id N,f⟩ o z = ⟨z,g⟩)
+Proof
+rw[] >>
+‘⟨id N,f⟩∶ N → (N× B) ∧ ⟨z,g⟩∶ one → (N×B) ∧ ⟨id N,f⟩ o z∶ one → (N×B)’
+ by metis_tac[id1,pa_hom,compose_hom,ax3] >>
+‘z∶ one → N’ by metis_tac[ax3] >>
+‘f o z ∶ one → B’ by metis_tac[compose_hom] >>
+rw[EQ_IMP_THM] (* 2 *)
+>- (irule to_p_eq_applied >> qexistsl_tac [‘N’,‘B’,‘one’] >> rw[] (* 2 *)
+   >- (‘p1 N B ∘ ⟨z,f ∘ z⟩ = z’ by metis_tac[p1_of_pa] >>
+      ‘p1 N B ∘ ⟨id N,f⟩ ∘ z = (p1 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p1_hom] >>
+      metis_tac[idL,id1,p1_of_pa])
+   >- (‘p2 N B ∘ ⟨z,f ∘ z⟩ = f o z’ by metis_tac[p2_of_pa] >>
+      ‘p2 N B ∘ ⟨id N,f⟩ ∘ z = (p2 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p2_hom] >>
+      metis_tac[idL,id1,p2_of_pa]))
+>- (‘p2 N B o ⟨id N,f⟩ ∘ z = p2 N B o ⟨z,g⟩’ by metis_tac[] >>
+   ‘p2 N B ∘ ⟨id N,f⟩ ∘ z = (p2 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p2_hom] >>
+   ‘(p2 N B ∘ ⟨id N,f⟩) = f’ by metis_tac[id1,p2_of_pa] >>
+    metis_tac[p2_of_pa])
+QED
+*)
+
+(*TODO:  Exception- Fail "unexpected term constructor" raised more helpful error message*)
+
+
+val Thm1_case_1_comm_condition_left = proved_th(
+e
+(dimp_tac >> stp_tac
+ >-- (match_mp_tac to_p_eq' >> arw_tac[GSYM o_assoc,p1_of_pa,p2_of_pa,idL]) >>
+ suffices_tac “p2(N,B) o pa(id(N), f) o z = p2(N,B) o pa(z, g)”
+ >-- rw_tac[GSYM o_assoc,p2_of_pa] >> 
+ arw_tac[])
+(rapg "(f:N->B) o z = g <=> <id(N),f> o z = <z,g>")
+)
+
+val Thm1_case1_comm_condition_right = proved_th(
+e
+(dimp_tac >> stp_tac
+ >-- (match_mp_tac to_p_eq' >> arw_tac[GSYM o_assoc,p1_of_pa,p2_of_pa] >> rw_tac[o_assoc,p1_of_pa,idR,idL])>>
+ suffices_tac “p2(N,B) o pa((s o p1(N, B)), h) o pa(id(N), f) = p2(N,B) o pa(id(N), f) o s”  
+ >-- rw_tac[GSYM o_assoc,p2_of_pa] >> arw_tac[])
+(rapg "h o <id(N),f> = f o s <=> <s o p1(N,B),h> o <id(N),f> = <id(N),f> o s")
+)
+
+val Thm1_case1_comm_condition = proved_th(
+e
+(dimp_tac >> stp_tac 
+ >-- (pop_assum STRIP_ASSUME_TAC >> drule (Thm1_case_1_comm_condition_left|> dimpl2r) >>
+     drule (Thm1_case1_comm_condition_right |> dimpl2r |> GSYM) >> arw_tac[]) >>
+ pop_assum STRIP_ASSUME_TAC >> drule (Thm1_case_1_comm_condition_left|> dimpr2l) >>
+ drule (Thm1_case1_comm_condition_right |> dimpr2l) >> arw_tac[])
+(rapg "(f0 o z = g & f0 o s = h o <id(N),f0>) <=> (<id(N),f0> o z = <z,g> & <s o p1(N,B),h> o <id(N),f0> = <id(N),f0> o s)")
+)
+
+val ax3_equality = ax3 |> spec_all |> dimpr2l |> allI ("x",sort_of (readt "x:N->X"))|> (C allE) (readt "Nind(x0:1->X,t)")|> (C mp) (refl (readt "Nind(x0:1->X,t:X->X)"))|> gen_all
+
+(*!!!!!!!once arw has the canon, but still need the strip asume, do not understand why*)
+
+(*TODO: unabbrev, ntac*)
+val Thm1_case_1 = proved_th(
+e
+(abbrev_tac “Nind(pa(z,g:1->B),pa(s o p1(N,B), h)) = f'” >> 
+ assume_tac ax3_equality >> first_x_assum (specl_then
+ (List.map readt ["N * B","pa(s o p1(N,B),h:N*B ->B)","pa(z,g:1->B)"]) assume_tac) >>
+ by_tac “p1(N,B) o f' = id(N)”
+ >-- (match_mp_tac comm_with_s_id >> last_x_assum (assume_tac o GSYM) >> once_arw_tac[] >> rw_tac[o_assoc] >> 
+      pop_assum_list (map_every STRIP_ASSUME_TAC) >> conj_tac (* 2 *)
+      >-- arw_tac[p1_of_pa] >>
+      arw_tac[GSYM o_assoc,p1_of_pa] >> arw_tac[o_assoc] >> rw_tac[GSYM o_assoc,p1_of_pa]) >>
+ abbrev_tac “p2(N,B) o (f':N->N*B) = f” >>
+ by_tac “f':N->N*B = pa(id(N),f)”
+ >-- (match_mp_tac to_p_eq' >> pop_assum (assume_tac o GSYM) >> arw_tac[p2_of_pa,p1_of_pa]) >> 
+ wexists_tac (readt "f:N->B") >> stp_tac (*2*)
+ >-- (pop_assum_list (map_every STRIP_ASSUME_TAC) >> 
+     pick_x_assum “p2(N,B) o f' = f:N->B” (assume_tac o GSYM) >> 
+     pick_x_assum “Nind(pa(z, g:1->B), pa(s o p1(N, B), h:N*B ->B)) = f'” (assume_tac o GSYM) >>
+     once_arw_tac[] >> once_arw_tac[] >> rw_tac[o_assoc] >> once_arw_tac[] >> rw_tac[p2_of_pa] >>
+     rw_tac[GSYM o_assoc,p2_of_pa] >>
+     pop_assum (assume_tac o GSYM) >> once_arw_tac[] >> once_arw_tac[] >> rw_tac[p2_of_pa]) >>
+ pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> once_arw_tac[] >>
+ repeat stp_tac >> pop_assum mp_tac >> rw_tac[Thm1_case1_comm_condition] >> stp_tac >>
+ pop_assum STRIP_ASSUME_TAC >> pop_assum (assume_tac o GSYM) >>
+ by_tac “pa(id(N),f0:N->B) = f'” >> last_x_assum (assume_tac o GSYM) >> once_arw_tac[] >>
+ rw_tac[GSYM ax3] >> arw_tac[] >> 
+ match_mp_tac (gen_all to_p_eq_one_side) >> once_arw_tac[] >> first_x_assum accept_tac
+ (*the accept is necessary, cannot be solved by arw, not unexpected*)
+ (*drule (ax3 |> spec_all |> dimpl2r|> undisch |> split_assum “(x:N->X) o z = x0 & x o s = t o x”|> disch_all|>*)
+ (*wexists_tac (readt "f:N->B") >> stp_tac (*2-exists and uniqueness*)
+ >-- (rw_tac[Thm1_case1_comm_condition] >> )*))
+(rapg "EXISTS f:N->B. (f o z = g & f o s = h o <id(N),f>) & (ALL f0. f0 o z = g & f0 o s = h o <id(N),f0> ==> f0 = f)")
+)
+
+(*TOdO: think about the drule commented out, both drule and match mp does not work there*)
+
+val Thm1_comm_eq_left = proved_th(
+e
+(by_tac “pa(p1(A,1),tp(f:A * N -> B) o z o p2(A,1)) = pa(p1(A,N),tp(f) o p2(A,N)) o pa(p1(A,1),z o p2(A,1))”
+>-- rw_tac[parallel_p_one_side] >> dimp_tac (* 2 *) >> stp_tac
+>-- (by_tac “f o pa(p1(A, 1), z o p2(A, 1)) = ev(A,B) o pa(p1(A,1),tp(f:A * N -> B) o z o p2(A,1))”      >-- (arw_tac[] >> rw_tac[GSYM o_assoc,ev_of_tp]) >>
+     once_arw_tac[] >> rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[ev_of_tp]) >>
+match_mp_tac ev_eq_eq >> rw_tac[o_assoc] >> once_arw_tac[] >> rw_tac[GSYM o_assoc,ev_of_tp] >>
+arw_tac[]
+)
+(rapg "tp(f) o z = tp (g o p1(A,1)) <=> f o <p1(A,1),z o (p2(A,1))> = g o p1(A,1)")
+)
+
+(*
+∀A B f h. f∶ A× N → B ∧ h∶ (A×N)×B → B ⇒
+          (h o ⟨id (A×N), f⟩ = f o ⟨p1 A N, s o (p2 A N)⟩ ⇔
+           tp (h o
+                ⟨⟨p1 A (N×(exp A B))
+                  ,(p1 N (exp A B)) o (p2 A (N×(exp A B)))⟩,
+                (ev A B) o ⟨p1 A (N×(exp A B)),
+                            (p2 N (exp A B) o (p2 A (N×(exp A B))))⟩⟩
+
+           ) o  ⟨id N,tp f⟩
+        = (tp f o s))
 *)

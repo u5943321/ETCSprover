@@ -326,6 +326,12 @@ fun right_imp_forall_fconv f  =
         val dth' = disch ant gmpasm
     in dimpI (disch f gth)  (disch (concl gth) dth')
     end
+(*
+fun all_inwards_fconv f = 
+    let 
+        val (at,conc) = dest_imp f
+        val 
+*)
 
 fun sym_fconv f = 
     case f of 

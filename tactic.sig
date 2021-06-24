@@ -74,5 +74,8 @@ val cases_on: form.form -> tactic
 val specl_then: term.term list -> thm_tactic -> thm_tactic
 
 val OPPOSITE_TAC: thm_tactic
+
+val abbrev_tac: form.form -> tactic 
+val remove_asm_tac: form.form -> tactic
 end
 

@@ -102,6 +102,7 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
 
 
 fun e tac = expandf (valid tac) 
+fun e0 tac = expandf (valid tac) 
 
 (*
 fun e tac = expandf (VALID tac) 

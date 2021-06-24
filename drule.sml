@@ -833,5 +833,18 @@ fun exists_all (n,s) =
     end
 
 
+fun split_assum f th = 
+    if fmem f (ant th) then
+        case f of (Conn("&",[f1,f2])) => 
+                  th |> disch f |> (C mp) (conjI (assume f1) (assume f2))
+                | _ =>  simple_fail "not a conjunction"
+    else simple_fail "formula not in assumption list"
+(*
+fun split_fst_assum th = 
+    case (ant th) of 
+        [] => simple_fail "no assumption"
+      | h :: t => split_assum h th 
+*)
+
 (*todo: a rule for eleminating ~~ taking an ~~ formula*)
 end
