@@ -2234,3 +2234,56 @@ conj_tac >-- rw_tac[suff_1] >-- rw_tac[suff_2])
 (new_goal (goal_of_form mgf))
 )
 
+val Thm1_comm_eq_condition = 
+dimpI
+(
+(conjI
+(Thm1_comm_eq_left|> GSYM |> dimpl2r |> undisch) 
+(Thm1_comm_eq_right|> dimpl2r|> undisch)
+)|> conj_all_assum |> disch_all
+)
+(
+(conjI
+(Thm1_comm_eq_left|> GSYM |> dimpr2l |> undisch) 
+(Thm1_comm_eq_right|> dimpr2l|> undisch)
+)|> conj_all_assum |> disch_all
+)
+
+val g' = readt "tp((g:A->B) o p1(A,1))"
+val h' = tp (mk_o (readt "h:(A*N)*B ->B") l)
+
+val Thm1_case_1_speced = Thm1_case_1|> gen_all |> (C specl) [readt "exp(A,B)",g',h']
+(*arw in commented place does not work because of the conj*)
+
+
+val Thm1_existence = proved_th(
+e
+(x_choose_tac "fb" Thm1_case_1_speced >> 
+pop_assum mp_tac >> abbrev_tac l_def >> arw_tac[] >> stp_tac >> 
+wexists_tac (readt "ev(A,B) o pa(p1(A,N),(fb:N-> exp(A,B)) o p2(A,N))") >>
+rw_tac[Thm1_comm_eq_condition] >> 
+by_tac “tp(ev(A,B) o pa(p1(A,N),(fb:N-> exp(A,B)) o p2(A,N))) = fb”
+>-- (fconv_tac sym_fconv >> match_mp_tac is_tp >> rw_tac[])>>
+arw_tac[] >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[])
+(rapg "EXISTS f:A * N -> B. f o <p1(A,1),z o p2(A,1)> = g o p1(A,1) & h o <id(A*N),f> = f o <p1(A,N),s o p2(A,N)>")
+)
+
+(*TODO: and_assoc, a rule*)
+
+val Thm1 = proved_th(
+e
+(x_choose_tac "fb" Thm1_case_1_speced >> 
+pop_assum mp_tac >> abbrev_tac l_def >> arw_tac[] >> stp_tac >> 
+wexists_tac (readt "ev(A,B) o pa(p1(A,N),(fb:N-> exp(A,B)) o p2(A,N))") >>
+rw_tac[Thm1_comm_eq_condition] >> 
+by_tac “tp(ev(A,B) o pa(p1(A,N),(fb:N-> exp(A,B)) o p2(A,N))) = fb”
+>-- (fconv_tac sym_fconv >> match_mp_tac is_tp >> rw_tac[]) >> repeat stp_tac (* 3 *)
+>-- (arw_tac[] >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[])
+>-- (arw_tac[] >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[]) >> 
+(*uniqueness*)
+match_mp_tac (dimpl2r tp_eq) >> arw_tac[] >> pop_assum_list (map_every STRIP_ASSUME_TAC) >>
+first_x_assum match_mp_tac >> arw_tac[] >> rev_pop_assum mp_tac >> rev_pop_assum mp_tac >>
+arw_tac[] >> repeat stp_tac >> arw_tac[])
+(rapg "EXISTS f:A * N -> B. (f o <p1(A,1),z o p2(A,1)> = g o p1(A,1) & h o <id(A*N),f> = f o <p1(A,N),s o p2(A,N)>) & (ALL f0. f0 o <p1(A,1),z o p2(A,1)> = g o p1(A,1) & h o <id(A*N),f0> = f0 o <p1(A,N),s o p2(A,N)> ==> f0 = f)")
+)
+
