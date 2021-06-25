@@ -2468,7 +2468,9 @@ e
 (repeat stp_tac >> match_mp_tac (gen_all Thm2_3_alt) >> try_on_assum issubset_def >>
  pop_assum STRIP_ASSUME_TAC >> 
  by_tac “ismono(a:A->N) & (ALL n : 1 -> N. ismem(n, a, N) ==> ismem(s o n, a, N))”
- >-- arw_tac[] >> drule ind_factorization >> first_x_assum (x_choose_tac "t"))
-(rapg "issubset(a:A->N,N) & (ALL n:1->N. ismem(n,a,N) ==>ismem(s o n,a,N)) & ismem(z,a,A) ==>areiso(A,N)")
+ >-- arw_tac[] >> drule ind_factorization >> first_x_assum (x_choose_tac "t") >>
+ wexists_tac (readt "a:A->N") >> wexists_tac (readt "t:A->A") >> pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> rw_tac[ismem_def] >> repeat stp_tac >>
+pop_assum_list (map_every STRIP_ASSUME_TAC) >> wexists_tac (readt "x0:1->A") >> arw_tac[])
+(rapg "issubset(a:A->N,N) & (ALL n:1->N. ismem(n,a,N) ==>ismem(s o n,a,N)) & ismem(z,a,N) ==>areiso(A,N)")
 )
 ind_factorization
