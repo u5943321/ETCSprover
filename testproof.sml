@@ -2086,15 +2086,151 @@ arw_tac[]
 (rapg "tp(f) o z = tp (g o p1(A,1)) <=> f o <p1(A,1),z o (p2(A,1))> = g o p1(A,1)")
 )
 
-(*
-∀A B f h. f∶ A× N → B ∧ h∶ (A×N)×B → B ⇒
-          (h o ⟨id (A×N), f⟩ = f o ⟨p1 A N, s o (p2 A N)⟩ ⇔
-           tp (h o
-                ⟨⟨p1 A (N×(exp A B))
-                  ,(p1 N (exp A B)) o (p2 A (N×(exp A B)))⟩,
-                (ev A B) o ⟨p1 A (N×(exp A B)),
-                            (p2 N (exp A B) o (p2 A (N×(exp A B))))⟩⟩
+val dom = fst o dest_ar o sort_of
+val cod = snd o dest_ar o sort_of
 
-           ) o  ⟨id N,tp f⟩
-        = (tp f o s))
-*)
+fun mk_o g f = Fun("o",mk_ar_sort (dom f) (cod g),[g,f])
+fun mk_eq t1 t2 = if sort_of t1 = sort_of t2 then Pred("=",[t1,t2])
+                  else raise ERR "inconsistent sorts"
+
+val pm1 = readt "pa(p1(A,N* exp(A,B)),p1(N,exp(A,B)) o p2(A,N * exp(A,B)))"
+val pm2 = readt "pa(p1(A,N * exp(A,B)),p2(N,exp(A,B)) o p2(A,N * exp(A,B)))"
+val l = pa pm1 (mk_o (readt "ev(A,B)") pm2)
+val l_def = mk_eq l (readt "l:A * (N * exp(A,B)) -> (A * N) * B")
+
+
+
+val mgf_RL = mk_o (tp (mk_o (readt "h: (A * N) * B -> B") l)) (readt "pa(id(N),tp(f:A*N ->B))")
+val mgf_R = mk_eq mgf_RL (readt "tp(f:A*N ->B) o s")
+
+val mgf = mk_dimp
+         (rapf "h o <id(A*N),(f:A*N->B)> = (f:A * N ->B) o <p1(A,N),s o p2(A,N)>") mgf_R
+   
+(*TODO: rapf bug: *)
+
+val by_def_l1_f = mk_eq
+(mk_o (readt "p1(A,N)") (mk_o (readt "p1(A*N,B)")
+ (mk_o l (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))))
+(readt "p1(A,N) o p1(A*N,B) o pa(id(A*N),f:A*N ->B)")
+
+val by_def_l1_f0 = mk_eq
+(mk_o (mk_o (readt "p1(A,N)") (mk_o (readt "p1(A*N,B)") l))
+  (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))
+(readt "p1(A,N) o p1(A*N,B) o pa(id(A*N),f:A*N ->B)")
+
+val by_def_l1_f_eq_f0 = mk_eq
+(mk_o (readt "p1(A,N)") (mk_o (readt "p1(A*N,B)")
+ (mk_o l (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))))
+(mk_o (mk_o (readt "p1(A,N)") (mk_o (readt "p1(A*N,B)") l))
+  (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))
+
+
+
+fun goal_of_form f = (fvf f,[]:form list,f)
+
+(*TODO: use conv rule on the goal to transform the goal, think this is just fconv_tac*)
+
+val by_def_l10 = proved_th(
+e
+(rw_tac[p1_of_pa,idR])
+(new_goal (goal_of_form by_def_l1_f0))
+)
+
+val by_def_l1eq0 = proved_th(
+e
+(rw_tac[o_assoc])
+(new_goal (goal_of_form by_def_l1_f_eq_f0))
+)
+
+val by_def_l1 = conv_rule (once_depth_fconv (rewr_conv (GSYM by_def_l1eq0)) no_fconv) by_def_l10
+
+
+(*p2 ver*)
+val by_def_l2_f = mk_eq
+(mk_o (readt "p2(A,N)") (mk_o (readt "p1(A*N,B)")
+ (mk_o l (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))))
+(readt "p2(A,N) o p1(A*N,B) o pa(id(A*N),f:A*N ->B)")
+
+val by_def_l2_f0 = mk_eq
+(mk_o (mk_o (readt "p2(A,N)") (mk_o (readt "p1(A*N,B)") l))
+  (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))
+(readt "p2(A,N) o p1(A*N,B) o pa(id(A*N),f:A*N ->B)")
+
+val by_def_l2_f_eq_f0 = mk_eq
+(mk_o (readt "p2(A,N)") (mk_o (readt "p1(A*N,B)")
+ (mk_o l (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))))
+(mk_o (mk_o (readt "p2(A,N)") (mk_o (readt "p1(A*N,B)") l))
+  (readt "pa(p1(A,N),pa(id(N),tp(f:A*N ->B)) o p2(A,N))"))
+
+
+val by_def_l20 = proved_th(
+e
+(rw_tac[p1_of_pa,idR,p2_of_pa] >> rw_tac[o_assoc,p2_of_pa] >> rw_tac[GSYM o_assoc,p1_of_pa,idL])
+(new_goal (goal_of_form by_def_l2_f0))
+)
+
+val by_def_l2eq0 = proved_th(
+e
+(rw_tac[o_assoc])
+(new_goal (goal_of_form by_def_l2_f_eq_f0))
+)
+
+val by_def_l2 = conv_rule (once_depth_fconv (rewr_conv (GSYM by_def_l2eq0)) no_fconv) by_def_l20
+
+
+val by_def_l3_f = mk_eq
+(mk_o (readt "p2(A*N,B)") (mk_o l (readt "pa(p1(A,N),pa(id(N),tp(f:A*N->B)) o p2(A,N))")))
+(readt "p2(A*N,B) o pa(id(A*N),f:A*N->B)")
+
+
+val by_def_l3_lemma = proved_th(
+e
+(match_mp_tac to_p_eq' >> stp_tac
+>-- (rw_tac[GSYM o_assoc,p2_of_pa] >> rw_tac[o_assoc,p2_of_pa] >> rw_tac[GSYM o_assoc,p2_of_pa])>>
+rw_tac[GSYM o_assoc,p1_of_pa])
+(rapg "<p1(A,N*exp(A,B)),p2(N,exp(A,B)) o p2(A,N*exp(A,B))> o <p1(A,N),<id(N),tp(f:A*N->B)> o p2(A,N)> = <p1(A,N),tp(f) o p2(A,N)>")
+)
+
+val by_def_l3 = proved_th(
+e
+(rw_tac[GSYM o_assoc,p2_of_pa] >> rw_tac[o_assoc,by_def_l3_lemma,ev_of_tp])
+(new_goal (goal_of_form by_def_l3_f))
+)
+
+val suff_1_f = mk_eq
+(mk_o (tp (mk_o (readt "h:(A * N) * B -> B") l)) (readt "pa(id(N),tp(f:A*N-> B))"))
+(tp (readt "(h:(A * N) * B -> B) o pa(id(A * N),f:A*N -> B)"))
+
+val suff_1 = proved_th(
+e
+(match_mp_tac is_tp >> abbrev_tac l_def >> arw_tac[] >> rw_tac[o_assoc,parallel_p_one_side] >>
+rw_tac[GSYM o_assoc,ev_of_tp] >> rw_tac[o_assoc] >> 
+suffices_tac “l o pa(p1(A, N), pa(id(N), tp(f)) o p2(A, N)) = pa(id((A * N)), f:A*N->B)”
+>-- (stp_tac >> arw_tac[]) >>
+match_mp_tac iterated_p_eq_applied >> stp_tac
+>-- (pop_assum (assume_tac o GSYM) >> arw_tac[] >> rw_tac[by_def_l1]) >> conj_tac
+>-- (pop_assum (assume_tac o GSYM) >> arw_tac[] >> rw_tac[by_def_l2]) >>
+pop_assum (assume_tac o GSYM) >> arw_tac[] >> rw_tac[o_assoc,by_def_l3])
+(new_goal (goal_of_form suff_1_f))
+)
+
+val suff_2 = proved_th(
+e
+(fconv_tac sym_fconv >> match_mp_tac is_tp >> rw_tac[o_assoc,parallel_p_one_side] >>
+ rw_tac[GSYM o_assoc,ev_of_tp])
+(rapg "tp(f o <p1(A,N),s o p2(A,N)>) = tp(f:A * N -> B) o s")
+)
+
+val Thm1_comm_eq_right = proved_th(
+e
+(suffices_tac (mk_conj suff_1_f (rapf "tp((f:A * N -> B) o <p1(A,N),s o p2(A,N)>) = tp(f:A * N -> B) o s")) 
+>-- (stp_tac >> pop_assum STRIP_ASSUME_TAC >> dimp_tac 
+    >-- (stp_tac >> arw_tac[]) >>
+    stp_tac >> match_mp_tac (dimpl2r tp_eq) >> arw_tac[] >> 
+    pop_assum_list (map_every (assume_tac o GSYM)) >>
+    pick_x_assum “tp(f:A * N ->B) o s = tp(f o pa(p1(A, N), s o p2(A, N)))” (K all_tac) >>
+    arw_tac[]) >>
+conj_tac >-- rw_tac[suff_1] >-- rw_tac[suff_2])
+(new_goal (goal_of_form mgf))
+)
+

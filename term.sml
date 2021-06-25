@@ -167,12 +167,12 @@ fun coeqa f g = (case (sort_of f, sort_of g) of
                                                  else raise no_sort
                      | _ => raise no_sort)
 
-fun exp A B = Fun("^",ob,[A,B])
+fun exp A B = Fun("exp",ob,[A,B])
 
 fun tp f =  (case sort_of f of 
                  (ar (P,C)) =>
-                 (case P of (Fun ("po",ob,[A,B])) => 
-                            Fun ("tp",ar(B, exp B C),[f])
+                 (case P of (Fun ("*",ob,[A,B])) => 
+                            Fun ("tp",ar(B, exp A C),[f])
                           | _ => raise no_sort) 
                | _ => raise no_sort) 
 
