@@ -494,6 +494,9 @@ fun pop_assum_list (asltac:thm list -> tactic):tactic =
 fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
   | pop_assum   _   (_,[], _) = simple_fail"POP_ASSUM:no assum"
 
+fun rev_pop_assum thfun (ct,a :: asl, w) = thfun (assume (hd (rev (a :: asl)))) (ct,(rev (tl (rev (a :: asl)))), w)
+  | rev_pop_assum   _   (_,[], _) = simple_fail"REV_POP_ASSUM:no assum"
+
 fun stp_rw thl g = 
     repeat (stp_tac >> rw_tac thl) g
 

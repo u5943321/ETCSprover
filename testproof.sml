@@ -2287,3 +2287,188 @@ arw_tac[] >> repeat stp_tac >> arw_tac[])
 (rapg "EXISTS f:A * N -> B. (f o <p1(A,1),z o p2(A,1)> = g o p1(A,1) & h o <id(A*N),f> = f o <p1(A,N),s o p2(A,N)>) & (ALL f0. f0 o <p1(A,1),z o p2(A,1)> = g o p1(A,1) & h o <id(A*N),f0> = f0 o <p1(A,N),s o p2(A,N)> ==> f0 = f)")
 )
 
+val pred_exists = proved_th(
+e
+(assume_tac (specl  (gen_all Thm1_case_1) (List.map readt ["N","z","p1(N,N)"])) >>
+ first_x_assum (x_choose_tac "f") >> pop_assum STRIP_ASSUME_TAC >>
+ wexists_tac (readt "f:N->N") >> arw_tac[p1_of_pa])
+(rapg "EXISTS p:N->N. p o z = z & p o s = id(N)")
+)
+
+
+(*conv_rule (rewr_fconv (exists_all ("X",ob))) distinct_endo_exists
+TODO: think of how to do this conv in one function and work for all layers.
+
+*)
+
+val ax3' =
+specl ax3 (List.map readt ["X","a:1->X"]) |> spec_all 
+|> allI (dest_var(readt"x:N->X")) |> gen_all
+
+
+(*todo: a tactic of rewriting all assumptions using the newly added assumption*)
+
+(*
+
+X ,   
+   (e1 : X -> X), (e2 : X -> X), (n : 1 -> N), (p : N -> N)
+   1.s o n = z
+   2.p o z = z & p o s = id(N)
+   3.n = z
+   4.ALL X. ALL (t : X? -> X?). t? = id(X?)
+   5.~e1 = e2
+   6.e1 = id(X)
+   7.e2 = id(X)
+   ----------------------------------------------------------------------
+   F()
+
+hard to prove e1 = e2 from it since the goal got simplified to false
+*)
+
+val Thm2_1 = proved_th(
+e
+(ccontra_tac >>  x_choose_then "p" assume_tac pred_exists >> by_tac “n = z” 
+ >-- (suffices_tac “(p:N->N) o s o n = p o z” 
+     >-- (pop_assum_list (map_every STRIP_ASSUME_TAC) >> rw_tac[GSYM o_assoc] >>
+          arw_tac[idL]) >>
+     arw_tac[]) >>
+by_tac “ALL X. ALL t:X->X. t = id(X)”
+>-- (repeat stp_tac >> match_mp_tac fun_ext >> stp_tac >>
+     assume_tac (specl ax3_equality (List.map readt ["X","t:X->X","a:1->X"])) >>
+     pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[] >>
+     pop_assum mp_tac >> pop_assum mp_tac >> pop_assum mp_tac >> arw_tac[] >> repeat stp_tac >>
+     suffices_tac “(t:X->X) o Nind (a:1->X,t) o z = Nind(a,t) o s o z”
+     >-- (once_arw_tac[] >> once_arw_tac[idL] >> stp_tac >> arw_tac[]) >>
+     rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[]
+     ) >>
+assume_tac distinct_endo_exists >> 
+first_x_assum (x_choosel_tac ["X","e1","e2"]) >>
+first_assum (specl_then (List.map readt ["X","e1:X->X"]) assume_tac) >>
+first_assum (specl_then (List.map readt ["X","e2:X->X"]) assume_tac) >>
+by_tac “e1 = e2:X->X” >-- (pick_x_assum “~(e1 = e2:X->X)”  (K all_tac) >> once_arw_tac[] >>
+rw_tac[])>>  first_assum OPPOSITE_TAC
+ )
+(rpg "~(s o n = z)")
+)
+
+
+(*todo: switch the order of quantifier of ax3*)
+
+(*TODO:arw for conjunct work here, check where it works and where it does not work*)
+
+val Thm2_2 = proved_th(
+e
+(match_mp_tac (gen_all post_inv_mono) >> 
+ x_choose_then "x" assume_tac pred_exists >> wexists_tac (readt "x:N->N") >> arw_tac[])
+(rapg "ismono(s)")
+)
+
+val Thm2_3_alt = proved_th(
+e
+(rw_tac[are_iso_is_iso] >> 
+ specl_then (List.map readt ["A","s':A->A","z':1->A"]) assume_tac ax3_equality >>
+ stp_tac >> pop_assum_list (map_every STRIP_ASSUME_TAC) >> 
+ wexists_tac (readt "a:A->N") >> 
+ match_mp_tac mono_epi_is_iso >> arw_tac[] >> match_mp_tac (gen_all pre_inv_epi) >>
+ wexists_tac (readt "Nind(z':1->A,s':A->A)") >> match_mp_tac comm_with_s_id >>
+ arw_tac[o_assoc] >> arw_tac[GSYM o_assoc])
+(rapg "ismono(a:A->N) & a o s' = s o a & a o z' = z ==> areiso(A,N)")
+)
+
+fun try_on_assum th = rule_assum_tac (rewr_rule [th]) 
+
+(*TODO:
+pick_assum “ismono(a:A->N)” try_on_assum gives
+
+  (a : A -> N), (b : 1 -> A), (p : P -> A), (q : P -> A)
+   1.T()
+   2.ALL (n : 1 -> N).
+               EXISTS (x0 : 1 -> A). a o x0? = n? ==>
+                 EXISTS (x0 : 1 -> A). a o x0? = s o n?
+   3.ispb(P, p, q, s o a, a)
+   ----------------------------------------------------------------------
+   EXISTS (b0 : 1 -> P). p o b0? = b
+
+omits the assumption which may be useful, fix this
+
+*)
+
+
+(*TODO: write and test existsl_tac here*)
+val ind_factorization = proved_th(
+e
+(stp_tac >> pop_assum STRIP_ASSUME_TAC >> 
+assume_tac (specl (gen_all pb_exists) (List.map readt ["A","A","N","s o (a:A->N)","a:A->N"])) >>
+first_x_assum (x_choosel_tac ["P","p","q"]) >> 
+suffices_tac “isiso(p:P->A)” (* 2 *)
+>-- (rw_tac[isiso_def] >> stp_tac >> first_x_assum (x_choose_tac "p'") >> 
+    pop_assum STRIP_ASSUME_TAC >> wexists_tac (readt "(q:P->A) o (p':A->P)") >>
+    try_on_assum is_pb_def >> pop_assum_list (map_every STRIP_ASSUME_TAC) >>
+    pick_x_assum “(s o a:A->N) o (p:P->A) = a o (q:P->A)” (assume_tac o GSYM) >>
+    rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[o_assoc] >> arw_tac[idR]) >>
+(*done with the suffices*)
+match_mp_tac mono_epi_is_iso >> conj_tac (* 2 *)
+>-- (match_mp_tac (gen_all pb_mono_mono) >> 
+    wexists_tac (readt "A") >> wexists_tac (readt "q:P->A") >> wexists_tac (readt "N") >>
+    wexists_tac (readt "s o (a: A->N)") >> wexists_tac (readt "a:A->N") >> 
+    arw_tac[]) >>
+match_mp_tac surj_is_epi >> stp_tac >> try_on_assum ismem_def >> try_on_assum issubset_def >>
+pick_assum “ismono(a:A->N)” try_on_assum >>
+first_x_assum (specl_then [readt "(a:A->N) o (b:1->A)"] assume_tac) >>
+by_tac “EXISTS x0 : 1 -> A. (a:A->N) o x0 = a o b”
+>-- (wexists_tac (readt "b:1->A") >> rw_tac[]) >>
+first_x_assum drule >> first_x_assum (x_choose_tac "x0") >> try_on_assum is_pb_def >>
+pop_assum_list (map_every STRIP_ASSUME_TAC)  >> 
+first_x_assum (specl_then (List.map readt ["1","b:1->A","x0:1->A"]) assume_tac) >>
+pick_x_assum “a o x0 = s o a o (b:1->A)” (assume_tac o GSYM) >>
+pop_assum mp_tac >> rw_tac[GSYM o_assoc] >> stp_tac >> first_x_assum drule >>
+first_x_assum (x_choose_tac "a'") >> wexists_tac (readt "a':1->P") >> arw_tac[]
+
+(*>>
+first_x_assum drule >> first_x_assum (x_choose_tac) *)
+
+(*by_tac “ismem(s o (a:A->N) o (b:1->A),a,N)” >>
+first_x_assum (specl_then [readt "(a:A->N) o (b:1->A)"] assume_tac)*)
+)
+(rapg "ismono(a) & (ALL n:1->N. ismem(n,a,N) ==>ismem(s o n,a,N)) ==> EXISTS t:A->A. a o t = s o a")
+)
+
+
+(*
+Theorem Thm2_3:        
+∀A a. is_subset a N ∧ (∀n. is_mem n a N ⇒ is_mem (s o n) a N) ∧
+    is_mem z a A ⇒ dom a ≅ N
+Proof
+rw[] >> irule Thm2_3_alt >> fs[is_subset_def] >>
+‘a∶ dom a → N’ by metis_tac[hom_def] >>
+qabbrev_tac ‘A = dom a’ >>
+drule ind_factorization >> fs[is_mem_def] >> metis_tac[]
+QED
+*)
+
+(*TODO: write drule canon to make all conjunction implications
+drule with assumption with extra information:
+
+1.ismono(a) &
+               ALL (n : 1 -> N). ismem(n?, a, N) ==> ismem(s o n?, a, N) &
+                 ismem(z, a, A)
+
+thm: 
+   |-
+   ismono(a) & ALL (n : 1 -> N). ismem(n?, a, N) ==> ismem(s o n?, a, N) ==>
+       EXISTS (t : A -> A). a o t? = s o a: thm
+> 
+
+*)
+
+
+
+val Thm2_3 = proved_th(
+e
+(repeat stp_tac >> match_mp_tac (gen_all Thm2_3_alt) >> try_on_assum issubset_def >>
+ pop_assum STRIP_ASSUME_TAC >> 
+ by_tac “ismono(a:A->N) & (ALL n : 1 -> N. ismem(n, a, N) ==> ismem(s o n, a, N))”
+ >-- arw_tac[] >> drule ind_factorization >> first_x_assum (x_choose_tac "t"))
+(rapg "issubset(a:A->N,N) & (ALL n:1->N. ismem(n,a,N) ==>ismem(s o n,a,N)) & ismem(z,a,A) ==>areiso(A,N)")
+)
+ind_factorization

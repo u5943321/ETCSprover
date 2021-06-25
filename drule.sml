@@ -813,8 +813,8 @@ fun exists_all (n,s) =
                  (negE (assume (fVar "f0")) 
                    (allE (assume (Quant("ALL",n,s,mk_neg (fVar "f0"))))
                          (Var(n,s)))))
-                 (Quant("ALL","a",ob,mk_neg (fVar "f0"))) |>
-                 disch (Quant("EXISTS","a",ob,fVar "f0"))
+                 (Quant("ALL",n,s,mk_neg (fVar "f0"))) |>
+                 disch (Quant("EXISTS",n,s,fVar "f0"))
         val d2 = elim_double_neg
                      (negI
                           (negE

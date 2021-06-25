@@ -194,7 +194,7 @@ fun dimpI (thm (G1,A1,I1)) (thm (G2,A2,I2)) =
     let 
         val (f1,f2) = dest_imp I1
         val (f3,f4) = dest_imp I2
-        val _ = (f1 = f4 andalso f2 = f3) orelse
+        val _ = eq_form(f1,f4) andalso eq_form(f2,f3) orelse
                 simple_fail"no match"
     in
         thm (contl_U[G1,G2],asml_U[A1,A2],Conn("<=>",[f1,f2]))
