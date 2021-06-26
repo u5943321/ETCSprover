@@ -550,7 +550,7 @@ fun exists_all_imp x sx y sy A B =
 say we have (?b. P(b)) ==> A(b)*)
 
 (*
-fun imp_canon (th as thm(G,C)) = 
+fun imp_canonσσσσ (th as thm(G,C)) = 
     case C of
         Conn("&",[A,B]) => (imp_canon (conjE1 th)) @ (imp_canon (conjE2 th))
       | Conn("==>",[Conn("|",[P,Q]),R]) => 
@@ -847,4 +847,15 @@ fun split_fst_assum th =
 *)
 
 (*todo: a rule for eleminating ~~ taking an ~~ formula*)
+
+(*
+fun contrapos th = 
+    let val (at,conc) = dest_imp (concl th)
+        val d1 = (assume at) |> mp th |> (C negE) (assume (mk_neg conc))
+                             |> (C negI) at |> disch (mk_neg conc) 
+
+useful! but need to consider when double neg is produced, to be think more about, example: ax6
+*)
+
+(*TODO: write a conv which eliminates all double neg in a formula*)
 end

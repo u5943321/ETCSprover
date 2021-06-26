@@ -48,6 +48,29 @@ fun gen_tac (ct,asl,w) =
         | _ => simple_fail"goal is not universally quantified"
 
 
+fun spec_tac0 (n,s): tactic = 
+    fn (ct,asl,w) =>
+    let val ct' = HOLset.delete(ct,(n,s))
+        val w' = mk_all n s w
+    in
+        ([(ct',asl,w')],fn [th] => allE th (Var(n,s)))
+    end
+
+fun spec_tac n: tactic = 
+    fn (ct,asl,w) =>
+    let val (n,s) = case List.find (fn (n0,s0) => n0 = n) (HOLset.listItems ct) of
+                        SOME ns => ns
+                       | _ => simple_fail ("no variable with name: " ^ n)
+    in spec_tac0 (n,s) (ct,asl,w)
+    end
+
+(*
+
+
+maybe not so useful since the ns may be in assumption list,unless pop all assum
+*)
+
+
 (*
 
 A1 |- t1 A2 |- t2
@@ -490,6 +513,14 @@ fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
     fn (G,asl, w) => asltac (map assume asl) (G,[], w)
+
+fun excl_ths P thlt: thm list -> tactic = 
+    fn thl => 
+       let val (_,ths) = partition P thl
+       in thlt ths
+       end
+
+
 
 fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
   | pop_assum   _   (_,[], _) = simple_fail"POP_ASSUM:no assum"

@@ -2473,4 +2473,94 @@ e
 pop_assum_list (map_every STRIP_ASSUME_TAC) >> wexists_tac (readt "x0:1->A") >> arw_tac[])
 (rapg "issubset(a:A->N,N) & (ALL n:1->N. ismem(n,a,N) ==>ismem(s o n,a,N)) & ismem(z,a,N) ==>areiso(A,N)")
 )
-ind_factorization
+
+(*TODO: fill the constuctor functions in term.sml,with helpful error message*)
+
+val k' = readt "coeqa(i1(B,B) o f:A->B, i2(B,B) o f)"
+val R' = readt "coeqo(i1(B,B) o f:A->B, i2(B,B) o f)"
+
+fun eqo f1 f2 = Fun("eqo",ob,[f1,f2])
+fun eqa f1 f2 = Fun("eqa",mk_ar_sort (eqo f1 f2) (dom f1),[f1,f2])
+
+val I0 = eqo (mk_o k' (readt "i1(B,B)")) (mk_o k' (readt "i2(B,B)"))
+val q' = eqa (mk_o k' (readt "i1(B,B)")) (mk_o k' (readt "i2(B,B)"))
+
+fun mk_pred p l = Pred(p,l)
+
+val Thm3_A_zero_I_zerof = mk_imp (readf "areiso(A,0)") (mk_pred "areiso" [I0,readt"0"])
+
+val ax6_contrapos = (assume at) |> mp th |> (C negE) (assume (mk_neg conc))
+                             |> (C negI) at |> elim_double_neg |> disch (mk_neg conc) 
+
+(*TODO: think about abbrev tac which also works on dom/cod of context*)
+
+(*goal is F, want to prove by i1(X, X) o t = i2(X, X) o t for some t
+ (X : ob),
+   (t : 1 -> X)
+   
+   |-
+   ~i1(X, X) o t = i2(X, X) o t: thm
+
+*)
+
+val i1_i2_disjoint2F = mp (F_imp ((dest_neg o concl) i1_i2_disjoint))  i1_i2_disjoint 
+
+
+val q'_abbrev = 
+    let val q'0 = (eqa (mk_o k' (readt "i1(B,B)")) (mk_o k' (readt "i2(B,B)")))
+    in mk_eq q'0 (mk_var "q'" (sort_of q'0))
+    end
+
+(*wexists works here, which is good,but do not understand why it works, how does it see the equality of dom from the asl? if it can do it, should not be hard to rw the cont to be in abbrev
+
+another thing that could happen might be it does not the variable in context has the correct sort.need check.
+
+The usage of from_iso_zero_eq' may be replaced by drule_then, do not have drule_then yet...
+*)
+
+
+(*
+ Exception-
+   ERR
+     ("VALIDInvalid tactic: theorem has extra variable involved k':(B + B)-->(((B i2 B) o f) coeqo ((B i2 B) o f))",
+      [], [], []) raised
+
+invalid error message for the commented line
+*)
+
+
+(*Will need equality on object, for rewriting the sorts in abbrev
+
+messy abbrev will make arw invalid.
+
+check where would make arw invalid...
+*)
+
+(*here already a bit slow*)
+val Thm3_A_zero_I_zero = proved_th(
+e
+(stp_tac >> abbrev_tac “coeqa(i1(B,B) o f:A->B, i2(B,B) o f) = k'” >> 
+abbrev_tac (mk_eq I0 (mk_var "I0" ob)) >> arw_tac[] >>
+suffices_tac “~(EXISTS t:1->I0.T)” 
+>-- (stp_tac >> drule ax6_contrapos >> arw_tac[]) >>
+ccontra_tac >> pop_assum STRIP_ASSUME_TAC >> match_mp_tac (gen_all i1_i2_disjoint2F) >>
+wexists_tac (readt "B") >> abbrev_tac q'_abbrev >> wexists_tac (readt "(q':I0->B) o (t:1->I0)") >>
+assume_tac 
+ (coeq_of_equal|> gen_all |> (C specl) (List.map readt ["A","B+B","i2(B,B) o (f: A->B)"])) >>
+first_x_assum (x_choose_tac "ki") >>
+try_on_assum (from_iso_zero_eq'|> spec_all |> (C mp) (assume “areiso(A,0)”)|> 
+ (C specl) (List.map readt ["B+B","i1(B,B) o (f:A->B)","i2(B,B) o (f: A->B)"])) >>
+(*pick_assum “coeqa(i2(B, B) o (f:A->B), i2(B, B) o f) = k'” try_on_assum invalid, but should not*)
+(*pop_assum_list (map_every mp_tac) >> spec_tac "q'"  *)
+(*assum_list
+(excl_ths (fn th => (fst o dest_var o snd o dest_eq o concl) th = "I0"
+               handle _ => false) 
+(map_every mp_tac)) >>
+spec_tac "q'" >> pop_assum (K all_tac) >> pop_assum (K all_tac) >>  pop_assum (K all_tac) >>
+rev_pop_assum (K all_tac) >> rev_pop_assum (K all_tac) >> arw_tac[]
+
+even do this still the same error message...
+*)
+)
+(new_goal (goal_of_form Thm3_A_zero_I_zerof))
+)
