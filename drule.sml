@@ -1,6 +1,9 @@
 structure drule :> drule = 
 struct
 open term form thm
+
+exception ERR of string * sort list * term list * form list
+
 fun simple_fail s = form.simple_fail ("drule."^s)
 
 fun undisch th = mp th (assume (#1(dest_imp (concl th))))
@@ -362,8 +365,8 @@ fun iff_trans (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
                 val f4f1 = imp_trans f4f2 f2f1
             in dimpI f1f4 f4f1
             end
-        else simple_fail("two iffs do not match" ^ (string_of_form C1) ^ " , " ^ (string_of_form C2))
-      | _ => simple_fail"not a pair of iffs"
+        else raise ERR ("iff_trans.two iffs do not match",[],[],[C1,C2])
+      | _ => raise ERR ("iff_trans.not a pair of iffs",[],[],[C1,C2])
 
 fun iff_swap (thm(G,A,C)) = 
     let val Q2P = conjE2 (dimpE (thm(G,A,C)))
@@ -382,7 +385,7 @@ fun dimp_iff (th1 as thm(G1,A1,C1)) (th2 as thm(G2,A2,C2)) =
             val P2iffQ22P1iffQ1 = disch P2iffQ2 (iff_trans (iff_trans th1 (assume P2iffQ2)) (iff_swap th2))
         in dimpI P1iffQ12P2iffQ2 P2iffQ22P1iffQ1
         end
-      | _ => simple_fail("not a pair of iff" ^ string_of_form C1 ^ " , " ^ string_of_form C2)
+      | _ => raise ERR ("dimp_iff.not a pair of iff: ",[],[],[C1,C2])
 
 
 fun all_iff (th as thm(G,A,C)) (n,s) = 
@@ -395,7 +398,7 @@ fun all_iff (th as thm(G,A,C)) (n,s) =
         in
             dimpI allP2allQ allQ2allP
         end
-      | _ => simple_fail("conclusion of theorem is not an iff" ^ " " ^ string_of_form C)
+      | _ => raise ERR ("all_iff.conclusion of theorem is not an iff:",[],[],[C])
 
 
 
@@ -504,7 +507,7 @@ fun disj_imp_distr A B C =
 fun disj_imp_distr_th (th as thm(G,A,C)) = 
     case C of
         (Conn("==>",[Conn("|",[P,Q]),R])) => dimp_mp_l2r th (disj_imp_distr P Q R)
-      | f => simple_fail("Error disj_imp_distr_th" ^ " : " ^ (string_of_form f))
+      | f => raise ERR ("disj_imp_distr_th.not a implication from a disjunction: ",[],[],[f])
 
 (*function that deal with dimp_mp_l2r for thm?*)
 
@@ -604,7 +607,7 @@ fun eqF_intro_form f =
 fun eqF_intro th = 
     case (concl th) of
         Conn("~",[f]) => dimp_mp_l2r th (eqF_intro_form f)
-      | _ => simple_fail ("eqF_intro: conclusion " ^ (string_of_form (concl th)) ^ " is not a negation") 
+      | _ => raise ERR ("eqF_intro.conclusion is not an negation: ",[],[],[concl th]) 
     
 
 
@@ -619,7 +622,7 @@ fun specl th l =
                             in 
                                 specl f1 t
                             end
-                        else simple_fail"thm is not universally quantified"
+                        else raise ERR ("specl.thm is not universally quantified",[],[],[concl th])
 
 
 fun spec_all th = 
@@ -763,8 +766,8 @@ check what does it read...
 
 fun conj_assum f1 f2 (th as thm(G,A,C)) = 
     let 
-        val _ = fmem f1 A orelse simple_fail"first formula not in assumption"
-        val _ = fmem f2 A orelse simple_fail"second formula not in assumption"
+        val _ = fmem f1 A orelse raise ERR ("conj_assum.first formula not in assumption: ",[],[],[f1])
+        val _ = fmem f2 A orelse raise ERR ("conj_assum.second formula not in assumption: ",[],[],[f2])
         val th1 = disch f1 (disch f2 th)
     in mp (mp th1 (conjE1 (assume (mk_conj f1 f2))))
           (conjE2 (assume (mk_conj f1 f2)))
@@ -798,7 +801,7 @@ fun F2f f = disch FALSE (falseE [FALSE] f)
 CONTR f th = A |- f
 *)
 fun CONTR f th =
-   mp (F2f f) th handle ERR _ => simple_fail"CONTR"
+   mp (F2f f) th handle ERR _ => simple_fail "CONTR"
 
 
 fun double_neg_th th = 
@@ -837,8 +840,8 @@ fun split_assum f th =
     if fmem f (ant th) then
         case f of (Conn("&",[f1,f2])) => 
                   th |> disch f |> (C mp) (conjI (assume f1) (assume f2))
-                | _ =>  simple_fail "not a conjunction"
-    else simple_fail "formula not in assumption list"
+                | _ =>  raise ERR ("split_assum.not a conjunction: ",[],[],[f])
+    else raise ERR ("split_assum.formula not in assumption list",[],[],[f])
 (*
 fun split_fst_assum th = 
     case (ant th) of 

@@ -78,5 +78,7 @@ val OPPOSITE_TAC: thm_tactic
 val abbrev_tac: form.form -> tactic 
 val remove_asm_tac: form.form -> tactic
 val rev_pop_assum: thm_tactic -> tactic
+
+val rewr_rule: thm list -> thm -> thm
 end
 

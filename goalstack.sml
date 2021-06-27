@@ -8,7 +8,7 @@ fun prove f tac =
     in
         case (subgoals) of 
             [] => vfn []
-          | h :: t => raise ERR "remaining subgoals"
+          | h :: t => simple_fail "remaining subgoals"
     end
 
 type tac_result = {goals      : goal list,
@@ -35,11 +35,11 @@ fun rapg f =
 fun proved_th (GSTK{prop:proposition,...}) = 
     case prop of
         PROVED (th,_) => th
-      | _ => raise ERR "goal is not proved yet"
+      | _ => simple_fail "goal is not proved yet"
 
 fun current_tac_result (GSTK{prop,stack:tac_result list}) = 
     case stack of
-        [] => raise ERR "no remaining goal"
+        [] => simple_fail "no remaining goal"
       | h :: t => h
 
 fun current_goal ({goals:goal list,validation:validation}:tac_result) = hd goals
@@ -47,7 +47,7 @@ fun current_goal ({goals:goal list,validation:validation}:tac_result) = hd goals
 
 fun current_goal ({goals: goal list,validation : thm list -> thm}:tac_result) = 
     case goals of 
-        [] => raise ERR "no goal remains"
+        [] => simple_fail "no goal remains"
       | h :: t => h
 
 *)
@@ -63,7 +63,7 @@ fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g}) =
                          stack={goals=rst_o_goals,
                                 validation=fn thl => validation(th::thl)}::rst'})
            )
-         | otherwise => raise ERR ""
+         | otherwise => simple_fail ""
     end
   | return gstk = gstk
 
@@ -72,7 +72,7 @@ fun say s = Lib.say s
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 fun imp_err s =
-    raise ERR ("expandf or expand_listf" ^ "implementation error: "^s)
+    simple_fail ("expandf or expand_listf" ^ "implementation error: "^s)
 
 fun expand_msg dpth (GSTK{prop = PROVED _, ...}) = ()
   | expand_msg dpth (GSTK{prop, stack as {goals, ...}::_}) =
@@ -87,10 +87,10 @@ fun expand_msg dpth (GSTK{prop = PROVED _, ...}) = ()
             else imp_err "2"
        else cr_add_string_cr "Remaining subgoals:"
     end
-  | expand_msg _ _ = raise ERR "3" ;
+  | expand_msg _ _ = simple_fail "3" ;
 
 fun expandf _ (GSTK{prop=PROVED _, ...}) =
-       raise ERR "expandf: goal has already been proved"
+       simple_fail "expandf: goal has already been proved"
   | expandf tac (GSTK{prop as POSED g, stack}) =
      let val arg = (case stack of [] => g | tr::_ => hd (#goals tr))
          val (glist,vf) = tac arg

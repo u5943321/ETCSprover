@@ -7,7 +7,7 @@ and term =
     | Bound of int
     | Fun of string * sort * term list;
 
-exception ERR of string
+exception ERR of string * sort list * term list
 
 val enclose: string -> string
 val conc_list: string -> string list -> string
@@ -58,7 +58,6 @@ val coeqa: term -> term -> term
 val coeqo: term -> term -> term
 val copa: term -> term -> term
 val copo: term -> term -> term
-
 
 
 end

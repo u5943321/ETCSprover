@@ -1,6 +1,6 @@
 structure pp = 
 struct 
-open form term smpp symbols
+open term form smpp symbols
 
 infix >>
 
@@ -95,7 +95,7 @@ fun ppform (ss:bool) (f:form) =
               (add_string q >> add_break (1,0) >> 
                           (if s = ob then ppterm false (LR (NONE,NONE)) (Var(n,s)) else ppterm true (LR (NONE,NONE)) (Var(n,s))) >> add_string "." >> add_break (1,0) >> ppform ss (subst_bound (Var(n^"?",s)) b))
       | fVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
-      | _ => raise ERR "ill-formed formula"
+      | _ => raise ERR ("ill-formed formula",[],[],[f])
 
 
 

@@ -10,7 +10,7 @@ and term =
 
 (*string_of stuff should be at very begining to help producing helpful error message*)
 
-exception ERR of string
+exception ERR of string * sort list * term list 
 
 fun enclose a = "(" ^ a ^ ")";
 
@@ -82,12 +82,12 @@ fun is_var t =
 
 fun dest_var t = 
     case t of Var(n,s) => (n,s)
-            | _ => raise ERR ("not a variable: " ^ (string_of_term t))
+            | _ => raise ERR ("not a variable: ",[],[t])
 
 fun dest_fun t = 
     case  t of 
         Fun(n,s,l) => (n,s,l)
-      | _ => raise ERR ("not a function: " ^ (string_of_term t))
+      | _ => raise ERR ("not a function: ",[],[t])
 
 
 fun mk_ar_sort t1 t2 = ar(t1,t2)

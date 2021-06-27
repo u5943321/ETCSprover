@@ -512,14 +512,13 @@ fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
 fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
-    fn (G,asl, w) => asltac (map assume asl) (G,[], w)
+    fn (G,asl, w) => asltac (List.map assume asl) (G,[], w)
 
 fun excl_ths P thlt: thm list -> tactic = 
     fn thl => 
        let val (_,ths) = partition P thl
        in thlt ths
        end
-
 
 
 fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
@@ -535,7 +534,7 @@ fun stp_rw thl g =
 
 fun every tacl = List.foldr (op then_tac) all_tac tacl
 
-fun map_every tacf lst = every (map tacf lst) 
+fun map_every tacf lst = every (List.map tacf lst) 
 
 fun rule_assum_tac rule: tactic =
     pop_assum_list
@@ -613,7 +612,7 @@ fun valid (tac: tactic) : tactic =
          let
             val (result as (glist, prf)) = tac g
          in
-           case bad_prf (prf (map masquerade glist)) g of
+           case bad_prf (prf (List.map masquerade glist)) g of
                NONE => result
              | SOME e => error "VALID" "tactic" e
          end
@@ -877,6 +876,35 @@ fun remove_asm_tac f: tactic =
 
 val once_rwl_tac = map_every (fn th => once_rw_tac[th])
 val once_arwl_tac = map_every (fn th => once_arw_tac[th])
+
+(*---------------------------------------------------------------------------*
+ *       A,t1 |- t2                A,t |- F                                  *
+ *     --------------              --------                                  *
+ *     A |- t1 ==> t2               A |- ~t                                  *
+ *---------------------------------------------------------------------------*)
+
+fun neg_disch t th =
+   if eq_form(concl th,FALSE) then negI th t
+   else disch t th
+
+
+
+fun disch_then (ttac: thm_tactic): tactic = 
+ fn ((ct,asl,w):goal) =>
+   let
+      val (ant, conseq) = dest_imp w
+      val (gl, prf) = ttac (assume ant) (ct,asl,conseq)
+   in
+      (gl, (if is_neg w then neg_disch ant else disch ant) o prf):(goal list * validation)
+   end
+ 
+
+fun strip_goal_then ttac : tactic = first [gen_tac, conj_tac, disch_then ttac] 
+
+val strip_tac:tactic = fn g => strip_goal_then STRIP_ASSUME_TAC g
+
+fun disch_tac g = disch_then assume_tac g 
+
 
 end
     

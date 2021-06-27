@@ -2423,7 +2423,6 @@ first_x_assum (specl_then (List.map readt ["1","b:1->A","x0:1->A"]) assume_tac) 
 pick_x_assum “a o x0 = s o a o (b:1->A)” (assume_tac o GSYM) >>
 pop_assum mp_tac >> rw_tac[GSYM o_assoc] >> stp_tac >> first_x_assum drule >>
 first_x_assum (x_choose_tac "a'") >> wexists_tac (readt "a':1->P") >> arw_tac[]
-
 (*>>
 first_x_assum drule >> first_x_assum (x_choose_tac) *)
 
@@ -2549,7 +2548,7 @@ assume_tac
  (coeq_of_equal|> gen_all |> (C specl) (List.map readt ["A","B+B","i2(B,B) o (f: A->B)"])) >>
 first_x_assum (x_choose_tac "ki") >>
 try_on_assum (from_iso_zero_eq'|> spec_all |> (C mp) (assume “areiso(A,0)”)|> 
- (C specl) (List.map readt ["B+B","i1(B,B) o (f:A->B)","i2(B,B) o (f: A->B)"])) >>
+ (C specl) (List.map readt ["B+B","i1(B,B) o (f:A->B)","i2(B,B) o (f: A->B)"])) 
 (*pick_assum “coeqa(i2(B, B) o (f:A->B), i2(B, B) o f) = k'” try_on_assum invalid, but should not*)
 (*pop_assum_list (map_every mp_tac) >> spec_tac "q'"  *)
 (*assum_list
@@ -2564,3 +2563,19 @@ even do this still the same error message...
 )
 (new_goal (goal_of_form Thm3_A_zero_I_zerof))
 )
+
+
+val (ct, asl, w) = (fvfl [readf "A = B",readf "P(a:A->B)"],[readf "A = B"],readf "P(a:A->B)")
+
+val th = thm (ct,asl,w)
+
+
+val genth = th |> allI (dest_var(readt "a:A->B"))
+
+val f0 = concl genth
+
+basic_fconv (rewr_conv (assume (readf "A = B"))) no_fconv f0
+
+basic_fconv (rewr_conv (assume (readf "A = B"))) no_fconv (readf "P(a:A->B)")
+
+rewr_conv (assume (readf "A = B")) (readt "a:A->B")

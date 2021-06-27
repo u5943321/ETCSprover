@@ -3,6 +3,7 @@ struct
 open token pterm_dtype term form pterm symbols
 
 datatype thm = thm of ((string * sort) set * form list * form) 
+exception ERR of string * sort list * term list * form list
 
 fun dest_thm (thm(G,A,C)) = (G,A,C)
 
@@ -16,7 +17,7 @@ fun eq_forml (l1:form list) (l2:form list) =
     case (l1,l2) of 
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
-      | _ => simple_fail"incorrect length of list"
+      | _ => simple_fail "incorrect length of list"
 
 fun fmem f fl = List.exists (curry eq_form f) fl
 
@@ -58,7 +59,7 @@ fun inst_thm env th =
         in
             thm(G,A,C)
         end
-    else simple_fail"bad environment"
+    else simple_fail "bad environment"
 
 fun ril i l = 
     case l of [] => []
@@ -101,18 +102,25 @@ fun disjI1 (thm (G,A,C)) f = thm (G,A,Conn ("|",[C,f]))
 
 fun disjI2 f (thm (G,A,C)) = thm (G,A,Conn ("|",[f,C]))
 
+(*TODO: replace disjE with the simpler version*)
+
 fun disjE A B C (thm (G1,A1,AorB)) (thm (G2,A2,C1)) (thm (G3,A3,C2)) = 
     let 
-        val _ = eq_form(AorB, Conn("|",[A,B])) orelse 
-                simple_fail"theorem #1 unexpected"
+        val _ = eq_form(AorB, mk_disj A B) orelse 
+                raise ERR ("disjE.theorem #1 is not the desired disjunction: ",
+                           [],[],[mk_disj A B,AorB])
         val _ = eq_form(C1,C) orelse 
-                simple_fail"theorem #2 unexpected"
+                raise ERR ("disjE.theorem #2 unexpected: ",
+                           [],[],[C1,C])
         val _ = eq_form(C2,C) orelse 
-                simple_fail"theorem #3 unexpected"
+                raise ERR ("disjE.theorem #3 unexpected: ",
+                           [],[],[C2,C])
         val _ = fmem A A2 orelse
-                simple_fail"first disjunct not in theorem #2"
+                raise ERR ("disjE.first disjunct not in the formula list: ",
+                           [],[],[A])
         val _ = fmem B A3 orelse
-                simple_fail"first disjunct not in theorem #3"
+                raise ERR ("disjE.second disjunct not in the formula list: ",
+                           [],[],[B])
     in
         thm (contl_U [G1,G2,G3], asml_U [ril A A2, ril B A3, A1],C)
     end
@@ -131,14 +139,15 @@ fun thml_eq_pairs (th:thm,(ll,rl,asml)) =
             (l::ll,r::rl,asml_U [asm,asml])
         end
     else 
-        simple_fail"input theorem is not an equality" 
+        raise ERR ("thml_eq_pairs.input thm is not an equality: ",
+                   [],[],[concl th])
 
 (*avoid EQ_psym/fsym using by hand*)
 
 
 fun EQ_fsym f thml = 
     case lookup_fun fsyms0 f of 
-        NONE => simple_fail("function:" ^ f ^ " is not found")
+        NONE => simple_fail ("function: " ^ f ^ " is not found")
       | SOME(s,l) => 
         let 
             val sl = List.map (fst o dest_eq o concl) thml
@@ -165,9 +174,11 @@ fun tautI f = thm(fvf f,[],Conn("|",[f,mk_neg f]))
 fun negI (thm (G,A,C)) f = 
     let 
         val _ = (C = FALSE) orelse 
-                simple_fail"conclusion is not FALSE"
+                raise ERR ("negI.concl of thm is not FALSE",
+                          [],[],[C])
         val _ = fmem f A orelse
-                simple_fail"formula to be negated not in assumption"
+                raise ERR ("negI.formula to be negated not in the asl",
+                           [],[],[f])
     in
         thm (G,ril f A, (Conn("~",[f])))
     end
@@ -175,14 +186,15 @@ fun negI (thm (G,A,C)) f =
 fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
     let 
         val _ = eq_form(C2,Conn("~",[C1])) orelse 
-                simple_fail"not a pair of contradiction"
+                raise ERR ("negE.not a pair of contradiction",
+                           [],[],[C1,C2])
     in
         thm (contl_U [G1,G2],asml_U [A1,A2],FALSE)
     end
 
 fun falseE fl f = 
     let val _ = fmem FALSE fl orelse 
-                simple_fail"FALSE is not in the list"
+                simple_fail "falseE.FALSE is not in the asl"
     in
         thm(fvfl (f::fl),fl,f)
     end
@@ -195,7 +207,8 @@ fun dimpI (thm (G1,A1,I1)) (thm (G2,A2,I2)) =
         val (f1,f2) = dest_imp I1
         val (f3,f4) = dest_imp I2
         val _ = eq_form(f1,f4) andalso eq_form(f2,f3) orelse
-                simple_fail"no match"
+                raise ERR ("dimpI.no match",
+                           [],[],[I1,I2])
     in
         thm (contl_U[G1,G2],asml_U[A1,A2],Conn("<=>",[f1,f2]))
     end
@@ -215,11 +228,9 @@ fun allI (a,s) (thm(G,A,C)) =
         val G0 = HOLset.delete(G,(a,s)) 
                  handle _ => G
         val _ = HOLset.isSubset(fvs s,G0) orelse 
-                simple_fail"sort of the variable to be abstract has extra variable(s)"
+                simple_fail "sort of the variable to be abstract has extra variable(s)"
         val _ = not (HOLset.member(fvfl A,(a,s))) orelse
-                simple_fail"variable to be abstract occurs in assumption" 
-    (*    val _ = HOLset.isSubset(fvfl A,G0) orelse
-                simple_fail"variable to be abstract occurs in assumption" *)
+                simple_fail "variable to be abstract occurs in assumption" 
     in thm(G0,A,mk_all a s C)
     end
 
@@ -236,11 +247,10 @@ A,Γ ∪ (Var(t)) |- ϕ(t)
 
 fun allE (thm(G,A,C)) t = 
     let 
-        val ((_,s),b) = dest_all C
+        val ((n,s),b) = dest_all C
         val _ = (sort_of t = s) orelse 
-                simple_fail("sort inconsistant"
-                           ^ (string_of_sort (sort_of t)) ^ " " ^ 
-                           string_of_sort s)
+                raise ERR ("allE.sorts inconsistent",
+                           [s,sort_of t],[Var(n,s),t],[])
     in
         thm(contl_U [G,fvt t],A,subst_bound t b)
     end
@@ -268,7 +278,8 @@ fun existsI (thm(G,A,C)) (a,s) t f =
         val _ = (sort_of t = s) orelse 
                 simple_fail"term and variable to be abstract of different sorts"
         val _ = eq_form (C, substf ((a,s),t) f) orelse
-                simple_fail("formula has the wrong form" ^ string_of_form C)
+                raise ERR ("existsI.formula has the wrong form, should be something else: ",
+                           [],[],[C,substf ((a,s),t) f])
     in
         thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))
     end
@@ -293,12 +304,12 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
         val ((n,s),b) = dest_exists C1
         val _ = fmem (subst_bound (Var(a,s0)) b) A2
         val _ = (s = s0) orelse 
-                simple_fail"the given variable has unexpected sort"
+                raise ERR ("the given variable has unexpected sort, should have another sort",[s,s0],[],[])
         val _ = (HOLset.member
                      (HOLset.union
                           (fvfl (ril (subst_bound (Var(a,s0)) b) A2),
                            fvf C2),(a,s0)) = false) orelse
-                simple_fail"the given variable occurs unexpectedly"
+                simple_fail "the given variable occurs unexpectedly"
     in
         thm(contl_U[G1,delete'(G2,(a,s0))],
             asml_U[A1,(ril (subst_bound (Var(a,s0)) b) A2)],C2)
@@ -312,20 +323,18 @@ fun sym th =
             val (l,r) = dest_eq (concl th)
         in thm(cont th,ant th,Pred("=",[r,l]))
         end
-    else simple_fail("not an equality" ^ string_of_form (concl th))
+    else raise ERR ("sym.not an equality: ",[],[],[concl th])
 
 fun trans th1 th2 = 
     let 
         val _ = is_eqn (concl th1) orelse 
-                simple_fail"first theorem not an equality"
+                raise ERR ("trans.first thm not an equality: ",[],[],[concl th1])
         val _ = is_eqn (concl th2) orelse
-                simple_fail"second thoerem not an equality"
+                raise ERR ("trans.second thm not an equality: ",[],[],[concl th2])
         val (t1,t2) = dest_eq ((fst o strip_all) (concl th1))
         val (t3,t4) = dest_eq ((fst o strip_all) (concl th2))
         val _ = (t2 = t3) orelse
-                simple_fail("equalities do not match" ^ 
-                           (string_of_form (concl th1)) ^ " " ^ 
-                           string_of_form (concl th2))
+                raise ERR ("trans.equalities do not match",[],[],[concl th1,concl th2])
     in 
         thm(contl_U[cont th1,cont th2],
             asml_U[ant th1,ant th2],Pred("=",[t1,t4]))
@@ -371,9 +380,7 @@ fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
     let
         val (A,B) = dest_imp C1
         val _ = eq_form(C2,A) orelse 
-                simple_fail
-                      ("no match" ^ (string_of_form C1) ^ " " ^ 
-                       string_of_form C2)
+                raise ERR ("mp.no match",[],[],[C1,C2])
     in
         thm (contl_U [G1,G2],asml_U[A1,A2],B) 
     end
@@ -389,8 +396,38 @@ fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
 
 fun add_cont th nss = thm(HOLset.union(cont th,nss),ant th,concl th)
 
+(*
+       
+fun EQ_psym p thml = 
+    let 
+        val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
+    in 
+        thm (contl_U (List.map cont thml),asml,
+             Conn("<=>",[Pred(p,ll),Pred(p,rl)]))
+    end
 
 
+fun subst_ct_t t nt tm = 
+    case tm of
+        Var(n,s) => if tm = t then nt else Var(n,)
+
+fun subst_sort eq (d,c)
+
+fun rsm s e e' = HOLset.add(HOLset.delete(s,e),e')
+
+fun eq_ar_ct v eqth th = 
+    if HOLset.member(cont th,v) then 
+        let val (n,s) = dest_var v 
+            val (d,c) = dest_ar s
+            val (t,t') = (dest_eq o concl) eqth 
+        in if d = t then rsm (cont th) v (n,ar(t,d))
+*)
+(*
+fun subst thml tmp t = 
+    let 
+        val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
+    in 
+*)
 
 fun all_distinct l = 
     case l of [] => true

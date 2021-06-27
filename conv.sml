@@ -9,19 +9,10 @@ type sort = term.sort
 
 exception unchanged
 
+
+
 (*think about inst_thm when names clash!!!!!!!!!!!*)
 
-(*
-fun part_tmatch partfn A t = 
-    let 
-        val env = 
-            Binarymap.listItems
-                (vd_of (match_term (partfn A) t mempty))
-        val A' = abstl A (List.map (fn (a,b) => a) env)
-    in specl A' (List.map (fn (a,b) => b) env)
-    end
-
-*)
 
 (*TODO: think more carefully if use cont or recollect the variable set*)
 
@@ -61,7 +52,7 @@ fun try_conv c = c orelsec all_conv
 fun repeatc c t =
     ((c thenc (repeatc c)) orelsec all_conv) t
 
-fun no_conv f = raise ERR "no_conv" 
+fun no_conv f = simple_fail "no_conv" 
 
 fun first_conv cl = 
     case cl of [] => no_conv
@@ -138,7 +129,7 @@ infix orelsefc;
 
 fun orelsefc (fc1,fc2) f = fc1 f handle _ => fc2 f
 
-fun no_fconv f = raise ERR "no_fconv"
+fun no_fconv f = simple_fail "no_fconv"
 
 fun first_fconv fcl = 
     case fcl of [] => no_fconv
@@ -159,7 +150,7 @@ fun pred_fconv c f =
     case f of 
         Pred (P,tl) => 
         (EQ_psym P (List.map (try_conv c) tl))
-      | _ => raise ERR "not a predicate"
+      | _ => simple_fail "not a predicate"
 
 (*pred_fconv use try_conv or not?*)
 
@@ -169,37 +160,37 @@ fun disj_fconv fc f =
     case f of 
         Conn("|",[p,q]) => 
         disj_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => raise ERR "not a disjunction"
+      | _ => simple_fail "not a disjunction"
 
 fun conj_fconv fc f = 
     case f of 
         Conn("&",[p,q]) => 
         conj_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => raise ERR "not a conjunction"
+      | _ => simple_fail "not a conjunction"
 
 fun imp_fconv fc f = 
     case f of
         Conn("==>",[p,q]) => 
         imp_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => raise ERR "not an implication"
+      | _ => simple_fail "not an implication"
 
 fun dimp_fconv fc f = 
     case f of
         Conn("<=>",[p,q]) => 
         dimp_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => raise ERR "not an iff"
+      | _ => simple_fail "not an iff"
 
 fun forall_fconv fc f = 
     case f of
         (Quant("ALL",n,s,b)) => 
         all_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
-      | _ => raise ERR "not an all"
+      | _ => simple_fail "not an all"
 
 fun exists_fconv fc f = 
     case f of
         (Quant("EXISTS",n,s,b)) => 
         exists_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
-      | _ => raise ERR "not an all"
+      | _ => simple_fail "not an all"
 
 val reflTob = equivT (refl (Var("a",ob)))
 
@@ -337,9 +328,11 @@ fun sym_fconv f =
     case f of 
     Pred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (Pred("=",[t2,t1])) |> sym |> disch_all)
   | Conn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (Conn("<=>", [f2,f1]))|> iff_swap |> disch_all)
-  | _ => raise ERR "not an iff or equality"
+  | _ => simple_fail "not an iff or equality"
 
 
 val GSYM = conv_rule (once_depth_fconv no_conv sym_fconv)
 
+
+(*TODO: something like iffLR in HOL, deal with iff in anywhere of this thm*)
 end

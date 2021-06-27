@@ -79,7 +79,7 @@ fun string_of_form f =
         string_of_form 
             (subst_bound (Var(n,s)) b)
       | fVar fm => "fV" ^ enclose fm
-      | _ => simple_fail "bad formula"
+      | _ => raise ERR ("bad formula: ",[],[],[f])
 
 
 (*predicate functions*)
@@ -134,49 +134,50 @@ fun mk_exists n s b = Quant("EXISTS",n,s,abstract (n,s) b)
 fun dest_eq f = 
     case f of
         Pred("=",[t1,t2]) => (t1,t2)
-      | _ => raise ERR ("not an equality",[],[],[f])
+      | _ => raise ERR ("not an equality: ",[],[],[f])
 
 fun dest_imp f = 
     case f of 
         Conn("==>",[f1,f2]) => (f1,f2)
-      | _ => simple_fail "not an implication"
+      | _ => raise ERR ("not a implication: ",[],[],[f])
 
 fun dest_neg f = 
     case f of
         Conn("~",[f0]) => f0
-      | _ => simple_fail "not an negation"
+      | _ => raise ERR ("not a negation: ",[],[],[f])
 
 
 fun dest_conj f = 
     case f of
         Conn("&",[f1,f2]) => (f1,f2)
-      | _ => simple_fail "not a conjunction"
+      | _ => raise ERR ("not a conjunction: ",[],[],[f])
 
 fun dest_disj f = 
     case f of
         Conn("|",[f1,f2]) => (f1,f2)
-      | _ => simple_fail "not a disjunction"
+      | _ => raise ERR ("not a disjunction: ",[],[],[f])
  
 
 fun dest_dimp f = 
     case f of 
         Conn("<=>",[L,R]) => (L,R)
-      | _ => simple_fail ((string_of_form f) ^ " is not a double implication")
+      | _ => raise ERR ("not a double implication: ",[],[],[f])
+
 
 fun dest_pred f = 
     case f of 
         Pred(p,l) => (p,l)
-      | _ => simple_fail ((string_of_form f) ^ " is not a predicate")
+      | _ => raise ERR ("not a predicate: ",[],[],[f])
 
 fun dest_exists f = 
     case f of 
         Quant("EXISTS",n,s,b) => ((n,s),b)
-      | _ => simple_fail "not an existential"
+      | _ => raise ERR ("not an existantial: ",[],[],[f])
 
 fun dest_all f = 
     case f of 
         Quant("ALL",n,s,b) => ((n,s),b)
-      | _ => simple_fail "not a universal"
+      | _ => raise ERR ("not a universal",[],[],[f])
 
 fun eq_form fp = 
     case fp of 
@@ -304,21 +305,22 @@ fun pmenv (env:menv) = (Binarymap.listItems (vd_of env),Binarymap.listItems (fvd
 fun match_term nss pat ct (env:menv) = 
     case (pat,ct) of 
         (Fun(f1,s1,l1),Fun(f2,s2,l2)) => 
-        if f1 <> f2 then simple_fail "different function names"
+        if f1 <> f2 then 
+            raise ERR ("different function names: ",[],[pat,ct],[])
         else match_sort nss s1 s2 (match_tl nss l1 l2 env)  
       | (Var(n1,s1),_) => 
         if HOLset.member(nss,(n1,s1)) then
             if pat = ct then env 
-            else simple_fail "current term not alloed to be instantiated"
+            else raise ERR ("current term is local constant: ",[],[pat,ct],[])
         else 
             (case (lookup_t env (n1,s1)) of
                  SOME t => if t = ct then env else
-                           simple_fail "double bind"
+                           raise ERR ("double bind: ",[],[pat,t,ct],[])
                | _ => 
                  v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env))
       | (Bound i1,Bound i2) => 
         if i1 <> i2 then 
-            simple_fail "bounded variable cannot be unified"
+            raise ERR ("bound variables have different levels: ",[],[pat,ct],[])
         else env
       | _ => raise Fail "unexpected term constructor"
 and match_sort nss sp cs env = 
@@ -326,33 +328,36 @@ and match_sort nss sp cs env =
         (ob,ob) => env
       | (ar(d1,c1),ar(d2,c2)) => 
         match_term nss c1 c2 (match_term nss d1 d2 env)
-      | _ => simple_fail "cannot match ob with ar"
+      | _ => raise ERR ("cannot match ob with ar: ",[sp,cs],[],[])
 and match_tl nss l1 l2 env =
     case (l1,l2) of 
         ([],[]) => env
       | (h1 :: t1,h2 :: t2) => 
         match_tl nss t1 t2 (match_term nss h1 h2 env)
-      | _ => simple_fail "incorrect length of list"
+      | _ => raise ERR ("incorrect length of list",[],[],[])
 
 
 
 fun match_form nss pat cf env:menv = 
     case (pat,cf) of
         (Pred(P1,l1),Pred(P2,l2)) => 
-        if P1 <> P2 then simple_fail "different predicates"
+        if P1 <> P2 then 
+            raise ERR ("different predicates: ",[],[],[pat,cf])
         else match_tl nss l1 l2 env
       | (Conn(co1,l1),Conn(co2,l2)) => 
-        if co1 <> co2 then simple_fail "different connectives"
+        if co1 <> co2 then 
+            raise ERR ("different connectives: ",[],[],[pat,cf])
         else match_fl nss l1 l2 env
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
-        if q1 <> q2 then simple_fail "different quantifiers"
+        if q1 <> q2 then 
+            raise ERR ("different quantifiers: ",[],[],[pat,cf])
         else match_form nss b1 b2 (match_sort nss s1 s2 env)
       | (fVar fm,_) => 
             (case (lookup_f env fm) of
                  SOME f => if f = cf then env else
-                           simple_fail "double bind"
+                           raise ERR ("double bind of formula variables",[],[],[pat,f,cf])
                | _ => fv2f fm cf env)
-      | _ => simple_fail "different formula constructors"
+      | _ => raise ERR ("different formula constructors",[],[],[pat,cf])
 and match_fl nss l1 l2 env = 
     case (l1,l2) of 
         ([],[]) => env
@@ -367,25 +372,11 @@ fun strip_all f =
         let val (b1,l) = strip_all (subst_bound (Var(n,s)) b) in
             (b1,(n,s) :: l) end
       | _ => (f,[])
-(*
+
 fun pvariantt vd t = 
     case t of 
         Var(n,s) => 
-        if HOLset.member (vd,(n,s))
-        then Var (n ^ "'",pvariants vd s)
-        else Var (n, pvariants vd s)
-      | Fun(f,s,l) => Fun(f,pvariants vd s,List.map (pvariantt vd) l)
-      | _ => t
-and pvariants vl s = 
-    case s of  
-        ob => ob
-      | ar(t1,t2) => ar(pvariantt vl t1,pvariantt vl t2)
-*)
-fun pvariantt vd t = 
-    case t of 
-        Var(n,s) => 
-        if (*HOLset.member (vd,(n,s)) *)
-            mem n (List.map fst (HOLset.listItems vd))
+        if mem n (List.map fst (HOLset.listItems vd))
         then Var (n ^ "'",s)
         else Var (n, s)
       | Fun(f,s,l) => Fun(f,s,List.map (pvariantt vd) l)
@@ -439,8 +430,7 @@ fun psymsf f =
       | Conn("~",[A]) => psymsf A
       | Conn(_,[A,B]) => HOLset.union(psymsf A,psymsf B)
       | Quant(_,_,_,b) => psymsf b
-      | _ => simple_fail 
-                   ("formula: " ^ (string_of_form f) ^ " is not well-formed")
+      | _ => raise ERR ("psymsf.ill-formed formula: ",[],[],[f])
 
 fun fsymss s = 
     case s of
@@ -468,8 +458,7 @@ fun fsymsf f =
       | Conn("~",[A]) => fsymsf A
       | Conn(_,[A,B]) => HOLset.union(fsymsf A,fsymsf B)
       | Quant(_,_,_,b) => fsymsf b
-      | _ => simple_fail 
-                   ("formula: " ^ (string_of_form f) ^ " is not well-formed")
+      | _ => raise ERR ("fsymfs.ill-formed formula: ",[],[],[f])
 
 
 
