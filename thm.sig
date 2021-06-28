@@ -25,8 +25,8 @@ val sym: thm -> thm
 val mk_sss: (string * sort) set list -> (string * sort) set
 val inst_thm: menv -> thm -> thm
 val conjI: thm  -> thm -> thm
-val disjI1: thm -> form -> thm 
-(*val disjI1: form -> thm -> thm*)
+(*val disjI1: thm -> form -> thm *)
+val disjI1: form -> thm -> thm
 val disjI2: form -> thm -> thm
 val dimpI: thm -> thm -> thm
 val dimpE: thm -> thm
@@ -36,17 +36,18 @@ val conjE1: thm -> thm
 val conjE2: thm -> thm
 val disjE: form -> form -> form -> thm -> thm -> thm -> thm
 val tautI: form -> thm
-val negI: thm -> form -> thm
+(*val negI: thm -> form -> thm*)
+val negI: form -> thm -> thm
 val negE: thm -> thm -> thm
 val existsE: string * sort -> thm -> thm -> thm
 val existsI: thm -> (string * sort) -> term -> form -> thm
 val falseE: form list -> form -> thm
 val trueI: form list -> thm
 val allI: (string * sort) -> thm -> thm
-val allE: thm -> term -> thm
+val allE: term -> thm -> thm
 val disch: form -> thm -> thm
 val mp: thm -> thm -> thm
-val add_cont: thm -> (string * sort) set -> thm
+val add_cont: (string * sort) set -> thm -> thm
 
 
 

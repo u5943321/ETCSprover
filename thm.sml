@@ -100,7 +100,7 @@ fun conjE2 (thm(G,A,C)) =
         thm (G,A,C2)
     end
 
-fun disjI1 (thm (G,A,C)) f = thm (G,A,Conn ("|",[C,f]))
+fun disjI1 f (thm (G,A,C)) = thm (G,A,Conn ("|",[C,f]))
 
 fun disjI2 f (thm (G,A,C)) = thm (G,A,Conn ("|",[f,C]))
 
@@ -173,7 +173,7 @@ fun EQ_psym p thml =
 
 fun tautI f = thm(fvf f,[],Conn("|",[f,mk_neg f]))
 
-fun negI (thm (G,A,C)) f = 
+fun negI f (thm (G,A,C)) = 
     let 
         val _ = (C = FALSE) orelse 
                 raise ERR ("negI.concl of thm is not FALSE",
@@ -247,7 +247,7 @@ A,Γ ∪ (Var(t)) |- ϕ(t)
 
 ----------------------------------------------*)
 
-fun allE (thm(G,A,C)) t = 
+fun allE t (thm(G,A,C)) = 
     let 
         val ((n,s),b) = dest_all C
         val _ = (sort_of t = s) orelse 
@@ -396,7 +396,7 @@ fun mp (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
  *   A ,Γ ∪ Γ'|- B                                             *
  *---------------------------------------------------------------------------*)
 
-fun add_cont th nss = thm(HOLset.union(cont th,nss),ant th,concl th)
+fun add_cont nss th = thm(HOLset.union(cont th,nss),ant th,concl th)
 
 (*
        

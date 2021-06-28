@@ -53,7 +53,7 @@ fun spec_tac0 (n,s): tactic =
     let val ct' = HOLset.delete(ct,(n,s))
         val w' = mk_all n s w
     in
-        ([(ct',asl,w')],fn [th] => allE th (Var(n,s)))
+        ([(ct',asl,w')],fn [th] => allE (Var(n,s)) th)
     end
 
 fun spec_tac n: tactic = 
@@ -105,7 +105,7 @@ fun drule th (G,fl:form list,f) =
             in
                 SOME (mp ith (assume asm))
             end
-            handle ERR _ => NONE 
+            handle _ => NONE 
     in
         case (first_opt mfn fl) of 
             NONE => simple_fail"no match"
@@ -242,7 +242,7 @@ fun disj1_tac (g:goal as (G,fl,f)) =
     case f of
         Conn("|",[f1,f2]) => 
         ([(G,fl,f1)], 
-         fn [thm1] => disjI1 thm1 f2
+         fn [thm1] => disjI1 f2 thm1
          | _ => simple_fail"incorrect number of list items")
       | _ => simple_fail"not a disjunction"
 
@@ -268,7 +268,7 @@ fun cases_on c (G,fl,f) =
 fun contra_tac (g:goal as (G,fl,f)) = 
     case f of
         Conn("~",[A]) => 
-        ([(G,A::fl,FALSE):goal], fn [th] => negI th A
+        ([(G,A::fl,FALSE):goal], fn [th] => negI A th
                           | _ => simple_fail"incorrect number of list items")
       | _ => simple_fail"not a negation"
 
@@ -276,10 +276,10 @@ fun contra_tac (g:goal as (G,fl,f)) =
 fun ccontra_tac (g:goal as (G,fl,f)) = 
     case f of
         Conn("~",[A]) => 
-        ([(G,A::fl,FALSE):goal], fn [th] => negI th A
+        ([(G,A::fl,FALSE):goal], fn [th] => negI A th
                           | _ => simple_fail"incorrect number of list items")
       | _ => 
-        ([(G,(mk_neg f)::fl,FALSE):goal], fn [th] => dimp_mp_l2r (negI th (mk_neg f)) (double_neg f)
+        ([(G,(mk_neg f)::fl,FALSE):goal], fn [th] => dimp_mp_l2r (negI (mk_neg f) th) (double_neg f)
                           | _ => simple_fail"incorrect number of list items")
 
 
@@ -379,7 +379,7 @@ val op >-- = then1_tac
 
 fun op Orelse (tac1:tactic, tac2:tactic) = 
     fn (g as (G,fl,f)) =>
-       tac1 g handle ERR _ => tac2 g
+       tac1 g handle _ => tac2 g
 
 
 
@@ -512,7 +512,7 @@ fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
 fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
-    fn (G,asl, w) => asltac (List.map assume asl) (G,[], w) handle _ => simple_fail "pop_assum_list"
+    fn (G,asl, w) => asltac (List.map assume asl) (G,[], w) 
 
 fun excl_ths P thlt: thm list -> tactic = 
     fn thl => 
@@ -709,7 +709,7 @@ fun DISCARD_TAC th (ct,asl, w) =
 
 (*disj_cases_then*)
 
-fun foo th m = mp (disch (concl th) (assume m)) th
+fun foo th m = mp (disch (concl th) (assume m)) th handle _ => simple_fail "foo"
 
 (*
  A |- t1 \/ t2   ,   A1,t1 |- t   ,   A2,t2 |- t
@@ -753,7 +753,7 @@ fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
                end)
          end
    end
-   handle ERR _ => simple_fail"DISJ_CASES_THEN2"
+   handle _ => simple_fail"DISJ_CASES_THEN2"
  
 val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
 
@@ -769,14 +769,14 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
       in
          fn (ct,asl,w) =>
             let
-               val th = add_cont (foo xth (subst_bound (Var (n0,s)) b)) 
-                                 (HOLset.add(essps,(n0,s)))
+               val th = add_cont (HOLset.add(essps,(n0,s)))
+                                 (foo xth (subst_bound (Var (n0,s)) b))              
                val (gl,prf) = ttac th (ct,asl,w)
             in
                (gl, (existsE (n0,s) xth) o prf)
             end
       end
-      handle ERR _ => simple_fail"X_CHOOSE_THEN"
+      handle _ => simple_fail"X_CHOOSE_THEN"
 
 fun x_choosel_then nl (ttac: thm_tactic):thm_tactic =
     case nl of
@@ -802,7 +802,7 @@ val choose_then: thm_tactical =
             x_choose_then y ttac xth (ct,asl,w)
          end
       end
-      handle ERR _ => simple_fail"CHOOSE_THEN"
+      handle _ => simple_fail"CHOOSE_THEN"
 
 val choose_tac' = choose_then assume_tac
 
@@ -824,7 +824,7 @@ val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
 
 fun find (ttac:thm_tactic) goal [] = simple_fail"find"
     | find ttac goal (a :: L) =
-      ttac (assume a) goal handle ERR _ => find ttac goal L
+      ttac (assume a) goal handle _ => find ttac goal L
  
 fun first_assum ttac = fn (ct,asl, w) => find ttac (ct,asl,w) asl
 
@@ -885,7 +885,7 @@ val once_arwl_tac = map_every (fn th => once_arw_tac[th])
  *---------------------------------------------------------------------------*)
 
 fun neg_disch t th =
-   if eq_form(concl th,FALSE) then negI th t
+   if eq_form(concl th,FALSE) then negI t th 
    else disch t th
 
 
