@@ -382,7 +382,7 @@ existsE ("x1",sort_of (readt "x1: 1 -> X"))
 existsE ("x2",sort_of (readt "x2: 1 -> X"))
 (assume (readf "EXISTS x2:1-> X. ~x1 = x2"))
 
-(negI
+((C negI)
 (negE
 (trans
 (trans
@@ -545,7 +545,7 @@ readt "(copa(i1(1,1) o to1(A), i2(1,1) o to1(B)) o i2(A,B)) o (x1:1 -> B)"
 in
 gen_all
 (
-negI 
+(C negI)
 
 (
 existsE ("x1",sort_of (readt "x1 : 1-> B"))
@@ -621,8 +621,6 @@ e
 )
 end
 
-(*todo: maybe let the inst rename if discovered different bounded names*)
-
 
 
 
@@ -633,9 +631,6 @@ val th = thm(essps,[],mk_dimp (Quant("EXISTS","a",ob,fVar "f0"))
 
 
 (*contradiction between forall and exists, TODO: derive such a thm*)
-
-
-(*TODO: turn off the pp and then the whole thing still works AQ: want the pp things for error message, so want pp on top level, so can print out the thing causes error in sort/form/thm*)
 
 
 val p1_of_pa = gen_all
@@ -919,7 +914,6 @@ e
 *)
 
 
-(*TODO:test abbrev tac*)
 
 
 
@@ -942,45 +936,6 @@ A ==> !x. B x ==> C x
 TODO: fill the gap from match_mp_tac
 
 *)
-
-
-
-val pb_exists = proved_th(
-e
-(repeat stp_tac >> 
- wexists_tac (readt "eqo ((f:X->Z)o p1(X,Y),g o p2(X,Y))") >>
- wexists_tac (readt "p1(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
- wexists_tac (readt "p2(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
- rw_tac[spec_all is_pb_def] >>
- by_tac 
- (rapf "(f:X->Z) o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))") 
- >-- (once_rw_tac[GSYM o_assoc] >> rw_tac[GSYM eq_equality])
- >> arw_tac[] >> repeat stp_tac >> 
- by_tac
- (rapf "((f:X->Z) o p1(X,Y)) o <u:A->X,v:A->Y> = (g o p2(X,Y)) o <u,v>")
-(*for solving by tac*)
- >-- (arw_tac[spec_all p1_of_pa,spec_all p2_of_pa,spec_all o_assoc])
- >> wexists_tac (readt "eqinduce ((f:X->Z) o p1(X,Y),g o p2(X,Y), pa(u:A->X,v:A->Y))")
- >> by_tac (rapf "eqa((f:X->Z) o p1(X, Y), g o p2(X, Y)) o eqinduce(f o p1(X,Y), g o p2(X, Y), pa(u:A->X, v:A-> Y)) = <u,v>")
-(*solving the by tac*)
- >-- (match_mp_tac ax1_5_applied >> 
-     arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa])
- >> arw_tac[spec_all o_assoc] 
- >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa]
-(*uniqueness, last subgoal*)
- >> repeat stp_tac >>
-suffices_tac
- (rapf "b = eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")
- >-- (stp_tac >> accept_tac (sym(assume(rapf "b=eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")))) >>
- match_mp_tac is_eqinduce >> arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa] >>
-  match_mp_tac to_p_eq' >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
-rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
- by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X") >>
- first_x_assum STRIP_ASM_CONJ_TAC >> arw_tac[o_assoc]
-)
-(rapg
-"ALL f:X->Z. ALL g:Y->Z. EXISTS P. EXISTS p:P->X. EXISTS q:P-> Y. ispb(P,p,q,f,g)")
-)
 
 
 val pb_exists = proved_th(
@@ -1014,7 +969,7 @@ e
  >> match_mp_tac is_eqinduce >> arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa] >>
  match_mp_tac to_p_eq' >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
  by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X") >>
- pop_assum_list (map_every STRIP_ASSUME_TAC) >> arw_tac[o_assoc]
+ pop_assum STRIP_ASSUME_TAC >> arw_tac[o_assoc]
 )
 (rapg
 "ALL f:X->Z. ALL g:Y->Z. EXISTS P. EXISTS p:P->X. EXISTS q:P-> Y. ispb(P,p,q,f,g)")
@@ -1044,41 +999,6 @@ first_x_assum (x_choose_tac "a") >> wexists_tac (readt "a:A->P") >>
 "ALL X. ALL Z. ALL f:X->Z. ALL Y. ALL g:Y->Z.EXISTS P. EXISTS p:P->X.EXISTS q:P->Y. f o p = g o q & (ALL A.ALL u:A->X.ALL v:A->Y. f o u = g o v ==>EXISTS a:A->P. p o a = u & q o a = v)")
 )
 
-(*
-
-rule_assum_tac ((conv_rule o try_fconv) (rewr_fconv (spec_all is_pb_def)))
-
-need try_fconv because there are two assumptions! ugly
-
-
-ALL X'. ALL (g : X' -> P). ALL (h : X' -> P). p o g = p o h ==> h = g
-*)
-
-(*TODO: 
-match_mp_tac is_mono_applied renaming!
- (Z : ob),
-   (f : X -> Z),
-   (g : Y -> Z),
-   (p : P -> X),
-   (q : P -> Y)
-   ismono(g),
-     f o p = g o q &
-       ALL A.
-         ALL (u : A -> X).
-           ALL (v : A -> Y).
-             f o u = g o v ==>
-               EXISTS (a : A -> P).
-                 p o a = u &
-                   q o a = v &
-                     ALL (b : A -> P). p o b = u & q o b = v ==> a = b
-   ----------------------------------------------------------------------
-   ALL X'. ALL (g : X' -> P). ALL (h : X' -> P). p o g = p o h ==> h = g
-
-rename tac then strip?
-
-TODO: is_mono_applied  should be p o h = p o k ==> h = k, not k = h, just comfusing
-
-*)
 
 
 val pb_mono_mono = proved_th
@@ -1118,9 +1038,6 @@ end
 )
 
 
-(*!!!!!!AQ2: Want to extract the current goal for testing tactic form the goal stack, how to do this?*)
-
-
 val non_zero_pinv = proved_th(
 e
 (repeat stp_tac >> drule ax6 >> 
@@ -1148,10 +1065,11 @@ by_tac (rapf "isepi(f:A->B)")
 )
 
 
+
 val mono_pinv_post_inv = proved_th(
 e
 (stp_tac >>
-pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
+pop_assum_list (map_every STRIP_ASSUME_TAC)
 >> drule is_mono_thm
 >> first_x_assum (specl_then  (List.map readt ["A","id(A)","(g:B->A) o (f:A->B)"]) assume_tac)
 >> first_x_assum match_mp_tac >> arw_tac[spec_all idR] 
@@ -1161,18 +1079,11 @@ pop_assum_list (map_every STRIP_ASM_CONJ_TAC)
 
 
 
-(*TODO: quotation for specl, and switch the order of input
-bug here, x_choose gives disch has extra variables
-
-*)
-
-
 
 (*TODO: AQ introduce a machinary to check that at each step we have all the variables in the goal are in the context
 at this stage, since have less context makes the thm weaker, so something should be proved cannot be proved. 
 
 *)
-
 
 val epi_non_zero_pre_inv = proved_th(
 e
@@ -1193,15 +1104,6 @@ e
  wexists_tac (readt "a:B->A") >> match_mp_tac mono_pinv_post_inv >> arw_tac[])
 (rapg "ismono(f:A->B) & ~(areiso(A,0)) ==> EXISTS g:B ->A. g o f = id(A)")
 )
-
-
-(*TODO: edit stp_tac using 
-fun STRIP_GOAL_THEN ttac = FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac]
-add a tactic of removing assumption
-
-rule assume tac on first rule which the function applies
-
-*)
 
 
 val o_mono_mono = proved_th(
@@ -1328,38 +1230,6 @@ e
 (rapg "isiso(i) & f o i = g o i ==> f = g")
 ) 
 
-(*
-want solve
-
-(A : ob),
-   (B : ob),
-   (f : A -> B),
-   (g : A -> B),
-   (i : 0 -> A)
-   f o i = g o
-     i,
-     isiso(i)
-   ----------------------------------------------------------------------
-   f = g
-
-from the thm
-
-   (A : ob),
-   (B : ob),
-   (C : ob),
-   (f : B -> C),
-   (g : B -> C),
-   (i : A -> B)
-   
-   |-
-   isiso(i) & f o i = g o i ==> f = g: thm
-
-TODO: bug match_mp
-if use match_mp_tac o_iso_eq_eq, then # Exception- ERR "VALIDInvalid tactic: theorem has extra variable involved i"
-   raised
-
-The i is the i:A->B, not the one from 0, and i is not matched anywhere.
-*)
 
 val from_iso_zero_eq = proved_th(
 e
@@ -1635,9 +1505,6 @@ e
 (rapg "ev(X,Y) o <x:1->X,tp(f o p1(X,1))> = f o x")
 )
  
-(*
-TODO: The pp of goalstack order is messed up
-*)
 val copa_not_mem_mono_mono = proved_th(
 e
 (stp_tac >> pop_assum STRIP_ASSUME_TAC >> match_mp_tac is_mono_applied >> 
@@ -1840,14 +1707,6 @@ e
 (*AQ:do not understand why strip asm does not work here*)
 
 
-(*
-
-AQ3: cannot solve by arw tac because negation is normalised to be false, but the goal is not. Should I change conv_canon or also normalise the goal when rw? 
-
-I think all first_x_assum accept_tac can just be arw in prop_half2
-
-*)
-
 
 val prop_2_corollary = proved_th(
 e
@@ -2002,46 +1861,6 @@ e
 )
     
 
-(*
-Theorem aa:
-a = a
-Proof
-cheat
-QED
-
-“a = b” rw[aa]
-*)
-
-
-(*Thm1*)
-
-(*
-Theorem Thm1_case_1_comm_condition_left:
-∀B f g. f∶ N → B ∧ g∶ one → B ⇒
-          (f o z = g  ⇔ ⟨id N,f⟩ o z = ⟨z,g⟩)
-Proof
-rw[] >>
-‘⟨id N,f⟩∶ N → (N× B) ∧ ⟨z,g⟩∶ one → (N×B) ∧ ⟨id N,f⟩ o z∶ one → (N×B)’
- by metis_tac[id1,pa_hom,compose_hom,ax3] >>
-‘z∶ one → N’ by metis_tac[ax3] >>
-‘f o z ∶ one → B’ by metis_tac[compose_hom] >>
-rw[EQ_IMP_THM] (* 2 *)
->- (irule to_p_eq_applied >> qexistsl_tac [‘N’,‘B’,‘one’] >> rw[] (* 2 *)
-   >- (‘p1 N B ∘ ⟨z,f ∘ z⟩ = z’ by metis_tac[p1_of_pa] >>
-      ‘p1 N B ∘ ⟨id N,f⟩ ∘ z = (p1 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p1_hom] >>
-      metis_tac[idL,id1,p1_of_pa])
-   >- (‘p2 N B ∘ ⟨z,f ∘ z⟩ = f o z’ by metis_tac[p2_of_pa] >>
-      ‘p2 N B ∘ ⟨id N,f⟩ ∘ z = (p2 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p2_hom] >>
-      metis_tac[idL,id1,p2_of_pa]))
->- (‘p2 N B o ⟨id N,f⟩ ∘ z = p2 N B o ⟨z,g⟩’ by metis_tac[] >>
-   ‘p2 N B ∘ ⟨id N,f⟩ ∘ z = (p2 N B ∘ ⟨id N,f⟩) ∘ z’ by metis_tac[compose_assoc,p2_hom] >>
-   ‘(p2 N B ∘ ⟨id N,f⟩) = f’ by metis_tac[id1,p2_of_pa] >>
-    metis_tac[p2_of_pa])
-QED
-*)
-
-(*TODO:  Exception- Fail "unexpected term constructor" raised more helpful error message*)
-
 
 val Thm1_case_1_comm_condition_left = proved_th(
 e
@@ -2072,7 +1891,7 @@ e
 (rapg "(f0 o z = g & f0 o s = h o <id(N),f0>) <=> (<id(N),f0> o z = <z,g> & <s o p1(N,B),h> o <id(N),f0> = <id(N),f0> o s)")
 )
 
-val ax3_equality = ax3 |> spec_all |> dimpr2l |> allI ("x",sort_of (readt "x:N->X"))|> (C allE) (readt "Nind(x0:1->X,t)")|> (C mp) (refl (readt "Nind(x0:1->X,t:X->X)"))|> gen_all
+val ax3_equality = ax3 |> spec_all |> dimpr2l |> allI ("x",sort_of (readt "x:N->X"))|> allE (readt "Nind(x0:1->X,t)")|> (C mp) (refl (readt "Nind(x0:1->X,t:X->X)"))|> gen_all
 
 (*!!!!!!!once arw has the canon, but still need the strip asume, do not understand why*)
 
@@ -2129,7 +1948,7 @@ val cod = snd o dest_ar o sort_of
 
 fun mk_o g f = Fun("o",mk_ar_sort (dom f) (cod g),[g,f])
 fun mk_eq t1 t2 = if sort_of t1 = sort_of t2 then Pred("=",[t1,t2])
-                  else raise ERR "inconsistent sorts"
+                  else raise ERR ("inconsistent sorts",[sort_of t1,sort_of t2],[],[])
 
 val pm1 = readt "pa(p1(A,N* exp(A,B)),p1(N,exp(A,B)) o p2(A,N * exp(A,B)))"
 val pm2 = readt "pa(p1(A,N * exp(A,B)),p2(N,exp(A,B)) o p2(A,N * exp(A,B)))"
@@ -2526,8 +2345,11 @@ fun mk_pred p l = Pred(p,l)
 
 val Thm3_A_zero_I_zerof = mk_imp (readf "areiso(A,0)") (mk_pred "areiso" [I0,readt"0"])
 
-val ax6_contrapos = (assume at) |> mp th |> (C negE) (assume (mk_neg conc))
-                             |> (C negI) at |> elim_double_neg |> disch (mk_neg conc) 
+val ax6_contrapos = let val (at,conc) = dest_imp (concl (spec_all ax6))
+                        val th = spec_all ax6 in 
+                        (assume at) |> mp th |> (C negE) (assume (mk_neg conc))
+                             |> negI at |> elim_double_neg |> disch (mk_neg conc) 
+                    end
 
 (*TODO: think about abbrev tac which also works on dom/cod of context*)
 
