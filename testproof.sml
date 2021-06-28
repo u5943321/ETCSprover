@@ -968,6 +968,44 @@ e
  >> arw_tac[spec_all o_assoc] 
  >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa]
 (*uniqueness, last subgoal*)
+ >> repeat stp_tac >>
+suffices_tac
+ (rapf "b = eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")
+ >-- (stp_tac >> accept_tac (sym(assume(rapf "b=eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")))) >>
+ match_mp_tac is_eqinduce >> arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa] >>
+  match_mp_tac to_p_eq' >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
+rw_tac[spec_all p1_of_pa,spec_all p2_of_pa] >>
+ by_tac (readf "(p1(X, Y) o eqa((f:X->Z) o p1(X, Y), g o p2(X, Y))) o b = u:A->X") >>
+ first_x_assum STRIP_ASM_CONJ_TAC >> arw_tac[o_assoc]
+)
+(rapg
+"ALL f:X->Z. ALL g:Y->Z. EXISTS P. EXISTS p:P->X. EXISTS q:P-> Y. ispb(P,p,q,f,g)")
+)
+
+
+val pb_exists = proved_th(
+e
+(repeat stp_tac >> 
+ wexists_tac (readt "eqo ((f:X->Z)o p1(X,Y),g o p2(X,Y))") >>
+ wexists_tac (readt "p1(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
+ wexists_tac (readt "p2(X,Y) o eqa ((f:X->Z) o p1(X,Y),g o p2(X,Y))") >>
+ rw_tac[spec_all is_pb_def] >>
+ by_tac 
+ (rapf "(f:X->Z) o p1(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y)) = g o p2(X, Y) o eqa(f o p1(X, Y), g o p2(X, Y))") 
+ >-- (once_rw_tac[GSYM o_assoc] >> rw_tac[GSYM eq_equality])
+ >> arw_tac[] >> repeat stp_tac >> 
+ by_tac
+ (rapf "((f:X->Z) o p1(X,Y)) o <u:A->X,v:A->Y> = (g o p2(X,Y)) o <u,v>")
+(*for solving by tac*)
+ >-- (arw_tac[spec_all p1_of_pa,spec_all p2_of_pa,spec_all o_assoc])
+ >> wexists_tac (readt "eqinduce ((f:X->Z) o p1(X,Y),g o p2(X,Y), pa(u:A->X,v:A->Y))")
+ >> by_tac (rapf "eqa((f:X->Z) o p1(X, Y), g o p2(X, Y)) o eqinduce(f o p1(X,Y), g o p2(X, Y), pa(u:A->X, v:A-> Y)) = <u,v>")
+(*solving the by tac*)
+ >-- (match_mp_tac ax1_5_applied >> 
+     arw_tac[spec_all o_assoc,spec_all p1_of_pa,spec_all p2_of_pa])
+ >> arw_tac[spec_all o_assoc] 
+ >> rw_tac[spec_all p1_of_pa,spec_all p2_of_pa]
+(*uniqueness, last subgoal*)
  >> repeat stp_tac >> 
  suffices_tac
  (rapf "b = eqinduce((f:X->Z) o p1(X, Y), g o p2(X, Y), pa(u:A->X, v:A->Y))")

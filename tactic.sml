@@ -512,7 +512,7 @@ fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
 fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
 fun pop_assum_list (asltac:thm list -> tactic):tactic = 
-    fn (G,asl, w) => asltac (List.map assume asl) (G,[], w)
+    fn (G,asl, w) => asltac (List.map assume asl) (G,[], w) handle _ => simple_fail "pop_assum_list"
 
 fun excl_ths P thlt: thm list -> tactic = 
     fn thl => 
@@ -657,7 +657,7 @@ fun conjuncts_then2 ttac1 ttac2 =
       in
          then_tac (ttac1 th1, ttac2 th2)
       end
-      handle ERR _ => simple_fail"conjuncts_then2"
+    (*  handle ERR _ => raise ERR ("conjuncts_then2",[],[],[concl th1,concl th2])*)
 
 val conjuncts_then:thm_tactical = fn ttac => conjuncts_then2 ttac ttac
 
@@ -681,7 +681,7 @@ th' =  A' |- ~C
 A,A' |- F
 *)
 
-fun resolve th th' = mp (mp (F_imp (concl th)) th') th
+fun resolve th th' = mp (mp (F_imp (concl th)) th') th handle _ => simple_fail "resolve"
 
 fun target_rule tm =
       if is_neg tm then (dest_neg tm, Lib.C resolve) else (mk_neg tm, resolve)
@@ -760,7 +760,7 @@ val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
 
 (*choose_then*)
 
-fun foo th m = mp (disch (concl th) (assume m)) th
+fun foo th m = mp (disch (concl th) (assume m)) th handle _ => simple_fail "foo"
 
 fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
    fn xth =>
@@ -814,10 +814,11 @@ val check_assume_tac: thm_tactic =
    fn gth =>
       first [CONTR_TAC gth, accept_tac gth, OPPOSITE_TAC gth,
              DISCARD_TAC gth,assume_tac gth]
+      handle _ => simple_fail "check_assume_tac"
 
 val strip_thm_then = FIRST_TCL [conjuncts_then, disj_cases_then, choose_then]
 
-val STRIP_ASSUME_TAC = REPEAT_TCL strip_thm_then check_assume_tac
+val STRIP_ASSUME_TAC = REPEAT_TCL strip_thm_then check_assume_tac handle _ => simple_fail "strip_assume_tac"
 
 val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
 

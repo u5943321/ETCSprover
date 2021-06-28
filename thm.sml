@@ -61,6 +61,8 @@ fun inst_thm env th =
         end
     else simple_fail "bad environment"
 
+(*fun subst_thm *)
+
 fun ril i l = 
     case l of [] => []
             | h :: t => 
@@ -428,6 +430,43 @@ fun subst thml tmp t =
         val (ll,rl,asml) = List.foldr thml_eq_pairs ([],[],[]) thml
     in 
 *)
+
+
+fun substfnt ot nt t = 
+    case t of
+        Var(n,s) => if t = ot then nt else Var(n,substfns ot nt s)
+       |Fun(f,s,l) => if t = ot then nt else 
+                      let val ns = substfns ot nt s
+                          val nl = List.map (substfnt ot nt) l
+                      in Fun(f,ns,nl)
+                      end
+       |Bound i => t
+and substfns ot nt s = 
+    case s of 
+        ob => s
+       |ar(d,c) => ar(substfnt ot nt d,substfnt ot nt c)
+
+
+fun mk_cont nsl =
+    List.foldr (fn (new,set) => HOLset.add(set,new)) essps nsl
+
+fun substfnf ot nt (redex as (n,s)) f0 f =
+    if eq_form(f,substf ((n,s),ot) f0) then 
+        substf ((n,s),nt) f0 
+    else raise ERR ("substfnf.formula to be subst is of the wrong form: ",
+                    [],[Var(n,s)],[f0,f])
+
+fun subst_cont eqth th = 
+    let val ctl = HOLset.listItems (HOLset.union(cont th,cont eqth))
+        val (obs,ars) = partition (fn (n,s) => s = ob) ctl
+        val (names,arss) = unzip ars
+        val (ot,nt) = dest_eq (concl eqth)
+        val arss' = List.map (substfns ot nt) arss
+        val nars = zip names arss'
+        val ct' = mk_cont (obs @ nars)
+    in thm(ct',asml_U [ant eqth,ant th],concl th)
+    end
+
 
 fun all_distinct l = 
     case l of [] => true
