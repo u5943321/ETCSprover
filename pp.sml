@@ -7,6 +7,7 @@ infix >>
 fun is_infix sym = 
     if mem sym ["*","+","^","=","o"] then true else false
 
+
 (*also want this pp for HOLset... *)
  
 fun paren pp = block HOLPP.INCONSISTENT 1 
@@ -52,6 +53,9 @@ fun ppterm ss g t =
                                ppterm ss g2 t2
                 end
         else 
+            if f = "pa" then 
+                add_string "<" >> ppterm ss g t1 >> add_string " , " >> ppterm ss g t2 >> add_string ">"
+            else
             add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) [t1,t2])
       | Fun(f,s,args) => 
         if args = [] then add_string f else
