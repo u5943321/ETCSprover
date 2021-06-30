@@ -600,6 +600,7 @@ fun ast2pf ast (env:env) =
                     end
                   | _ => simple_fail"err in parsing bound variable"
             end
+   (*this does not allow us to use constants for bounded variable names*)
         else simple_fail"not a quantifier"
 and ast2pt ast env = 
     case ast of 
