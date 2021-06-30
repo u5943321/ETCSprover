@@ -110,8 +110,9 @@ fun ppform (ss:bool) g (f:form) =
       | Conn("~",[f]) => add_string "~" >> ppform ss g f
       | Quant(q,n,s,b) =>
         block HOLPP.INCONSISTENT 2
-              (add_string q >> add_break (1,0) >> 
-                          (if s = ob then ppterm false (LR (NONE,NONE)) (Var(n,s)) else ppterm true (LR (NONE,NONE)) (Var(n,s))) >> add_string "." >> add_break (1,0) >> ppform ss g (subst_bound (Var(n^"#",s)) b))
+              (add_string q >> 
+                          (if s = ob then ppterm false (LR (NONE,NONE)) (Var(n,s)) else 
+add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss g (subst_bound (Var(n^"#",s)) b))
       | fVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
       | _ => raise ERR ("ill-formed formula",[],[],[f])
 
