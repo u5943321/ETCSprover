@@ -2,14 +2,7 @@ signature form =
 sig
 type sort = term.sort
 type term = term.term
-(*datatype sort = ob 
-               | ar of term * term 
-and term =
-    Var of string * sort
-    | Param of string * sort * (string * sort) list
-    | Bound of int
-    | Fun of string * sort * term list;
-*)
+
 datatype form =
 Pred of string * term list
 | Conn of string * form list
@@ -19,6 +12,9 @@ Pred of string * term list
 exception ERR of string * sort list * term list * form list 
 val simple_fail: string -> 'a 
 
+val eq_forml: form list -> form list -> bool
+val fmem: form -> form list -> bool
+val ril: form -> form list -> form list
 val is_conj: form -> bool
 val is_dimp: form -> bool
 val is_neg: form -> bool

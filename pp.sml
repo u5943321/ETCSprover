@@ -7,8 +7,6 @@ infix >>
 fun is_infix sym = 
     if mem sym ["*","+","^","=","o"] then true else false
 
-
-(*also want this pp for HOLset... *)
  
 fun paren pp = block HOLPP.INCONSISTENT 1 
                      (add_string "(" >> pp >> 
@@ -16,10 +14,6 @@ fun paren pp = block HOLPP.INCONSISTENT 1
 
 datatype gravity = LR of int option * int option (*prec of left and right neighbours*)
 
-(*
-Fun("*",[A, Fun("+",[B,C])])
-
-*)
 
 fun int_option_leq (n,n0) = 
     case n0 of NONE => false
@@ -149,7 +143,5 @@ val printf = HOLPP.pp_to_string 75 (fn f => PPform 70 () f)  (*70-75 for the int
 val printth = HOLPP.pp_to_string 75 (fn th => PPthm 70 () th)  (*70-75 for the int*) 
 
 val _ = PolyML.addPrettyPrinter PPthm
-
-(*TODO: Dont print thm and goal as same*)
 
 end
