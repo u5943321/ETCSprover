@@ -157,7 +157,7 @@ fun ps_of_pt pt env =
       | pFun (n,ps,l) => (ps,env)
       | pAnno(pt,ps) => ps_of_pt pt env
 
-(*TODO: read_ast_f "ALL A. ALL B.ALL f: A -> B. ALL g:A ->B.~(f = g) ==> EXISTS a: 1 -> A. ~(f o a = g o a)";
+(*TODO: read_ast_f "! A. ! B.! f: A -> B. ! g:A ->B.~(f = g) ==> ? a: 1 -> A. ~(f o a = g o a)";
 Exception- UNIFY "occurs check(pt):pv a : psv  4 ptu  4" raised*)
 
 fun unify_ps env (ps1:psort) (ps2:psort):env = 
@@ -471,21 +471,21 @@ fun rparen s (x, Key(s')::toks) =
 
 fun parse_ast tl =
     case tl of
-        Key"ALL"::tl =>
+        Key"!"::tl =>
         let 
             val (ns,tl1) = parse_ast tl
             val tl1' = List.tl tl1
             val (b,tl2) = parse_ast tl1'
         in
-            (aBinder ("ALL",ns,b), tl2)
+            (aBinder ("!",ns,b), tl2)
         end
-      | Key"EXISTS"::tl =>
+      | Key"?"::tl =>
         let 
             val (ns,tl1) = parse_ast tl
             val tl1' = List.tl tl1
             val (b,tl2) = parse_ast tl1'
         in
-            (aBinder ("EXISTS",ns,b), tl2)
+            (aBinder ("?",ns,b), tl2)
         end 
       | _ => parse_ast_fix 0 (parse_ast_atom tl)
 and parse_ast_fix n (ast,tl) = 
@@ -495,8 +495,8 @@ and parse_ast_fix n (ast,tl) =
         else
             let
                 val (ast1,tl1) =
-                    if List.hd tl = Key "ALL" orelse 
-                       List.hd tl = Key "EXISTS" then 
+                    if List.hd tl = Key "!" orelse 
+                       List.hd tl = Key "?" then 
                         parse_ast tl 
                     else 
                     parse_ast_atom tl
@@ -508,7 +508,7 @@ and parse_ast_fix n (ast,tl) =
 and parse_ast_atom tl = 
     case tl of
         (Key"~"::tl1) =>
-        let val (ast,tl2) = parse_ast_atom tl1
+        let val (ast,tl2) = parse_ast tl1
         in (aApp("~",[ast]),tl2)
         end
      | Id(a)::Key"("::tl1 => 
@@ -527,7 +527,7 @@ and parse_ast_atom tl =
 
 
 (*
-parse_ast (lex "ALL X. ~ areiso(X,0) ==> EXISTS x: 1 -> X. T");
+parse_ast (lex "! X. ~ areiso(X,0) ==> ? x: 1 -> X. T");
 Exception- ERR "" raised
 *)
 (*handle "()"*)
@@ -556,7 +556,7 @@ fun ast2pf ast (env:env) =
         simple_fail("variable:" ^ a ^ " is parsed as a predicate")
       | aApp("~",[ast]) => 
         let val (pf,env1) = ast2pf ast env in
-            (pConn("~",[pf]),env)
+            (pConn("~",[pf]),env1)
         end
       | aApp(str,astl) => 
         if is_pred str then 
@@ -585,7 +585,7 @@ fun ast2pf ast (env:env) =
             end else
         simple_fail"not an infix operator"
       | aBinder(str,ns,b) => 
-        if str = "ALL" orelse str = "EXISTS" then
+        if str = "!" orelse str = "?" then
             let val (pt,env1) = ast2pt ns env in 
                 case pt of 
                     pVar(n,s) => 
@@ -626,22 +626,22 @@ and ast2pt ast env =
                 in (pFun_cons pt0 pt,env2)
                 end
         else simple_fail("not a function symbol: " ^ str) 
-      | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) => 
+      | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) =>
         let 
+            val (dom,env1) = ast2pt ast1 env
+            val (cod,env2) = ast2pt ast2 env1
+        in 
+            case ps_of env n of 
+            NONE => let val env3 = record_ps n (par(dom,cod)) env2
+                     in (pVar(n,par(dom,cod)),env3)
+                     end
+           | SOME ps =>  (pAnno(pVar(n,ps),par(dom,cod)),env2)
+        end
+        (*let 
             val (pt1,env1) = ast2pt ast1 env
             val (pt2,env2) = ast2pt ast2 env1
             val env3 = record_ps n (par(pAnno(pt1,pob),pAnno(pt2,pob))) env2
         in  (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env3)
-        end 
-        (*let 
-            val (pt1,env1) = ast2pt ast1 env
-            val (pt2,env2) = ast2pt ast2 env1
-        in (pVar(n,par(pt1,pt2)),env2)
-        end*)
-        (*let 
-            val (pt1,env1) = ast2pt ast1 env
-            val (pt2,env2) = ast2pt ast2 env1
-        in (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env2)
         end *)
       | aInfix(ast1,str,ast2) => 
         if mem str ["*","+","^","o"] then
@@ -654,6 +654,9 @@ and ast2pt ast env =
         else simple_fail"not an infix operator"
       | aBinder(str,ns,b) => 
         simple_fail "quantified formula parsed as a term!"
+
+fun dest_Binder (aBinder(q,ns,b)) = (q,ns,b)
+
 
 fun parse_ast_end (x:ast, l:token list) =
     if l = [] then x
@@ -738,13 +741,13 @@ fun prec_of "~" = 4
 
 fun parse_pf tl env = 
     case tl of 
-        (Key"ALL"::Id(a)::tl) =>
+        (Key"!"::Id(a)::tl) =>
         (case tl of 
              (Key"."::tl1) =>
              let val (n,env1) = fresh_var env
                  val env2 = record_ps a (psvar n) env1
                  val (pb,tl2,env3) = parse_pf tl1 env2
-             in (mk_pQuant "ALL" a (psvar n) pb,tl2,clear_ps a env3)
+             in (mk_pQuant "!" a (psvar n) pb,tl2,clear_ps a env3)
              end
            | (Key":"::tl1) => 
              let val (ps,tl2,env1) = parse_par tl1 env
@@ -753,18 +756,18 @@ fun parse_pf tl env =
                     let  val env2 = record_ps a ps env1
                          val (pb,tl3,env3) = parse_pf tl3 env2
                     in
-                        (mk_pQuant "ALL" a ps pb,tl3,clear_ps a env3) 
+                        (mk_pQuant "!" a ps pb,tl3,clear_ps a env3) 
                     end
                   | _ => raise ERROR "Expected dot"
              end
            | _ => raise ERROR "Syntax of pform")
-      | (Key"EXISTS"::Id(a)::tl) =>
+      | (Key"?"::Id(a)::tl) =>
         (case tl of 
              (Key"."::tl1) =>
              let val (n,env1) = fresh_var env
                  val env2 = record_ps a (psvar n) env1
                  val (pb,tl2,env3) = parse_pf tl1 env2
-             in (mk_pQuant "EXISTS" a (psvar n) pb,tl2,clear_ps a env3)
+             in (mk_pQuant "?" a (psvar n) pb,tl2,clear_ps a env3)
              end
            | (Key":"::tl1) => 
              let val (ps,tl2,env1) = parse_par tl1 env
@@ -773,7 +776,7 @@ fun parse_pf tl env =
                     let  val env2 = record_ps a ps env1
                          val (pb,tl3,env3) = parse_pf tl3 env2
                     in
-                        (mk_pQuant "EXISTS" a ps pb,tl3,clear_ps a env3) 
+                        (mk_pQuant "?" a ps pb,tl3,clear_ps a env3) 
                     end
                   | _ => raise ERROR "Expected dot"
              end

@@ -45,7 +45,7 @@ val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
-val fsyms0:fsymd = 
+val fsyms0:fsymd =  
     List.foldr 
         (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
             Binarymap.insert (d,p,(s,l)))
@@ -54,12 +54,14 @@ val fsyms0:fsymd =
          ("0",(ob,[])),
          ("1",(ob,[])),
          ("id",(ar(mk_ob "A",mk_ob "A"),[("A",ob)])),
-         ("to1",(ar(mk_ob "X",mk_const "1" ob),[("X",ob)])),
-         ("from0",(ar(mk_const "0" ob,mk_ob "X"),[("X",ob)])),
+         ("to1",(ar(mk_ob "X",mk_ob "one"),
+                 [("one",ob),("X",ob)])),
+         ("from0",(ar(mk_ob "zero",mk_ob "X"),
+                   [("zero",ob),("X",ob)])),
          ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
                                         ("g",ar(mk_ob "A",mk_ob "B"))])),
          ("*",(ob,[("A",ob),("B",ob)])),
-         ("+",(ob,[("A",ob),("B",ob)])),
+         ("+",(ob,[("A",ob),("B",ob)]))](*,
          ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
          ("p2",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
          ("i1",(ar(mk_ob "A",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
@@ -93,7 +95,7 @@ val fsyms0:fsymd =
                   [("x0",ar(mk_const "1" ob,mk_ob "X")),
                    ("t",ar(mk_ob "X",mk_ob "X"))]))
         ]
-
+*)
 val cdict0:(string,psort) Binarymap.dict =
     List.foldr (fn ((n,s),d) => (Binarymap.insert(d,n,s))) 
                (Binarymap.mkDict String.compare) 
