@@ -61,7 +61,7 @@ val fsyms0:fsymd =
          ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
                                         ("g",ar(mk_ob "A",mk_ob "B"))])),
          ("*",(ob,[("A",ob),("B",ob)])),
-         ("+",(ob,[("A",ob),("B",ob)]))](*,
+         ("+",(ob,[("A",ob),("B",ob)])),
          ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
          ("p2",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
          ("i1",(ar(mk_ob "A",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
@@ -95,7 +95,7 @@ val fsyms0:fsymd =
                   [("x0",ar(mk_const "1" ob,mk_ob "X")),
                    ("t",ar(mk_ob "X",mk_ob "X"))]))
         ]
-*)
+
 val cdict0:(string,psort) Binarymap.dict =
     List.foldr (fn ((n,s),d) => (Binarymap.insert(d,n,s))) 
                (Binarymap.mkDict String.compare) 

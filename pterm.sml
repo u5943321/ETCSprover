@@ -2,6 +2,7 @@ structure pterm :> pterm =
 struct
 open token pterm_dtype term form symbols
 
+exception PER of (string * psort list * pterm list)
 
 fun mk_pQuant q n ps pf = pQuant (q,n,ps,pf)
 
@@ -583,7 +584,7 @@ fun ast2pf ast (env:env) =
             in
                 (pPred(str,[pt1,pt2]),env2)
             end else
-        simple_fail"not an infix operator"
+        simple_fail ("not an infix operator: " ^ "str")
       | aBinder(str,ns,b) => 
         if str = "!" orelse str = "?" then
             let val (pt,env1) = ast2pt ns env in 
@@ -598,7 +599,7 @@ fun ast2pf ast (env:env) =
                     let val (pf,env2) = ast2pf b env1 in
                         (mk_pQuant str n ps pf,clear_ps n env2)
                     end
-                  | _ => simple_fail"err in parsing bound variable"
+                  | _ => simple_fail"err in parsing bound variable,maybe the bounded variable name clash wish a constant"
             end
    (*this does not allow us to use constants for bounded variable names*)
         else simple_fail"not a quantifier"
