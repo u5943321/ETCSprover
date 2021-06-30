@@ -116,7 +116,7 @@ fun ppform (ss:bool) g (f:form) =
       | _ => raise ERR ("ill-formed formula",[],[],[f])
 
    
-
+“(!f. P(f)) ==> (?f. Q(f)) ==> (!a.P(a))”
 fun PPform printdepth _ t = let val s = ppform (!show_types) (LR (NONE,NONE)) t 
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
