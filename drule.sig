@@ -92,6 +92,7 @@ val conj_all_assum: thm -> thm
 
 val nF2T: thm
 val nT2F: thm
+val double_neg_elim: thm
 (*
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list

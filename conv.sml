@@ -335,6 +335,9 @@ fun sym_fconv f =
 
 val GSYM = conv_rule (once_depth_fconv no_conv sym_fconv)
 
+fun double_neg_fconv f = rewr_fconv double_neg_elim f
+
+val neg_neg_elim = conv_rule (once_depth_fconv no_conv double_neg_fconv)
 
 (*TODO: something like iffLR in HOL, deal with iff in anywhere of this thm*)
 end

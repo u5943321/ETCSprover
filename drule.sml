@@ -841,4 +841,5 @@ val nT2F =
     in dimpI l2r r2l
     end
 
+val double_neg_elim = double_neg (fVar "f0")
 end
