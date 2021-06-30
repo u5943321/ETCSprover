@@ -1,6 +1,6 @@
 structure conv :> conv = 
 struct
-open term form thm drule pp
+open term form logic drule pp
 type conv = term -> thm
 type fconv = form -> thm
 type form = form.form
@@ -104,7 +104,7 @@ fun part_fmatch partfn th f =
     let 
         val fvd = (match_form (fvfl (ant th)) (partfn th) f mempty)
         val th' = inst_thm fvd th
-        val _ = if !simp_trace then Lib.say (printth th') else ()
+       (* val _ = if !simp_trace then Lib.say (printth th') else ()*)
     in 
         th'
     end
@@ -272,7 +272,9 @@ val basic_taut_fconv =
                  taut_forall_fconv,
                  taut_exists_fconv]
 
-val taut_fconv = basic_taut_fconv orelsec refl_fconv 
+val nFT_fconv = first_fconv [rewr_fconv nF2T,rewr_fconv nT2F]
+
+val taut_fconv = basic_taut_fconv orelsec refl_fconv orelsec nFT_fconv
 
 fun top_depth_fconv c fc f =
     (repeatfc fc thenfc

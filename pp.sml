@@ -1,6 +1,6 @@
 structure pp = 
 struct 
-open term form smpp symbols
+open term form logic smpp symbols
 
 infix >>
 

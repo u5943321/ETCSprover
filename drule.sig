@@ -4,7 +4,7 @@ type form = form.form
 type term = term.term
 type sort = term.sort
 type menv = form.menv
-type thm = thm.thm
+type thm = logic.thm
 
 val simple_exists: (string  * sort) -> thm -> thm
 val prove_hyp: thm -> thm -> thm
@@ -89,6 +89,9 @@ val elim_double_neg:thm -> thm
 val strip_neg: thm -> thm
 val exists_all: (string * sort) -> thm
 val conj_all_assum: thm -> thm
+
+val nF2T: thm
+val nT2F: thm
 (*
 val imp_canon: thm -> thm list
 val fconv_canon: thm -> thm list

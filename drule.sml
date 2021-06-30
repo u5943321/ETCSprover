@@ -825,4 +825,20 @@ fun split_assum f th =
 
 (*todo:dual for exists_all: !a.P(a) <=> ~?a.~P(a)*)
 (*todo: a rule for eleminating ~~ taking an ~~ formula*)
+
+
+(*~F <=> T and also ~T <=> F*)
+
+val nF2T = 
+    let val l2r = trueI [mk_neg FALSE] |> disch_all
+        val r2l = assume FALSE |> add_assum TRUE |> negI FALSE |> disch_all
+    in dimpI l2r r2l
+    end
+
+val nT2F = 
+    let val l2r = assume (mk_neg TRUE) |> negE (trueI []) |> disch_all
+        val r2l = falseE [FALSE] (mk_neg TRUE) |> disch_all
+    in dimpI l2r r2l
+    end
+
 end
