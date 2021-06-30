@@ -1,0 +1,5 @@
+
+*.sml#
+.#testproof.sml
+.#pp.sml
+*.sml~
