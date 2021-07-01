@@ -159,6 +159,7 @@ fun negI f (thm (G,A,C)) =
 fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) = 
     let 
         val _ = eq_form(C2,Conn("~",[C1])) orelse 
+                eq_form(C1,Conn("~",[C2])) orelse
                 raise ERR ("negE.not a pair of contradiction",
                            [],[],[C1,C2])
     in

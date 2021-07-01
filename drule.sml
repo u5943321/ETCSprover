@@ -842,4 +842,16 @@ val nT2F =
     end
 
 val double_neg_elim = double_neg (fVar "f0")
+
+val all_iff' = C all_iff
+
+fun all_exists (n,s) = 
+    let val th0 = exists_all (n,s) |> neg_iff |> inst_thm (mk_inst [] [("f0",mk_neg (fVar "f0"))]) 
+        val rhs1 = double_neg (fVar "f0") |> all_iff' (n,s)
+        val rhs2 = double_neg (mk_all n s (mk_neg (mk_neg (fVar "f0"))))
+        val rhs = iff_trans rhs2 rhs1
+        val th0' = iff_trans th0 rhs
+    in iff_swap th0'
+    end
+
 end
