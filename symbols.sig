@@ -14,6 +14,7 @@ val insert_psym: string -> unit
 
 type fsymd = (string, term.sort * (string * term.sort) list) Binarymap.dict
 val fsyms0: fsymd
+val fsyms: fsymd ref
 val lookup_fun: fsymd -> string -> (term.sort * (string * term.sort) list) option
 val is_fun: string -> bool
 val new_fun:
@@ -24,6 +25,7 @@ val new_fun:
 
 type psymd = (string, (string * term.sort) list) Binarymap.dict
 val psyms0: psymd
+val psyms: psymd ref
 val lookup_pred: psymd -> string -> (string * term.sort) list option
 val is_pred: string -> bool
 val new_pred:

@@ -16,7 +16,7 @@ val contra_tac: tactic
 val ccontra_tac: tactic
 val imp_tac: tactic
 val dimp_tac: tactic
-val wexists_tac: term -> tactic
+val exists_tac: term -> tactic
 val gen_tac: tactic
 val then_tac: (tactic * tactic) -> tactic
 val then1_tac: (tactic * tactic) -> tactic

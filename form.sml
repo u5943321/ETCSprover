@@ -2,10 +2,6 @@ structure form :> form =
 struct
 open term 
 
-(*TODO: edit all the ERR so it outputs the term/form as well*)
-
-
-
 datatype form =
 Pred of string * term list
 | Conn of string * form list
@@ -106,7 +102,7 @@ fun is_eqn f =
 
 fun is_all f = 
     case f of 
-        Quant("ALL",_,_,_) => true
+        Quant("!",_,_,_) => true
       | _ => false
 
 
@@ -124,9 +120,9 @@ fun mk_imp f1 f2 = Conn("==>",[f1,f2])
 
 fun mk_dimp f1 f2 = Conn("<=>",[f1,f2])
 
-fun mk_all n s b = Quant("ALL",n,s,abstract (n,s) b)
+fun mk_all n s b = Quant("!",n,s,abstract (n,s) b)
 
-fun mk_exists n s b = Quant("EXISTS",n,s,abstract (n,s) b)
+fun mk_exists n s b = Quant("?",n,s,abstract (n,s) b)
 
 (*destructor functions*)
 
@@ -171,12 +167,12 @@ fun dest_pred f =
 
 fun dest_exists f = 
     case f of 
-        Quant("EXISTS",n,s,b) => ((n,s),b)
+        Quant("?",n,s,b) => ((n,s),b)
       | _ => raise ERR ("not an existantial: ",[],[],[f])
 
 fun dest_all f = 
     case f of 
-        Quant("ALL",n,s,b) => ((n,s),b)
+        Quant("!",n,s,b) => ((n,s),b)
       | _ => raise ERR ("not a universal",[],[],[f])
 
 fun eq_form fp = 
@@ -189,6 +185,19 @@ fun eq_form fp =
         q1 = q2 andalso s1 = s2 andalso eq_form (b1,b2)
       | (fVar fm1,fVar fm2)  => fm1 = fm2
       | _ => false
+
+fun eq_forml (l1:form list) (l2:form list) = 
+    case (l1,l2) of 
+        ([],[]) => true
+      | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
+      | _  => simple_fail "eq_forml.different length of lists"
+
+fun fmem f fl = List.exists (curry eq_form f) fl
+
+fun ril i l = 
+    case l of [] => []
+            | h :: t => 
+              if eq_form(h,i) then t else h :: (ril i t)
 
 (*compare functions which help produces HOLsets.*)
 
@@ -368,7 +377,7 @@ and match_fl nss l1 l2 env =
 
 fun strip_all f = 
     case f of 
-        Quant("ALL",n,s,b) => 
+        Quant("!",n,s,b) => 
         let val (b1,l) = strip_all (subst_bound (Var(n,s)) b) in
             (b1,(n,s) :: l) end
       | _ => (f,[])
