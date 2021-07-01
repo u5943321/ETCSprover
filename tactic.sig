@@ -24,22 +24,22 @@ val Orelse: (tactic * tactic) -> tactic
 val stp_tac: tactic
 val all_tac: tactic
 val repeat: tactic -> tactic 
-val assum_list: (thm.thm list -> tactic) -> tactic
-val pop_assum_list: (thm.thm list -> tactic) -> tactic
+val assum_list: (logic.thm list -> tactic) -> tactic
+val pop_assum_list: (logic.thm list -> tactic) -> tactic
 val pop_assum: thm_tactic -> tactic
 val mp_tac: thm_tactic
-val rw_tac: thm.thm list -> tactic
+val rw_tac: logic.thm list -> tactic
 val T_INTRO_TAC: tactic
 val drule: thm_tactic
-val arw_tac: thm.thm list -> tactic
-val once_arw_tac: thm.thm list -> tactic
+val arw_tac: logic.thm list -> tactic
+val once_arw_tac: logic.thm list -> tactic
 val fconv_tac: fconv -> tactic
-val once_rw_tac: thm.thm list -> tactic
+val once_rw_tac: logic.thm list -> tactic
 val valid: tactic -> tactic
 val by_tac: form.form -> tactic
 val suffices_tac: form.form -> tactic
 val match_mp_tac: thm_tactic
-val rule_assum_tac: (thm.thm -> thm.thm) -> tactic
+val rule_assum_tac: (logic.thm -> logic.thm) -> tactic
 val choose_tac: string -> form.form -> tactic
 
 val every: tactic list -> tactic
@@ -48,7 +48,7 @@ val map_every: ('a -> tactic) -> 'a list -> tactic
 val CONTR_TAC:thm_tactic
 val first: tactic list -> tactic
 val check_assume_tac: thm_tactic
-val conj_pair: thm.thm -> (thm.thm * thm.thm)
+val conj_pair: logic.thm -> (logic.thm * logic.thm)
 val conjuncts_then: thm_tactic -> thm_tactic
 val STRIP_ASSUME_TAC: thm_tactic
 
@@ -67,8 +67,8 @@ val last_x_assum: thm_tactic -> tactic
 val pick_assum: form.form -> thm_tactic -> tactic
 val pick_x_assum: form.form -> thm_tactic -> tactic
 
-val conv_canon: thm.thm -> thm.thm list
-val fconv_canon: thm.thm -> thm.thm list
+val conv_canon: logic.thm -> logic.thm list
+val fconv_canon: logic.thm -> logic.thm list
 
 val cases_on: form.form -> tactic
 val specl_then: term.term list -> thm_tactic -> thm_tactic

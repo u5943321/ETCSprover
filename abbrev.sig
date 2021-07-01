@@ -1,6 +1,6 @@
 signature abbrev =
 sig
-  type thm          = thm.thm
+  type thm          = logic.thm
   type term         = term.term
   type sort         = term.sort
   type form         = form.form

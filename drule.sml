@@ -391,7 +391,7 @@ fun dimp_iff (th1 as thm(G1,A1,C1)) (th2 as thm(G2,A2,C2)) =
       | _ => raise ERR ("dimp_iff.not a pair of iff: ",[],[],[C1,C2])
 
 
-fun all_iff (th as thm(G,A,C0)) (n,s) = 
+fun all_iff (n,s) (th as thm(G,A,C0)) = 
     case C0 of 
         Conn("<=>",[P,Q]) => 
         let val allP = Quant("!", n, s, abstract (n,s) P)
@@ -405,7 +405,7 @@ fun all_iff (th as thm(G,A,C0)) (n,s) =
 
 
 
-fun exists_iff (th as thm(G,A,C)) (n,s) = 
+fun exists_iff (n,s) (th as thm(G,A,C)) = 
     let
         val (P,Q) = dest_dimp C
         val P2Q = undisch (conjE1 (dimpE th))
@@ -623,12 +623,12 @@ specl: if bounded variable name clash with existing variable, then add a " ' "
 **********************************************************************)
 
 
-fun specl th l = 
+fun specl l th = 
     case l of [] => th 
             | h :: t => if is_all (concl th) then 
-                            let val f1 = allE h th   (*handle ERR _ => th*)
+                            let val f1 = allE h th  
                             in 
-                                specl f1 t
+                                specl t f1
                             end
                         else raise ERR ("specl.thm is not universally quantified",[],[],[concl th])
 
@@ -640,7 +640,7 @@ fun spec_all th =
         val v2bs = snd (strip_all (concl th))
         val v2bs' = List.map (pvariantt fv) (List.map Var v2bs)
     in 
-        specl th v2bs'
+        specl v2bs' th
     end
 
 
@@ -698,10 +698,10 @@ fun order_of nss =
     in topological_order g
     end
 
-fun abstl th l = 
+fun abstl l th = 
     case l of 
         [] => th
-      | (n,s) :: t => allI (n,s) (abstl th t)
+      | (n,s) :: t => allI (n,s) (abstl t th)
 
 fun find_var l n = 
     case l of 
@@ -715,7 +715,7 @@ fun genl vsl th =
         val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vsl)
         val vl = List.map (find_var vsl) ovs
     in 
-        abstl th vl
+        abstl vl th
     end
 
 
@@ -727,7 +727,7 @@ fun gen_all th =
         val ovs = order_of vs
         val vl = List.map (find_var vsl) ovs
     in 
-        abstl th vl
+        abstl vl th
     end
 
 
@@ -843,11 +843,11 @@ val nT2F =
 
 val double_neg_elim = double_neg (fVar "f0")
 
-val all_iff' = C all_iff
+
 
 fun all_exists (n,s) = 
     let val th0 = exists_all (n,s) |> neg_iff |> inst_thm (mk_inst [] [("f0",mk_neg (fVar "f0"))]) 
-        val rhs1 = double_neg (fVar "f0") |> all_iff' (n,s)
+        val rhs1 = double_neg (fVar "f0") |> all_iff (n,s)
         val rhs2 = double_neg (mk_all n s (mk_neg (mk_neg (fVar "f0"))))
         val rhs = iff_trans rhs2 rhs1
         val th0' = iff_trans th0 rhs

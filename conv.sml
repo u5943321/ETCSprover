@@ -1,6 +1,6 @@
 structure conv :> conv = 
 struct
-open term form logic drule pp
+open term form logic drule
 type conv = term -> thm
 type fconv = form -> thm
 type form = form.form
@@ -183,13 +183,13 @@ fun dimp_fconv fc f =
 fun forall_fconv fc f = 
     case f of
         (Quant("ALL",n,s,b)) => 
-        all_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
+        all_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b)) 
       | _ => simple_fail "not an all"
-
+ 
 fun exists_fconv fc f = 
     case f of
         (Quant("EXISTS",n,s,b)) => 
-        exists_iff (try_fconv fc (subst_bound (Var(n,s)) b)) (n,s)
+        exists_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b)) 
       | _ => simple_fail "not an all"
 
 val reflTob = equivT (refl (Var("a",ob)))
@@ -310,7 +310,7 @@ fun right_imp_forall_fconv f  =
         val asm1 = assume f 
         val ath = assume ant 
         val mpth = mp asm1 ath
-        val sth =  specl mpth [Var ns]
+        val sth = specl [Var ns] mpth
         val gth = sth |> disch ant |> allI ns 
         val asm2 = assume (concl gth)
         val sasm2 = (C allE) asm2 (Var ns) 

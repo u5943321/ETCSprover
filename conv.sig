@@ -3,7 +3,7 @@ sig
 type form = form.form
 type term = term.term
 type sort = term.sort
-type thm = thm.thm
+type thm = logic.thm
 type conv = abbrev.conv
 type fconv = abbrev.fconv
 

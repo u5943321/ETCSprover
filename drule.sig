@@ -6,7 +6,7 @@ type sort = term.sort
 type menv = form.menv
 type thm = logic.thm
 
-val simple_exists: (string  * sort) -> thm -> thm
+val simple_exists: (string * sort) -> thm -> thm
 val prove_hyp: thm -> thm -> thm
 val imp_trans: thm -> thm -> thm
 val frefl: form -> thm
@@ -23,9 +23,9 @@ val dimp_mp_l2r: thm -> thm -> thm
 val dimp_mp_r2l: thm -> thm -> thm
 
 
-val abstl: thm -> (string * sort) list -> thm
+val abstl: (string * sort) list -> thm -> thm
 val spec_all: thm -> thm
-val specl: thm -> term list -> thm
+val specl: term list -> thm -> thm
 
 val gen_all: thm -> thm
 val genl: (string * sort) list -> thm -> thm
@@ -39,8 +39,8 @@ val disj_iff: thm -> thm -> thm
 val imp_iff: thm -> thm -> thm
 val dimp_iff: thm -> thm -> thm
 
-val all_iff: thm -> string * sort -> thm
-val exists_iff: thm -> string * sort -> thm 
+val all_iff: string * sort -> thm -> thm
+val exists_iff: string * sort -> thm -> thm 
 
 
 
