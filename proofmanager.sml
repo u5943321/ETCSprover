@@ -19,11 +19,11 @@ fun pgoal action x = (action x;
 
 fun g f = pgoal g0 f 
 
-fun e0 tac  = case !current_goal of 
+fun e00 tac  = case !current_goal of 
                   NONE => print "no goal \n"
-                | SOME gstk => current_goal := SOME (goalstack.e tac gstk)
+                | SOME gstk => current_goal := SOME (goalstack.e0 tac gstk)
 
-val e = pgoal e0
+val e = pgoal e00
 
 
 end

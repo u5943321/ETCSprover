@@ -10,7 +10,7 @@ Pred of string * term list
 | fVar of string;
 
 exception ERR of string * sort list * term list * form list 
-val simple_fail: string -> 'a 
+val simple_fail: string -> exn
 
 val eq_forml: form list -> form list -> bool
 val fmem: form -> form list -> bool

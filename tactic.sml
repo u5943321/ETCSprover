@@ -4,16 +4,16 @@ open term form logic drule abbrev
 
 fun wrap_err s exn = 
     case exn of ERR (s0,sl,tl,fl) => ERR (s^s0,sl,tl,fl)
-               | _ => simple_fail s
+               | _ => raise simple_fail s
 
 fun empty th [] = th
-  | empty th _ = simple_fail "empty" 
+  | empty th _ = raise simple_fail "empty" 
 
 fun sing f [x] = f x
-  | sing f _ = simple_fail "sing" 
+  | sing f _ = raise simple_fail "sing" 
 
 fun pairths f [x, y] = f x y
-  | pairths f _ = simple_fail "pairths" 
+  | pairths f _ = raise simple_fail "pairths" 
 
 val accept_tac = 
  fn th => fn (ct,asl,w) =>
@@ -49,7 +49,7 @@ fun spec_tac n: tactic =
     fn (ct,asl,w) =>
     let val (n,s) = case List.find (fn (n0,s0) => n0 = n) (HOLset.listItems ct) of
                         SOME ns => ns
-                       | _ => simple_fail ("spec_tac.no variable with name: " ^ n)
+                       | _ => raise simple_fail ("spec_tac.no variable with name: " ^ n)
     in spec_tac0 (n,s) (ct,asl,w)
     end
 
@@ -85,7 +85,7 @@ fun drule th (G,fl:form list,f) =
             handle _ => NONE 
     in
         case (first_opt mfn fl) of 
-            NONE => simple_fail "drule.no match"
+            NONE => raise simple_fail "drule.no match"
           | SOME th => assume_tac th (G,fl,f)
     end
 
@@ -189,7 +189,7 @@ fun ccontra_tac (g:goal as (G,fl,f)) =
         ([(G,A::fl,FALSE):goal], sing (negI A))
       | _ => 
         ([(G,(mk_neg f)::fl,FALSE):goal], fn [th] => dimp_mp_l2r (negI (mk_neg f) th) (double_neg f)
-                          | _ => simple_fail "ccontra_tac.incorrect number of list items")
+                          | _ => raise simple_fail "ccontra_tac.incorrect number of list items")
 
 
 
@@ -262,7 +262,7 @@ fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) =
             (if length l = length gl' then
                  case (func1 (List.take (l,length gl1))) of thm(G,A,C) =>
                  func (thm(G,A,C) :: (List.drop (l,length gl1)))
-             else simple_fail "then1_tac.incorrect number of list items")
+             else raise simple_fail "then1_tac.incorrect number of list items")
     in (gl',func')
     end
  
@@ -390,10 +390,10 @@ fun excl_ths P thlt: thm list -> tactic =
 
 
 fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
-  | pop_assum   _   (_,[], _) = simple_fail"pop_assum.no assum"
+  | pop_assum   _   (_,[], _) = raise simple_fail"pop_assum.no assum"
 
 fun rev_pop_assum thfun (ct,a :: asl, w) = thfun (assume (hd (rev (a :: asl)))) (ct,(rev (tl (rev (a :: asl)))), w)
-  | rev_pop_assum   _   (_,[], _) = simple_fail"rev_pop_assum.no assum"
+  | rev_pop_assum   _   (_,[], _) = raise simple_fail"rev_pop_assum.no assum"
 
 fun stp_rw thl g = 
     repeat (stp_tac >> rw_tac thl) g
@@ -415,7 +415,7 @@ fun choose_tac cn a0:tactic =
        let val _ = fmem a0 asl orelse
                    raise ERR ("choose_tac.formula to be substitute not in assumption list",[],[],[a0])
            val _ = not (mem cn (List.map fst (HOLset.listItems ct))) 
-                   orelse simple_fail "name to be choose is already used"
+                   orelse raise simple_fail "name to be choose is already used"
            val ((n,s),b) = dest_exists a0
            val newasm = subst_bound (Var(cn,s)) b
        in ([(HOLset.add(ct,(cn,s)),newasm ::(ril a0 asl),w)],
@@ -453,7 +453,7 @@ fun error f t e =
                | Concl c => ("wrong conclusion", string_of_form c)
                | Cont ns => ("extra variable involved",(string_of_term (Var ns))^ ":" ^ (string_of_sort (snd ns)))
        in
-         simple_fail(f^pfx ^ desc ^ " " ^ t)
+         raise simple_fail(f^pfx ^ desc ^ " " ^ t)
        end
 
 (*check the validaty error message: TODO, add term/form information*)
@@ -479,7 +479,7 @@ fun REPEAT_TCL ttcl ttac th =
    ((ttcl THEN_TCL (REPEAT_TCL ttcl)) ORELSE_TCL I) ttac th
 
 val ALL_THEN: thm_tactical = I
-val NO_THEN: thm_tactical = fn ttac => fn th => simple_fail "NO_THEN"
+val NO_THEN: thm_tactical = fn ttac => fn th => raise simple_fail "NO_THEN"
 val FIRST_TCL = List.foldr (op ORELSE_TCL) NO_THEN
 
 
@@ -536,7 +536,7 @@ fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
         val (opp, rule) = target_rule (concl th)
     in
         case List.find ((C (curry eq_form)) opp) asl of
-            NONE => simple_fail "OPPOSITE_TAC"
+            NONE => raise simple_fail "OPPOSITE_TAC"
           | SOME asm => CONTR_TAC (rule th (assume asm)) (ct,asl, w)
     end
 
@@ -550,7 +550,7 @@ fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
 fun DISCARD_TAC th (ct,asl, w) =
    if Lib.exists ((curry eq_form) (concl th)) (TRUE :: asl) andalso HOLset.isSubset(cont th,ct)
       then all_tac (ct,asl, w)
-   else simple_fail "DISCARD_TAC"
+   else raise simple_fail "DISCARD_TAC"
 
 
 fun foo th m = mp (disch (concl th) (assume m)) th 
@@ -574,7 +574,7 @@ fun foo th m = mp (disch (concl th) (assume m)) th
 (*
 fun disj_cases th1 th2 th3 = 
     let val (A,B) = dest_disj(concl th1)
-        val _ = eq_form(concl th2, concl th3) orelse simple_fail"two concls no match"
+        val _ = eq_form(concl th2, concl th3) orelse raise simple_fail"two concls no match"
     in disjE A B (concl th2) th1 th2 th3
     end
 *)
@@ -672,7 +672,7 @@ val STRIP_ASSUME_TAC = REPEAT_TCL strip_thm_then check_assume_tac
 
 val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
 
-fun find (ttac:thm_tactic) goal [] = simple_fail "find"
+fun find (ttac:thm_tactic) goal [] = raise simple_fail "find"
     | find ttac goal (a :: L) =
       ttac (assume a) goal handle _ => find ttac goal L
  
@@ -709,9 +709,9 @@ fun abbrev_tac eq0:tactic =
            val (lhs,rhs) = dest_eq eq0
            val (n,s) = dest_var rhs
            val _ = HOLset.isSubset(fvt lhs,ct) orelse
-                   simple_fail "the term to be abbrev has unknown variable" 
+                   raise simple_fail "the term to be abbrev has unknown variable" 
            val _ = not (mem n (List.map fst (HOLset.listItems ct)))
-                   orelse simple_fail "name of the abbrev is already used"
+                   orelse raise simple_fail "name of the abbrev is already used"
            val eth =  existsI (n,s) lhs (Pred("=",[lhs,Var(n,s)])) (refl lhs) 
        in
            ([(HOLset.add(ct,(n,s)),eq0::asl,w)],fn [th] => existsE (n,s) eth th)

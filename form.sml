@@ -10,7 +10,7 @@ Pred of string * term list
 
 exception ERR of string * sort list * term list * form list 
 
-fun simple_fail s = raise ERR (s,[],[],[]) 
+fun simple_fail s = ERR (s,[],[],[]) 
 
 fun replacet (u,new) t = 
     if t=u then new else 
@@ -190,7 +190,7 @@ fun eq_forml (l1:form list) (l2:form list) =
     case (l1,l2) of 
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
-      | _  => simple_fail "eq_forml.different length of lists"
+      | _  => raise simple_fail "eq_forml.different length of lists"
 
 fun fmem f fl = List.exists (curry eq_form f) fl
 
@@ -372,7 +372,7 @@ and match_fl nss l1 l2 env =
         ([],[]) => env
       | (h1::t1,h2::t2) =>  
         match_fl nss t1 t2 (match_form nss h1 h2 env)
-      | _ => simple_fail "incorrect length of list"
+      | _ => raise simple_fail "incorrect length of list"
 
 
 fun strip_all f = 

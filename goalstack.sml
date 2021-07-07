@@ -8,7 +8,7 @@ fun prove f tac =
     in
         case (subgoals) of 
             [] => vfn []
-          | h :: t => simple_fail "remaining subgoals"
+          | h :: t => raise simple_fail "remaining subgoals"
     end
 
 type tac_result = {goals      : goal list,
@@ -35,11 +35,11 @@ fun rapg f =
 fun proved_th (GSTK{prop:proposition,...}) = 
     case prop of
         PROVED (th,_) => th
-      | _ => simple_fail "goal is not proved yet"
+      | _ => raise simple_fail "goal is not proved yet"
 
 fun current_tac_result (GSTK{prop,stack:tac_result list}) = 
     case stack of
-        [] => simple_fail "no remaining goal"
+        [] => raise simple_fail "no remaining goal"
       | h :: t => h
 
 fun current_goal ({goals:goal list,validation:validation}:tac_result) = hd goals
@@ -63,7 +63,7 @@ fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g}) =
                          stack={goals=rst_o_goals,
                                 validation=fn thl => validation(th::thl)}::rst'})
            )
-         | otherwise => simple_fail ""
+         | otherwise => raise simple_fail ""
     end
   | return gstk = gstk
 
@@ -72,7 +72,7 @@ fun say s = Lib.say s
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 fun imp_err s =
-    simple_fail ("expandf or expand_listf" ^ "implementation error: "^s)
+    raise simple_fail ("expandf or expand_listf" ^ "implementation error: "^s)
 
 fun expand_msg dpth (GSTK{prop = PROVED _, ...}) = ()
   | expand_msg dpth (GSTK{prop, stack as {goals, ...}::_}) =
@@ -87,10 +87,10 @@ fun expand_msg dpth (GSTK{prop = PROVED _, ...}) = ()
             else imp_err "2"
        else cr_add_string_cr "Remaining subgoals:"
     end
-  | expand_msg _ _ = simple_fail "3" ;
+  | expand_msg _ _ = raise simple_fail "3" ;
 
 fun expandf _ (GSTK{prop=PROVED _, ...}) =
-       simple_fail "expandf: goal has already been proved"
+    raise simple_fail "expandf: goal has already been proved"
   | expandf tac (GSTK{prop as POSED g, stack}) =
      let val arg = (case stack of [] => g | tr::_ => hd (#goals tr))
          val (glist,vf) = tac arg
@@ -99,18 +99,12 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
                               stack={goals=glist, validation=vf} :: stack})
      in expand_msg dpth gs ; gs end
 
-
-
-fun e tac = expandf (valid tac) 
+ 
 fun e0 tac = expandf (valid tac) 
 
-(*
-fun e tac = expandf (VALID tac) 
-do valid check on each step.
-*)
 
 fun ppintf (n,f) = add_string (int_to_string n) >> add_string"." >> 
-                              block HOLPP.CONSISTENT 10 (ppform false f)
+                              block HOLPP.CONSISTENT 10 (ppform false (LR (NONE,NONE)) f)
 
 fun n2l n = 
     if n > 0 then n :: (n2l (n - 1)) else [] 
@@ -140,7 +134,7 @@ fun ppgoal (G,A,C) =
                 add_string "----------------------------------------------------------------------" >>
                 add_newline >>
                 block HOLPP.CONSISTENT 10
-                (ppform false C)
+                (ppform false (LR (NONE,NONE)) C)
     end 
 
 fun PPgoal printdepth _ th = let val s = ppgoal th

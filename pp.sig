@@ -1,5 +1,5 @@
 signature pp = 
 sig
 val print: form.form -> string
-val printth: thm.thm -> string
+val printth: logic.thm -> string
 end

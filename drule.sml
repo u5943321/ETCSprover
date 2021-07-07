@@ -2,7 +2,6 @@ structure drule :> drule =
 struct
 open term form logic
  
-exception ERR of string * sort list * term list * form list
 
 fun simple_fail s = form.simple_fail ("drule."^s)
 
@@ -35,7 +34,7 @@ fun prove_hyp th1 th2 = mp (disch (concl th1) th2) th1
 
 fun equivT (thm(G,A,C)) = dimpI (disch C (trueI (C :: A))) 
                               (disch TRUE (add_assum TRUE (thm(G,A,C))))
-
+(*should be eqT_intro*)
 fun frefl f = dimpI (disch f (assume f)) (disch f (assume f))
 
 fun dimpl2r th = conjE1 (dimpE th)
@@ -612,16 +611,12 @@ fun eqF_intro th =
     case (concl th) of
         Conn("~",[f]) => dimp_mp_l2r th (eqF_intro_form f)
       | _ => raise ERR ("eqF_intro.conclusion is not an negation: ",[],[],[concl th]) 
-    
-
-
-
+   
 (**********************************************************************
 
 specl: if bounded variable name clash with existing variable, then add a " ' "
 
 **********************************************************************)
-
 
 fun specl l th = 
     case l of [] => th 
@@ -705,7 +700,7 @@ fun abstl l th =
 
 fun find_var l n = 
     case l of 
-        [] => simple_fail"variable name not found"
+        [] => raise simple_fail"variable name not found"
       | h :: t => 
         if fst h = n then h 
         else find_var t n
@@ -718,7 +713,6 @@ fun genl vsl th =
         abstl vl th
     end
 
-
 fun gen_all th = 
     let 
         val vs = HOLset.difference
@@ -730,15 +724,12 @@ fun gen_all th =
         abstl vl th
     end
 
-
-
 fun dischl l th = 
     case l of 
         [] => th
       | h :: t => dischl t (disch h th)
 
 fun disch_all th = dischl (ant th) th
-
 
 (*f1,f2 |- C maps to f1 /\ f2 |- C*)
 
@@ -783,7 +774,6 @@ fun CONTR f th =
         mp (F2f f) th else 
     raise ERR ("contr.input theorem not a FALSE",[],[],[concl th])
 
-
 fun double_neg_th th = 
     dimp_mp_r2l (double_neg (concl th)) th
 
@@ -815,7 +805,6 @@ fun exists_all (n,s) =
     in dimpI d1 d2
     end
 
-
 fun split_assum f th = 
     if fmem f (ant th) then
         case f of (Conn("&",[f1,f2])) => 
@@ -823,9 +812,17 @@ fun split_assum f th =
                 | _ =>  raise ERR ("split_assum.not a conjunction: ",[],[],[f])
     else raise ERR ("split_assum.formula not in assumption list",[],[],[f])
 
-(*todo:dual for exists_all: !a.P(a) <=> ~?a.~P(a)*)
-(*todo: a rule for eleminating ~~ taking an ~~ formula*)
-
+(*
+fun deep_split_assum f th = 
+    if fmem f (ant th) then
+        case f of (Conn("&",[f1,f2])) => 
+            let 
+                val th0 = th |> disch f 
+                             |> (C mp) (conjI (assume f1) (assume f2))
+            in 
+                | _ =>  raise ERR ("split_assum.not a conjunction: ",[],[],[f])
+    else raise ERR ("split_assum.formula not in assumption list",[],[],[f])
+*)
 
 (*~F <=> T and also ~T <=> F*)
 
@@ -843,8 +840,6 @@ val nT2F =
 
 val double_neg_elim = double_neg (fVar "f0")
 
-
-
 fun all_exists (n,s) = 
     let val th0 = exists_all (n,s) |> neg_iff |> inst_thm (mk_inst [] [("f0",mk_neg (fVar "f0"))]) 
         val rhs1 = double_neg (fVar "f0") |> all_iff (n,s)
@@ -853,231 +848,5 @@ fun all_exists (n,s) =
         val th0' = iff_trans th0 rhs
     in iff_swap th0'
     end
-
-
-fun aimp_rule th =
-    let
-      val (l, r) = dest_imp (concl th)
-      val (c1, c2) = dest_conj l
-      val cth = conjI (assume c1) (assume c2)
-    in
-      disch c1 (disch c2 (mp th cth))
-    end
-
-fun (s1 - s2) = HOLset.difference(s1,s2)
-
-fun is_forall f = 
-    case f of 
-        Quant(q,_,_,_) => if q = "!" then true else false
-      | _ => false
-
-fun dest_imp_only f = 
-    case f of 
-        Conn("==>",[f1,f2]) => (f1,f2)
-      | _ => raise ERR ("dest_imp_only.not a implication",[],[],[f])
-
-fun norm th =
-    if is_forall (concl th) then norm (spec_all th)
-    else
-      case Lib.total dest_imp_only (concl th) of
-          NONE => th
-        | SOME (l,r) =>
-          if is_conj l then norm (aimp_rule th)
-          else norm (undisch th)
-
-fun overlaps fvset (tfvs,_) =
-      not (HOLset.isEmpty (HOLset.intersection(fvset, tfvs)))
-
-fun union ((fvset1, tlist1), (fvset2, tlist2)) =
-      (HOLset.union(fvset1, fvset2), tlist1 @ tlist2)
-
-fun recurse gfvs acc tlist =
-      case tlist of
-          [] => acc
-        | t::ts =>
-          let
-            val tfvs = (fvf t) - gfvs
-          in
-            case List.partition (overlaps tfvs) acc of
-                ([], _) => recurse gfvs ((tfvs,[t])::acc) ts
-              | (ovlaps, rest) =>
-                recurse gfvs (List.foldl union (tfvs, [t]) ovlaps :: rest) ts
-          end
-
-fun group_hyps gfvs tlist = recurse gfvs [] tlist
-
-fun foldthis ((n,s),(t,th)) =
-      let val ext = mk_exists n s t
-      in
-        (ext, existsE (n,s) (assume ext) th)
-      end
-
-fun choosel vs t th = List.foldr foldthis (t,th) vs
-
-
-val conjuncts =
-   let
-      fun aux acc th =
-         aux (aux acc (conjE2 th)) (conjE1 th)
-         handle _ => th :: acc
-   in
-      aux []
-   end
-
-(*to get consistent order, foldl, or rev and take hd and tl, then foldr
-current gives 
- ["P(a)","P(b)","P(c)"] |-> P(c) & (P(b) & P(a))
-*)
-fun list_mk_conj fl = List.foldl (uncurry mk_conj) (List.hd fl) (List.tl fl)
-
-
-
-fun conjl ts th = let
-  val c = list_mk_conj ts
-  val cths = conjuncts (assume c)
-in
-  (List.foldl (fn (c,th) => prove_hyp c th) th cths, c)
-end
-
-fun recurse acc groups th =
-      case groups of
-          [] => (acc, th)
-        | (fvset, ts) :: rest =>
-          let
-            val (th1,c) = conjl ts th
-            val (ext, th2) = choosel (HOLset.listItems fvset) c th1
-          in
-            recurse (ext::acc) rest th2
-          end
-
-
-
-fun recurse acc groups th =
-      case groups of
-          [] => (acc, th)
-        | (fvset, ts) :: rest =>
-          let
-            val (th1,c) = conjl ts th
-            val (ext, th2) = choosel (HOLset.listItems fvset) c th1
-          in
-            recurse (ext::acc) rest th2
-          end
-
-fun reconstitute groups th = recurse [] groups th
-
-fun form_list_diff l1 l2 = 
-    case l1 of 
-        [] => []
-      | h :: t => if fmem h l2 then list_diff t l2 else h :: list_diff t l2
-
-
-fun irule_canon th =
-  let
-    val th1 = norm (gen_all th)
-    val origl = ant th
-    val gfvs = fvfl (concl th1 :: origl) 
-    val newhyps = form_list_diff (ant th1)  origl
-    val grouped = group_hyps gfvs newhyps
-    val (cs, th2) = reconstitute grouped th1
-  in
-    case cs of
-        [] => gen_all th2
-      | _ =>
-        let
-          val (th3,c) = conjl cs th2
-        in
-          disch c th3 |> gen_all
-        end
-  end
-
-
-
-fun eq_imp_rule th = (dimpl2r th,dimpr2l th)
-
-datatype AI = imp of form | fa of {orig:string * sort, new:string * sort}
-
-fun dest_forall f = 
-    case f of
-        Quant("!",n,s,b) => ((n,s),b)
-      | _ => raise ERR ("dest_forall.not a forall",[],[],[f])
-
-fun spec t = specl [t]
-
-fun AIdestAll th =
-    case total dest_forall (concl th) of
-        NONE => NONE
-      | SOME ((n,s),b) =>
-        let
-          val hfvs = fvfl (ant th)
-        in
-          if HOLset.member(hfvs, (n,s)) then
-            let val new = dest_var (pvariantt hfvs (Var(n,s)))
-            in
-              SOME (fa{orig=(n,s),new=new}, spec (Var new) th)
-            end
-          else
-            SOME (fa{orig=(n,s),new=(n,s)}, spec (Var(n,s)) th)
-        end
-
-(*!y.P(y)<=> !x.P(x)*)
-
-fun all_rename x f = 
-    case f of
-        Quant("!",n,s,b) =>
-        let val l2r =  assume f |> allE (Var(x,s)) |> allI (x,s) |> disch_all
-            val r2l =  assume (Quant("!",x,s,b)) |> allE (Var(y,s)) |> allI (y,s) |> disch_all
-        in dimpI l2r r2l
-        end
-      | _ => raise ERR ("all_rename.not a forall",[],[],[f])
-
-(*
-fun exists_rename x f = 
-    case f of
-        Quant("?",n,s,b) =>
-        let val l2r =  assume f |> existsE (Var(y,s)) |> allI (x,s) |> disch_all
-            val r2l =  assume (Quant("!",x,s,b)) |> allE (Var(y,s)) |> allI (y,s) |> disch_all
-        in dimpI l2r r2l
-        end
-      | _ => raise ERR ("all_rename.not a forall",[],[],[f])
-
-
-
-fun gen_rename_fconv x 
-*)
-
-fun restore hs (acs, th) =
-    case acs of
-        [] => rev_itlist add_assum hs th
-      | imp t :: rest => restore hs (rest, disch t th)
-      | fa{orig,new} :: rest =>
-        if orig = new then
-          restore hs (rest, allI orig th)
-        else
-          restore hs (rest, th |> allI new |> conv_rule (all_rename (fst orig)))
-
-
-fun underALLs f th =
-    let
-      fun getbase A th =
-          case AIdestAll th of
-              NONE => (A, f th)
-            | SOME (act, th') => getbase (act::A) th'
-    in
-      restore [] (getbase [] th)
-    end
-
-
-fun underAIs f th =
-    let
-      fun getbase A th =
-          case AIdestAll th of
-              NONE => (case total dest_imp_only (concl th) of
-                           NONE => (A, f th)
-                         | SOME (l,r) => getbase (imp l :: A) (undisch th))
-            | SOME (act,th') => getbase (act::A) th'
-    in
-      restore (ant th) (getbase [] th)
-    end
-
 
 end

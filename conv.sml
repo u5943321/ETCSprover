@@ -14,7 +14,7 @@ exception unchanged
 (*think about inst_thm when names clash!!!!!!!!!!!*)
 
 
-(*TODO: think more carefully if use cont or recollect the variable set*)
+(*TODO: maybe change all try into verions that raise unchanged *)
 
 fun part_tmatch partfn th t = 
     let 
@@ -52,7 +52,7 @@ fun try_conv c = c orelsec all_conv
 fun repeatc c t =
     ((c thenc (repeatc c)) orelsec all_conv) t
 
-fun no_conv f = simple_fail "no_conv" 
+fun no_conv f = raise simple_fail "no_conv" 
 
 fun first_conv cl = 
     case cl of [] => no_conv
@@ -102,7 +102,7 @@ val simp_trace = ref false
 
 fun part_fmatch partfn th f = 
     let 
-        val fvd = (match_form (fvfl (ant th)) (partfn th) f mempty)
+        val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
         val th' = inst_thm fvd th
        (* val _ = if !simp_trace then Lib.say (printth th') else ()*)
     in 
@@ -111,6 +111,8 @@ fun part_fmatch partfn th f =
 
 val rewr_fconv = part_fmatch (fst o dest_dimp o concl)
 
+
+(*TODO: let rewr_fconv check the imput thm is an iff, so it raises err before the conv is applied*)
 (*operation on fconvs*)
 
 infix thenfc
@@ -129,7 +131,7 @@ infix orelsefc;
 
 fun orelsefc (fc1,fc2) f = fc1 f handle _ => fc2 f
 
-fun no_fconv f = simple_fail "no_fconv"
+fun no_fconv f = raise simple_fail "no_fconv"
 
 fun first_fconv fcl = 
     case fcl of [] => no_fconv
@@ -150,7 +152,7 @@ fun pred_fconv c f =
     case f of 
         Pred (P,tl) => 
         (EQ_psym P (List.map (try_conv c) tl))
-      | _ => simple_fail "not a predicate"
+      | _ => raise simple_fail "not a predicate"
 
 (*pred_fconv use try_conv or not?*)
 
@@ -160,48 +162,45 @@ fun disj_fconv fc f =
     case f of 
         Conn("|",[p,q]) => 
         disj_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => simple_fail "not a disjunction"
+      | _ => raise simple_fail "not a disjunction"
 
 fun conj_fconv fc f = 
     case f of 
         Conn("&",[p,q]) => 
         conj_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => simple_fail "not a conjunction"
+      | _ => raise simple_fail "not a conjunction"
 
 fun imp_fconv fc f = 
     case f of
         Conn("==>",[p,q]) => 
         imp_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => simple_fail "not an implication"
+      | _ => raise simple_fail "not an implication"
 
 fun dimp_fconv fc f = 
     case f of
         Conn("<=>",[p,q]) => 
         dimp_iff (try_fconv fc p) (try_fconv fc q)
-      | _ => simple_fail "not an iff"
+      | _ => raise simple_fail "not an iff"
 
 fun forall_fconv fc f = 
     case f of
-        (Quant("ALL",n,s,b)) => 
+        (Quant("!",n,s,b)) => 
         all_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b)) 
-      | _ => simple_fail "not an all"
+      | _ => raise simple_fail "not an all"
  
 fun exists_fconv fc f = 
     case f of
-        (Quant("EXISTS",n,s,b)) => 
+        (Quant("?",n,s,b)) => 
         exists_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b)) 
-      | _ => simple_fail "not an all"
+      | _ => raise simple_fail "not an all"
 
 val reflTob = equivT (refl (Var("a",ob)))
 
 val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
 
-
 val refl_fconv = 
     first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
      
-
-
 fun sub_fconv c fc = 
     try_fconv (first_fconv [conj_fconv fc,
                  disj_fconv fc,
@@ -319,18 +318,13 @@ fun right_imp_forall_fconv f  =
         val dth' = disch ant gmpasm
     in dimpI (disch f gth)  (disch (concl gth) dth')
     end
-(*
-fun all_inwards_fconv f = 
-    let 
-        val (at,conc) = dest_imp f
-        val 
-*)
+
 
 fun sym_fconv f = 
     case f of 
     Pred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (Pred("=",[t2,t1])) |> sym |> disch_all)
   | Conn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (Conn("<=>", [f2,f1]))|> iff_swap |> disch_all)
-  | _ => simple_fail "not an iff or equality"
+  | _ => raise simple_fail "not an iff or equality"
 
 
 val GSYM = conv_rule (once_depth_fconv no_conv sym_fconv)
@@ -339,5 +333,5 @@ fun double_neg_fconv f = rewr_fconv double_neg_elim f
 
 val neg_neg_elim = conv_rule (once_depth_fconv no_conv double_neg_fconv)
 
-(*TODO: something like iffLR in HOL, deal with iff in anywhere of this thm*)
+(*TODO: something like iffLR in HOL, deal with iff in anywhere of this thm*) 
 end

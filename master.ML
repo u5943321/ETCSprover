@@ -35,6 +35,21 @@ use "tactic.sml";
 
 open tactic;
 
+
+use "pp.sig"; 
+use "pp.sml";
+
+open pp;
+
+use "goalstack.sig";
+use "goalstack.sml";
+
+open goalstack;
+
+use "proofmanager.sml";
+open proofmanager;
+
+
 (*
 use "thm.sig";
 use "thm.sml";
