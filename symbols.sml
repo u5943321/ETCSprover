@@ -39,12 +39,12 @@ val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
                                               mk_ob "G")),
                                      ("i",ar (mk_fun "1" ob [],mk_ob "G")),
                                      ("inv",ar (mk_ob "G",mk_ob "G"))]),
-                         ("=",[("A",ob),("B",ob)]),
+                         (*("=",[("A",ob),("B",ob)]), *)
                          ("=",[("a",ar(mk_ob "A",mk_ob "B")),("b",ar(mk_ob "A",mk_ob "B"))])]
 
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
-
+(*
 val fsyms0:fsymd =  
     List.foldr 
         (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
@@ -95,6 +95,60 @@ val fsyms0:fsymd =
                   [("x0",ar(mk_const "1" ob,mk_ob "X")),
                    ("t",ar(mk_ob "X",mk_ob "X"))]))
         ]
+*)
+
+
+val fsyms0:fsymd =  
+    List.foldr 
+        (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
+            Binarymap.insert (d,p,(s,l)))
+        (Binarymap.mkDict String.compare)
+        [("N",(ob,[])),
+         ("0",(ob,[])),
+         ("1",(ob,[])),
+         ("id",(ar(mk_ob "A",mk_ob "A"),[("A",ob)])),
+         ("to1",(ar(mk_ob "X",mk_fun "1" ob []),
+                 [("X",ob)])),
+         ("from0",(ar(mk_fun "0" ob [],mk_ob "X"),
+                   [("X",ob)])),
+         ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
+                                        ("g",ar(mk_ob "A",mk_ob "B"))])),
+         ("*",(ob,[("A",ob),("B",ob)])),
+         ("+",(ob,[("A",ob),("B",ob)])),
+         ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
+         ("p2",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
+         ("i1",(ar(mk_ob "A",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
+         ("i2",(ar(mk_ob "B",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
+         ("pa",(ar(mk_ob "X",mk_fun "*" ob [mk_ob "A",mk_ob "B"]),
+                [("f",ar(mk_ob "X",mk_ob "A")),("g",ar(mk_ob "X",mk_ob "B"))])),
+         ("copa",(ar(mk_fun "+" ob [mk_ob "A",mk_ob "B"],mk_ob "X"),
+                [("f",ar(mk_ob "A",mk_ob "X")),("g",ar(mk_ob "B",mk_ob "X"))])),
+         ("eqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
+         ("coeqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
+         ("eqa",(ar(mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "A"),
+                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
+         ("coeqa",(ar(mk_ob "B",mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
+                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
+         ("eqinduce",(ar(mk_ob "X",mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
+                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
+                  ("h",ar(mk_ob "X",mk_ob "A"))])),
+         ("coeqinduce",(ar(mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "X"),
+                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
+                  ("h",ar(mk_ob "B",mk_ob "X"))])),
+         ("exp",(ob,[("A",ob),("B",ob)])),
+         ("tp",(mk_ar_sort (mk_ob "B") (mk_fun "exp" ob [mk_ob "A", mk_ob "C"]),
+                [("f",ar(mk_fun "*" ob [mk_ob "A", mk_ob "B"],mk_ob "C"))])),
+         ("ev",(mk_ar_sort 
+                    (mk_fun "*" ob [mk_ob "A",mk_fun "exp" ob [mk_ob "A",mk_ob "B"]]) 
+                    (mk_ob "B"),
+                [("A",ob),("B",ob)])),
+         ("s",(ar(mk_const "N" ob,mk_const "N" ob),[])),
+         ("z",(ar(mk_const "1" ob,mk_const "N" ob),[])),
+         ("Nind",(ar(mk_const "N" ob,mk_ob "X"),
+                  [("x0",ar(mk_const "1" ob,mk_ob "X")),
+                   ("t",ar(mk_ob "X",mk_ob "X"))]))
+        ]
+
 
 val cdict0:(string,psort) Binarymap.dict =
     List.foldr (fn ((n,s),d) => (Binarymap.insert(d,n,s))) 

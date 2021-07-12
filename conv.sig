@@ -20,13 +20,12 @@ val redepth_conv: conv -> conv
 val repeatc: conv -> conv
 val rewr_conv: thm -> conv
 val rewr_fconv: thm -> fconv
-val sub_conv: conv -> conv
+(*val sub_conv: conv -> conv*)
 val thenc: conv * conv -> conv
 val thenfc: fconv * fconv -> fconv
 val top_depth_conv: conv -> conv
 val once_depth_conv: conv -> conv
 val try_conv: conv -> conv
-exception unchanged
 val basic_fconv: conv -> fconv -> fconv
 val basic_taut_fconv: fconv
 val changed_fconv: fconv -> fconv

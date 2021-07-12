@@ -320,7 +320,7 @@ fun type_infer_pfun env t ty =
                           end)
                       env ptl
         in
-        (case lookup_fun fsyms0 f of 
+        (case lookup_fun (!fsyms) f of 
              SOME (s,l) => 
              let val (uvs,nd,env1) = npsl2ptUVarl (map ns2nps l) env 
                  val (s1,nd1,env2) = fgt_name_ps (s2ps s) nd env1
@@ -359,7 +359,7 @@ fun type_infer_args env pf =
        in unify_ps env2 ps1 ps2
        end
      | pPred(p,ptl) => 
-        (case lookup_pred psyms0 p of 
+        (case lookup_pred (!psyms) p of 
              SOME l => 
              let val (uvs,_,env1) = npsl2ptUVarl (map ns2nps l) env 
                  val tounify = zip ptl uvs
@@ -599,7 +599,7 @@ fun ast2pf ast (env:env) =
                     let val (pf,env2) = ast2pf b env1 in
                         (mk_pQuant str n ps pf,clear_ps n env2)
                     end
-                  | _ => raise simple_fail"err in parsing bound variable,maybe the bounded variable name clash wish a constant"
+                  | _ => raise simple_fail"err in parsing bound variable,maybe the bounded variable name clash with a constant"
             end
    (*this does not allow us to use constants for bounded variable names*)
         else raise simple_fail"not a quantifier"
@@ -639,12 +639,6 @@ and ast2pt ast env =
                      end
            | SOME ps =>  (pAnno(pVar(n,ps),par(dom,cod)),env2)
         end
-        (*let 
-            val (pt1,env1) = ast2pt ast1 env
-            val (pt2,env2) = ast2pt ast2 env1
-            val env3 = record_ps n (par(pAnno(pt1,pob),pAnno(pt2,pob))) env2
-        in  (pVar(n,par(pAnno(pt1,pob),pAnno(pt2,pob))),env3)
-        end *)
       | aInfix(ast1,str,ast2) => 
         if mem str ["*","+","^","o"] then
             let val (pt1,env1) = ast2pt ast1 env
