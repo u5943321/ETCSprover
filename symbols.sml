@@ -30,17 +30,16 @@ fun lookup_pred (pd:psymd) p = Binarymap.peek (pd,p)
 fun lookup_fun (fd:fsymd) f = Binarymap.peek (fd,f)
 
 
-val psyms0:psymd = List.foldr (fn ((p:string,l:(string * sort) list),d) =>
-                                  Binarymap.insert (d,p,l)) 
-                        (Binarymap.mkDict String.compare)
-                        [(*("ismono",[("a",ar(mk_ob "A",mk_ob "B"))]),*)
-                         ("isgroup",[("G",ob),
-                                     ("m",ar (mk_fun "*" ob [mk_ob "G",mk_ob "G"],
-                                              mk_ob "G")),
-                                     ("i",ar (mk_fun "1" ob [],mk_ob "G")),
-                                     ("inv",ar (mk_ob "G",mk_ob "G"))]),
-                         (*("=",[("A",ob),("B",ob)]), *)
-                         ("=",[("a",ar(mk_ob "A",mk_ob "B")),("b",ar(mk_ob "A",mk_ob "B"))])]
+val psyms0:psymd =
+    List.foldr (fn ((p:string,l:(string * sort) list),d) =>
+                   Binarymap.insert (d,p,l)) (Binarymap.mkDict String.compare)
+               [("isgroup",[("G",mk_ob_sort),
+                            ("m",mk_ar_sort
+                                     (mk_fun "*" mk_ob_sort [mk_ob "G",mk_ob "G"]) (mk_ob "G")),
+                            ("i",mk_ar_sort one (mk_ob "G")),
+                            ("inv",mk_ar_sort (mk_ob "G") (mk_ob "G"))]),
+                ("=",[("a",mk_ar_sort (mk_ob "A") (mk_ob "B")),
+                      ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))])]
 
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
@@ -103,14 +102,15 @@ val fsyms0:fsymd =
         (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
             Binarymap.insert (d,p,(s,l)))
         (Binarymap.mkDict String.compare)
-        [("N",(ob,[])),
-         ("0",(ob,[])),
-         ("1",(ob,[])),
-         ("id",(ar(mk_ob "A",mk_ob "A"),[("A",ob)])),
-         ("to1",(ar(mk_ob "X",mk_fun "1" ob []),
-                 [("X",ob)])),
-         ("from0",(ar(mk_fun "0" ob [],mk_ob "X"),
-                   [("X",ob)])),
+        [("N",(mk_ob_sort,[])),
+         ("0",(mk_ob_sort,[])),
+         ("1",(mk_ob_sort,[])),
+         ("id",(mk_ar_sort (mk_ob "A") (mk_ob "A"),
+                [("A",mk_ob_sort)])),
+         ("to1",(mk_ar_sort (mk_ob "X") one,
+                 [("X",mk_ob_sort)])),
+         ("from0",(mk_ar_sort zero (mk_ob "X"),
+                   [("X",mk_ob_sort)])),
          ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
                                         ("g",ar(mk_ob "A",mk_ob "B"))])),
          ("*",(ob,[("A",ob),("B",ob)])),
@@ -185,7 +185,6 @@ val fpdict0:(string,ForP) Binarymap.dict =
            ("eqinduce",fsym),("coeqinduce",fsym),("Nind",fsym)
            ]
 
-(*change to fold*)
 
 val fpdict = ref fpdict0
 val fsyms = ref fsyms0

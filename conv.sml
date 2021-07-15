@@ -122,6 +122,12 @@ fun first_conv cl =
 
 (*conv on subterms*)
 
+
+(*
+
+"f" ["g" [a,b],c]
+
+*)
 fun arg_conv c t = 
     case t of 
         Fun (f,s,l) => 
@@ -248,16 +254,27 @@ fun disj_fconv fc f =
         end
       | _ => raise ERR ("disj_fconv.not a disjunction",[],[],[f])
 
+
+(*call fc on p, if throw unchanged exp, then call fc on q, 
+if fc q throws unchanged as well, throw unchanged on the conj_fconv 
+
+then do not need to call eq_form 
+
+
+*)
 fun conj_fconv fc f = 
     case f of 
-        Conn("&",[p,q]) => 
-        let val th0 = conj_iff (try_fconv fc p) (try_fconv fc q)
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("conj_fconv",[],[f])
-           else th0
-        end
+        Conn("&",[p,q]) => conj_iff (fc p) (fc q)
       | _ => raise ERR ("conj_fconv.not a conjunction",[],[],[f])
 
+(*if needed, add try_conv on fc*)
+
+
+(*
+
+TODO: call dest_conj / dest_imp
+
+*)
 fun imp_fconv fc f = 
     case f of
         Conn("==>",[p,q]) => 

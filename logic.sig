@@ -4,9 +4,12 @@ type form = form.form
 type term = term.term
 type sort = term.sort
 type menv = form.menv
-datatype thm = thm of (string * sort) set * form list * form
+type thm
+
+datatype thm_view = vth of ((string * sort) set * form list * form) 
 
 val dest_thm: thm -> (string * sort) set * form list * form
+val view_thm: thm -> thm_view
 
 val eq_thm: thm -> thm -> bool
 

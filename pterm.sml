@@ -1,6 +1,6 @@
 structure pterm :> pterm = 
 struct
-open token pterm_dtype term form symbols
+open token pterm_dtype term form 
 
 exception PER of (string * psort list * pterm list)
 
@@ -74,6 +74,17 @@ fun clear_psn n ((dpt,dps,dv,dus,i):env):env =
 end
 
 open Binarymap List Env
+
+fun enclose a = "(" ^ a ^ ")";
+
+fun conc_list sep l = 
+    case l of 
+        [] => ""
+      | h :: t => sep ^ h ^ conc_list sep t
+
+fun conc_list1 sep l = 
+    case l of [] => ""
+            | h :: t => h  ^ (conc_list sep t);
 
 
 fun stringof_pt pt = 
@@ -236,14 +247,14 @@ and unify_pt env pt1 pt2: env=
 
 
 fun t2pt t = 
-    case t of 
-        Var(n,s) => pVar(n,s2ps s)
-      | Fun(f,s,l) => pFun(f,s2ps s,map t2pt l)
-      | _ => raise simple_fail"bounded variable cannot be converted into pterm"
+    case view_term t of 
+        vVar(n,s) => pVar(n,s2ps s)
+      | vFun(f,s,l) => pFun(f,s2ps s,map t2pt l)
+      | _ => raise simple_fail "bounded variable cannot be converted into pterm"
 and s2ps s = 
-    case s of
-        ob => pob
-      | ar(t1,t2) => par(t2pt t1,t2pt t2)
+    case view_sort s of
+        vo => pob
+      | va(t1,t2) => par(t2pt t1,t2pt t2)
 
 val ns2nps =  (fn (a,b) => (a,s2ps b))
 
@@ -547,6 +558,10 @@ fun pFun_cons pt0 pt =
         pFun(f,ps,tl) => pFun(f,ps,pt :: tl)
       | _ => raise simple_fail"not a pFun"
  
+fun ps_of_const c = 
+    case (Binarymap.peek (!fsyms,c)) of 
+        SOME (st,l) => if length l = 0 then s2ps st else raise ERROR ("ps_of_const.not a constant: "^ c)
+      | _ =>  raise ERROR ("ps_of_const.not a constant: "^ c)
 
 (*clear ps when move out of a env*)
 fun ast2pf ast (env:env) = 
@@ -860,29 +875,29 @@ fun term_from_pt env pt =
         ptUVar n =>
         let val s = case (lookup_us env n) of
                         SOME ps => sort_from_ps env ps 
-                      | NONE => ob
-        in Var(n,s)
+                      | NONE => mk_ob_sort
+        in mk_var n s
         end
-      | pVar(n,ps) => Var(n,sort_from_ps env ps) 
-      | pFun(f,ps,ptl) => Fun(f,sort_from_ps env ps,
-                              List.map (term_from_pt env) ptl)
+      | pVar(n,ps) => mk_var n (sort_from_ps env ps) 
+      | pFun(f,ps,ptl) => mk_fun f (sort_from_ps env ps)
+                                 (List.map (term_from_pt env) ptl)
       | pAnno(pt,ps) => term_from_pt env pt
 and sort_from_ps env ps = 
     case (chasevars ps env) of
-        psvar n => ob
-      | pob => ob
-      | par(A,B) => ar(term_from_pt env A,term_from_pt env B)
+        psvar n => mk_ob_sort
+      | pob => mk_ob_sort
+      | par(A,B) => mk_ar_sort (term_from_pt env A) (term_from_pt env B)
 
 
 fun form_from_pf env pf = 
     case pf of 
         pQuant(q,n,ps,pb) => 
-        Quant(q,n,sort_from_ps env ps,abstract (n,sort_from_ps env ps)
-                                               (form_from_pf env pb))
+        mk_quant q n (sort_from_ps env ps) 
+                 (abstract (n,sort_from_ps env ps) (form_from_pf env pb))
       | pConn(co,pfl) => 
-        Conn(co,List.map (form_from_pf env) pfl)
+        mk_conn co (List.map (form_from_pf env) pfl)
       | pPred(P,ptl) => 
-        Pred(P,List.map (term_from_pt env) ptl)
+        mk_pred P (List.map (term_from_pt env) ptl)
 
 fun read_t t = 
     let val (pt,env) = read_pt t
@@ -968,7 +983,7 @@ fun pretty_form f =
                 (uns',nr')
             end
         val envl = snd (List.foldr foldfun (map_HOLset fst used_names0 String.compare,[]) l)
-        val env0 = mk_tenv (List.map (fn (n1,n2) => ((n1,ob),Var(n2,ob))) envl) 
+        val env0 = mk_tenv (List.map (fn (n1,n2) => ((n1,mk_ob_sort),mk_var n2 mk_ob_sort)) envl)
         val env = mk_menv env0 (Binarymap.mkDict String.compare)
     in
         inst_form env f

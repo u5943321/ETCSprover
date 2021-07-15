@@ -99,7 +99,7 @@ val ax1_3 = read_axiom "!A.!B.!X.!fg: X -> (A * B).!f: X -> A.!g: X -> B. p1(A,B
 
 val ax1_4 = read_axiom "!A.!B.!X.!fg: (A + B) -> X.!f: A -> X.!g. fg o i1(A,B) = f & fg o i2(A,B) = g <=> fg = copa(f,g)"
 
-val ax1_5 = read_axiom "!A.!B.!f:A -> B.!g:A -> B.g o eqa(f,g) = f o eqa(f,g) &!X.!h: X -> A.(f o h = g o h ==> !x0: X -> eqo(f,g).(eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
+val ax1_5 = read_axiom "!A.!B.!f:A -> B.!g:A -> B.g o eqa(f,g) = f o eqa(f,g) &!X.!h: X -> A.(f o h = g o h ==> !x0: X -> eqo(f,g).(eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))" 
 
 val ax1_6 = read_axiom "!A.!B.!f: A -> B.!g: A -> B. coeqa(f,g) o f = coeqa(f,g) o g & !X.!h: B -> X. (h o f = h o g ==> !x0:coeqo(f,g) -> X.(x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
 
@@ -146,7 +146,12 @@ val psyms0 = insert_psym "ismem"
 
 val ismem_def = define_pred (rapf "!A.!A0.!a:A0 -> A.!x:1 -> A. ismem(x,a,A) <=> issubset(a,A) & ?x0:1 -> A0. a o x0 = x")
 
-val ax7 = read_axiom "!A.!B.!f: 1 -> A + B. ismem(f,i1(A,B),A + B) | ismem(f,i2(A,B),A + B)"
+
+(*TODO: wrong err message, should be "redefine ismem" not "issubset"*)
+
+val ax7 = read_axiom "!A.!B.!f: 1 -> (A + B). ismem(f,i1(A,B),A + B) | ismem(f,i2(A,B),A + B)"
+
+
 
 val ax_mcp = ax7
 

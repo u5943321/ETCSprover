@@ -4,7 +4,13 @@ use "token.sml";
 use "pterm_dtype.sml";
 use "term.sig";
 use "term.sml";
-
+use "form.sig";
+use "form.sml";
+use "pterm.sig";
+use "pterm.sml";
+use "logic.sig";
+use "logic.sml";
+(*
 use "form.sig";
 use "form.sml";
 use "symbols.sig";
@@ -87,3 +93,4 @@ open proofmanager;
 *)
 *)
 
+*)

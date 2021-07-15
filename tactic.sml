@@ -341,6 +341,12 @@ fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
 
 fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
 
+(*
+fun rw'_conv th t = part_tmatch
+okay to let rw_conv loop, but do check here, and discard the thm after inst raise ERR if do not like it.
+
+*)
+
 fun rw_tac thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
