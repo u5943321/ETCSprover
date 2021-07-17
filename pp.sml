@@ -130,8 +130,10 @@ add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_brea
 
 fun pr_tlist g tl = 
     case tl of
-        h :: t => if eq_sort(sort_of h,mk_ob_sort) then ppterm false g h >> add_break (1,0) >> pr_tlist g t
-                  else ppterm true g h >> add_break (2,0) >> pr_tlist g t
+        h :: h' :: t => if eq_sort(sort_of h,mk_ob_sort) then ppterm false g h >> add_break (1,0) >> pr_tlist g (h' :: t)
+                  else ppterm true g h >> add_break (2,0) >> pr_tlist g (h' :: t)
+      | [t] => if eq_sort(sort_of t,mk_ob_sort) then
+                       ppterm false g t else ppterm true g t
       | [] => add_string ""
 
 fun strip_forall' f = 
