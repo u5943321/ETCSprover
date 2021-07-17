@@ -1,12 +1,11 @@
 signature conv = 
 sig
-type form = form.form
-type term = term.term
-type sort = term.sort
-type thm = logic.thm
+
+(*
 type conv = abbrev.conv
 type fconv = abbrev.fconv
-
+*)
+include abbrev
 val all_conv: conv
 val all_fconv: fconv
 val arg_conv: conv -> conv

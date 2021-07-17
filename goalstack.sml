@@ -1,6 +1,6 @@
 structure goalstack :> goalstack = 
 struct
-open abbrev pterm smpp
+open term form logic abbrev tactic pterm smpp
 
 fun prove f tac = 
     let
@@ -20,7 +20,7 @@ datatype proposition = POSED of goal
 datatype gstk = GSTK of {prop  : proposition,
                          stack : tac_result list}
 
-fun new_goal (g as (G:(string*sort) set,asl:form list,w:form)) = GSTK{prop=POSED g, stack=[]}
+fun new_goal g = GSTK{prop=POSED g, stack=[]}
 
 fun read_goal f = 
     let val f0 = readf f in new_goal (fvf f0,[]:form list,f0) end
@@ -115,8 +115,8 @@ fun ppobl l =
                                    add_break (1,0) >>  ppobl t
 
 fun ppcont c = 
-    let val (obs,ars) = partition (fn (n,s) => s = ob) (HOLset.listItems c)
-        val Gvl = List.map Var ars
+    let val (obs,ars) = partition (fn (n,s) => eq_sort(s,mk_ob_sort)) (HOLset.listItems c)
+        val Gvl = List.map (uncurry mk_var) ars
     in block HOLPP.CONSISTENT 10 (ppobl (List.map fst obs) >> add_break (2,0)) >> 
        add_newline >> 
        block HOLPP.CONSISTENT 10
@@ -126,7 +126,7 @@ fun ppcont c =
 
 fun ppgoal (G,A,C) = 
     let
-        val Gvl = List.map Var (HOLset.listItems G)
+        val Gvl = List.map (uncurry mk_var) (HOLset.listItems G)
     in
         ppcont G >> add_newline >>
                (pr_list ppintf (add_break (1,0)) (rev(zip (n2l (List.length A)) A))) >>

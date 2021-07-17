@@ -7,6 +7,7 @@ type menv = form.menv
 datatype thm = thm of (string * sort) set * form list * form
 
 val dest_thm: thm -> (string * sort) set * form list * form
+val mk_thm: (string * sort) set -> form list -> form -> thm
 val ril: form -> form list -> form list
 
 val ant: thm -> form list

@@ -1,12 +1,9 @@
 structure conv :> conv = 
 struct
-open term form logic drule
-type conv = term -> thm
+open term form logic drule abbrev
+(*type conv = term -> thm
 type fconv = form -> thm
-type form = form.form
-type term = term.term
-type sort = term.sort
-
+*)
 exception unchanged of string * term list * form list
 
 
@@ -14,9 +11,6 @@ exception unchanged of string * term list * form list
 (*think about inst_thm when names clash!!!!!!!!!!!*)
 
 
-(*TODO: maybe change all try into verions that raise unchanged *)
-(*occurence control*)
-datatype ocs_ctrl = none | rf_only | no_loop
 
 fun part_tmatch partfn th t = 
     let 
@@ -26,6 +20,8 @@ fun part_tmatch partfn th t =
     end
 
 (*parttern matcher without loop*)
+
+(*
 
 fun part_tmatch_norf partfn th t = 
     let 
@@ -85,10 +81,13 @@ fun part_tmatch_nolp partfn th t =
         if cause_loop_teq th' then raise ERR ("part_tmatch_nolp.the result of term matching causes loop",[],[],[concl th'])
         else th'
     end
+*)
 
-val rewr_conv = part_tmatch_norf (fst o dest_eq o concl)
+val rewr_conv = part_tmatch (fst o dest_eq o concl)
+
+(*
 val rewr_conv' = part_tmatch_nolp (fst o dest_eq o concl)
-
+*)
 
 
 (*operations on conv*)
@@ -129,14 +128,8 @@ fun first_conv cl =
 
 *)
 fun arg_conv c t = 
-    case t of 
-        Fun (f,s,l) => 
-        let val th0 = EQ_fsym f (List.map (try_conv c) l)
-            val (l,r) = dest_eq (concl th0)
-        in 
-            if l = r then raise unchanged ("arg_conv",[t],[])
-            else th0
-        end
+    case (view_term t) of 
+        vFun (f,s,l) => EQ_fsym f (List.map c l)
       | _ => raise ERR ("arg_conv.not a function term",[],[t],[])
 
 
@@ -172,7 +165,7 @@ fun top_depth_conv c t =
 (*fconvs*)
 
 val simp_trace = ref false
-
+(*
 fun part_fmatch partfn th f = 
     let 
         val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
@@ -183,8 +176,17 @@ fun part_fmatch partfn th f =
         if l = r then raise unchanged ("part_fmatch.the result of form matching is a refl",[],[concl th'])
         else th' 
     end
+*)
 
 
+fun part_fmatch partfn th f = 
+    let 
+        val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
+    in 
+        inst_thm fvd th
+    end
+
+(*        
 fun part_fmatch_nolp partfn th f = 
     let 
         val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
@@ -194,16 +196,20 @@ fun part_fmatch_nolp partfn th f =
         if cause_loop_dimp th' then raise ERR ("part_fmatch_nolp.the result of form matching causes loop",[],[],[concl th'])
         else th' 
     end
+*)
  
 val rewr_fconv = part_fmatch (fst o dest_dimp o concl)
+
+(*
 val rewr_fconv_nolp = part_fmatch_nolp (fst o dest_dimp o concl)
+*)
 
 (*TODO: let rewr_fconv check the imput thm is an iff, so it raises err before the conv is applied*)
 (*operation on fconvs*)
 
 infix thenfc
 
-fun thenfc (fc1,fc2) f = 
+fun thenfc (fc1:fconv,fc2:fconv) f = 
     let 
         val th1 = fc1 f 
     in 
@@ -233,25 +239,15 @@ fun repeatfc fc f =
     ((fc thenfc (repeatfc fc)) orelsefc all_fconv) f
 
 fun pred_fconv c f = 
-    case f of 
-        Pred (P,tl) => 
-        let val th0 = (EQ_psym P (List.map (try_conv c) tl))
-            val (l,r) = dest_dimp (concl th0)
-        in if eq_form(l,r) then raise unchanged ("pred_fconv",[],[f])
-           else th0
-        end
+    case view_form f of 
+        vPred (P,tl) => EQ_psym P (List.map c tl)
       | _ => raise ERR ("pred_fconv.not a predicate",[],[],[f])
 
 (*conv on subformulas*)
 
 fun disj_fconv fc f = 
-    case f of 
-        Conn("|",[p,q]) => 
-        let val th0 = disj_iff (try_fconv fc p) (try_fconv fc q)
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("disj_fconv",[],[f])
-           else th0
-        end
+    case view_form f of 
+        vConn("|",[p,q]) => disj_iff (fc p) (fc q)
       | _ => raise ERR ("disj_fconv.not a disjunction",[],[],[f])
 
 
@@ -262,9 +258,10 @@ then do not need to call eq_form
 
 
 *)
+
 fun conj_fconv fc f = 
-    case f of 
-        Conn("&",[p,q]) => conj_iff (fc p) (fc q)
+    case view_form f of 
+        vConn("&",[p,q]) => conj_iff (fc p) (fc q)
       | _ => raise ERR ("conj_fconv.not a conjunction",[],[],[f])
 
 (*if needed, add try_conv on fc*)
@@ -275,49 +272,35 @@ fun conj_fconv fc f =
 TODO: call dest_conj / dest_imp
 
 *)
+
 fun imp_fconv fc f = 
-    case f of
-        Conn("==>",[p,q]) => 
-        let val th0 = imp_iff (try_fconv fc p) (try_fconv fc q)
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("imp_fconv",[],[f])
-           else th0
-        end        
+    case view_form f of
+        vConn("==>",[p,q]) => imp_iff (fc p) (fc q)       
       | _ => raise ERR ("imp_fconv.not an implication",[],[],[f])
 
+
 fun dimp_fconv fc f = 
-    case f of
-        Conn("<=>",[p,q]) => 
-        let val th0 = dimp_iff (try_fconv fc p) (try_fconv fc q)
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("dimp_fconv",[],[f])
-           else th0
-        end        
+    case view_form f of
+        vConn("<=>",[p,q]) => dimp_iff (fc p) (fc q)
       | _ => raise ERR ("dimp_fconv.not an iff",[],[],[f])
 
 fun forall_fconv fc f = 
-    case f of
-        (Quant("!",n,s,b)) => 
-        let val th0 = all_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b)) 
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("forall_fconv",[],[f])
-           else th0
-        end        
+    case view_form f of
+        (vQ("!",n,s,b)) => 
+        forall_iff (n,s) $ fc (subst_bound (mk_var n s) b)
       | _ => raise ERR ("forall_fconv.not an all",[],[],[f])
  
 fun exists_fconv fc f = 
-    case f of
-        (Quant("?",n,s,b)) => 
-        let val th0 = exists_iff (n,s) (try_fconv fc (subst_bound (Var(n,s)) b))
-            val (l,r) = dest_dimp(concl th0)
-        in if eq_form(l,r) then raise unchanged ("exists_fconv_fconv",[],[f])
-           else th0
-        end  
+    case view_form f of
+        (vQ("?",n,s,b)) => 
+        exists_iff (n,s) $ fc (subst_bound (mk_var n s) b)
       | _ => raise ERR ("exists_fconv.not an all",[],[],[f])
 
-val reflTob = equivT (refl (Var("a",ob)))
+val reflTob = equivT (refl (mk_var  "a" mk_ob_sort))
 
-val reflTar = equivT (refl (Var("a",ar(Var("A",ob),Var("B",ob)))))
+val reflTar = equivT (refl (mk_var "a" 
+                            (mk_ar_sort
+                                 (mk_ob "A") (mk_ob "B"))))
 
 val refl_fconv = 
     first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
@@ -354,7 +337,7 @@ val taut_disj_fconv =
         (List.map rewr_fconv 
                   [T_disj_1,T_disj_2,F_disj_1,F_disj_2])
 
-val f2f = disch (fVar "f0") (assume (fVar "f0"))
+val f2f = disch (mk_fvar "f0") (assume (mk_fvar "f0"))
 val f2f_T  = eqT_intro f2f
 
 val taut_imp_fconv = 
@@ -372,8 +355,8 @@ val taut_dimp_fconv =
 val taut_forall_fconv = 
     first_fconv 
         (List.map rewr_fconv 
-                  [all_true_ar,all_true_ob,
-                   all_false_ar,all_false_ob])
+                  [forall_true_ar,forall_true_ob,
+                   forall_false_ar,forall_false_ob])
 
 
 
@@ -397,12 +380,21 @@ val nFT_fconv = first_fconv [rewr_fconv nF2T,rewr_fconv nT2F]
 
 val taut_fconv = basic_taut_fconv orelsec refl_fconv orelsec nFT_fconv
 
+(*
 fun top_depth_fconv c fc f =
     (repeatfc fc thenfc
              (sub_fconv c (top_depth_fconv c fc)) thenfc
              ((fc thenfc (top_depth_fconv c fc)) 
                   orelsefc all_fconv))
         f
+*)
+
+fun top_depth_fconv c fc f =
+   (repeatfc fc thenfc
+    try_fconv (changed_fconv (sub_fconv c (top_depth_fconv c fc)) thenfc
+              try_fconv (fc thenfc top_depth_fconv c fc))) f
+
+                                                           
 
 fun once_depth_conv conv tm =
    try_conv (conv orelsec (arg_conv (once_depth_conv conv))) tm
@@ -427,14 +419,14 @@ fun conv_rule c th = dimp_mp_l2r th (c (concl th))
 fun right_imp_forall_fconv f  = 
     let
         val (ant,conc) = dest_imp f
-        val (ns,b) = dest_all conc
+        val (ns,b) = dest_forall conc
         val asm1 = assume f 
         val ath = assume ant 
         val mpth = mp asm1 ath
-        val sth = specl [Var ns] mpth
+        val sth = specl [(uncurry mk_var) ns] mpth
         val gth = sth |> disch ant |> allI ns 
         val asm2 = assume (concl gth)
-        val sasm2 = (C allE) asm2 (Var ns) 
+        val sasm2 = (C allE) asm2 ((uncurry mk_var) ns) 
         val mpsasm = mp sasm2 ath
         val gmpasm = allI ns mpsasm
         val dth' = disch ant gmpasm
@@ -443,9 +435,9 @@ fun right_imp_forall_fconv f  =
 
 
 fun sym_fconv f = 
-    case f of 
-    Pred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (Pred("=",[t2,t1])) |> sym |> disch_all)
-  | Conn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (Conn("<=>", [f2,f1]))|> iff_swap |> disch_all)
+    case view_form f of 
+    vPred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (mk_pred "=" [t2,t1]) |> sym |> disch_all)
+  | vConn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (mk_dimp f2 f1)|> iff_swap |> disch_all)
   | _ => raise simple_fail "not an iff or equality"
 
 

@@ -519,7 +519,67 @@ fun new_pred p tl = psyms := Binarymap.insert (!psyms,p,tl)
 fun new_fun f (s,tl) = fsyms := Binarymap.insert (!fsyms,f,(s,tl))
 
 
+(**********************************************************************
+pretty printing
+**********************************************************************)
+(*
+open pp
 
+fun ppterm ss g t = 
+    case t of 
+        Var(n,s) => 
+        if ss then paren 
+                       (add_string n >> add_string " :" >>
+                                   add_break (1,2) >> ppsort g s)
+        else add_string n
+      | Fun(f,s,[t1,t2]) => 
+        if is_infix f then 
+            case g of 
+                LR(lg,rg) => 
+                let 
+                    val g1 = LR (lg, SOME (fxty f))
+                    val g2 = LR (SOME (fxty f),rg)
+                in 
+                    if int_option_less (fxty f, lg) orelse int_option_leq (fxty f, rg) then 
+                        add_string "(" >> 
+                                   ppterm ss (LR (NONE, SOME (fxty f))) t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
+                                   ppterm ss (LR (SOME (fxty f), NONE)) t2 >> add_string ")"
+                    else 
+                        ppterm ss g1 t1 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
+                               ppterm ss g2 t2
+                end
+        else 
+            if f = "pa" then 
+                add_string "<" >> ppterm ss g t1 >> add_string " , " >> ppterm ss g t2 >> add_string ">"
+            else
+            add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) [t1,t2])
+      | Fun(f,s,args) => 
+        if args = [] then add_string f else
+        add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) args)
+      | Bound i => add_string "B" >> paren (add_string (int_to_string i))
+and ppsort g s =
+    case s of
+        ob => add_string "ob"
+      | ar(d,c) => 
+        block HOLPP.INCONSISTENT 2 
+              (ppterm false g d >> add_string " ->" >>
+                      add_break(1,0) >> ppterm false g c)
 
+val show_types = ref false
 
+fun PPsort printdepth _ st = let val s = ppsort (LR (NONE,NONE)) st
+                             val SOME (pretty,_,_) = lower s ()
+                         in pretty
+                         end
+
+val pps = PolyML.addPrettyPrinter PPsort
+                     
+fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t 
+                             val SOME (pretty,_,_) = lower s ()
+                         in pretty
+                         end
+
+val ppt = PolyML.addPrettyPrinter PPterm
+
+*)
 end

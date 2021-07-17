@@ -1,5 +1,6 @@
 signature goalstack =
 sig
+    include abbrev
     type tac_result 
     datatype proposition = POSED of abbrev.goal
                        | PROVED of logic.thm * abbrev.goal

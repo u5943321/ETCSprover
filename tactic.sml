@@ -1,6 +1,6 @@
 structure tactic :> tactic = 
 struct
-open term form logic drule abbrev
+open term form logic drule abbrev conv
 
 fun wrap_err s exn = 
     case exn of ERR (s0,sl,tl,fl) => ERR (s^s0,sl,tl,fl)
@@ -22,13 +22,13 @@ val accept_tac =
 
 val T_INTRO_TAC:tactic = 
  fn (ct,asl,w) => 
-    if w = TRUE then ([], empty (trueI asl))
+    if eq_form(w,TRUE) then ([], empty (trueI asl))
     else raise ERR ("T_intro_tac.the goal is not T",[],[],[w])
 
 fun gen_tac (ct,asl,w) = 
-    case w of
-        Quant("!",n,s,b) =>
-        let val t0 = pvariantt ct (Var(n,s))
+    case view_form w of
+        vQ("!",n,s,b) =>
+        let val t0 = pvariantt ct (mk_var n s)
             val w' = subst_bound t0 b 
             val ct' = HOLset.union(ct,fvt t0) 
         in
@@ -40,9 +40,9 @@ fun gen_tac (ct,asl,w) =
 fun spec_tac0 (n,s): tactic = 
     fn (ct,asl,w) =>
     let val ct' = HOLset.delete(ct,(n,s))
-        val w' = mk_all n s w
+        val w' = mk_forall n s w
     in
-        ([(ct',asl,w')], sing (allE (Var(n,s))))
+        ([(ct',asl,w')], sing $ allE $ mk_var n s)
     end
 
 fun spec_tac n: tactic = 
@@ -73,7 +73,7 @@ val hyp = ant
 fun drule th (G,fl:form list,f) = 
     let 
         val c = concl th
-        val (b,vs) = strip_all c
+        val (b,vs) = strip_forall c
         val (ant,con) = dest_imp b
         fun mfn _ asm = 
             let 
@@ -106,18 +106,17 @@ fun efn (n,s) (f,th) =
         (ef,existsE (n,s) (assume ef) th)
     end
 
-fun hyp (thm(_,A,_))= A
-
+val var = uncurry mk_var
 
 fun match_mp_tac th (ct:cont,asl:form list,w) = 
     let
-        val (imp,gvs) = strip_all (concl th)
+        val (imp,gvs) = strip_forall (concl th)
         val (ant,conseq) = dest_imp imp
-        val (con,cvs) = strip_all (conseq)
-        val th1 = (C specl) (undisch ((C specl) th (List.map Var gvs))) (List.map Var cvs) 
+        val (con,cvs) = strip_forall (conseq)
+        val th1 = (C specl) (undisch ((C specl) th (List.map var gvs))) (List.map var cvs) 
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
         val th2 = uncurry disch (itlist efn evs (ant, th1)) 
-        val (gl,vs) = strip_all w
+        val (gl,vs) = strip_forall w
         val env = match_form (fvfl (hyp th)) con gl mempty
         val ith = inst_thm env th2
         val gth = genl vs (undisch ith)
@@ -151,20 +150,20 @@ prove as a thm and rw with this
 
 
 fun conj_tac ((G,fl,f):goal):goal list * validation = 
-    case f of 
-        (Conn("&",[f1,f2])) =>
+    case view_form f of 
+        (vConn("&",[f1,f2])) =>
         ([(G,fl,f1), (G,fl,f2)], pairths conjI)
       | _ => raise ERR ("conj_tac.not a conjunction",[],[],[f])
 
 fun disj1_tac (g:goal as (G,fl,f)) = 
-    case f of
-        Conn("|",[f1,f2]) => 
+    case view_form f of
+        vConn("|",[f1,f2]) => 
         ([(G,fl,f1)], sing (disjI1 f2))
       | _ => raise ERR ("disj1_tac.not a disjunction",[],[],[f])
 
 fun disj2_tac (G,fl,f) = 
-    case f of
-        Conn("|",[f1,f2]) => 
+    case view_form f of
+        vConn("|",[f1,f2]) => 
         ([(G,fl,f2)], sing (disjI2 f1))
       | _ => raise ERR ("disj2_tac.not a disjunction",[],[],[f])
 
@@ -177,15 +176,15 @@ fun cases_on c (G,fl,f) =
     end
 
 fun contra_tac (g:goal as (G,fl,f)) = 
-    case f of
-        Conn("~",[A]) => 
+    case view_form f of
+        vConn("~",[A]) => 
         ([(G,A::fl,FALSE):goal], sing (negI A))
       | _ => raise ERR ("contra_tac.goal is not a negation",[],[],[f])
 
 
 fun ccontra_tac (g:goal as (G,fl,f)) = 
-    case f of
-        Conn("~",[A]) => 
+    case view_form f of
+        vConn("~",[A]) => 
         ([(G,A::fl,FALSE):goal], sing (negI A))
       | _ => 
         ([(G,(mk_neg f)::fl,FALSE):goal], fn [th] => dimp_mp_l2r (negI (mk_neg f) th) (double_neg f)
@@ -194,58 +193,54 @@ fun ccontra_tac (g:goal as (G,fl,f)) =
 
 
 fun imp_tac (G,fl,f) = 
-    case f of 
-        Conn("==>",[f1,f2]) => 
+    case view_form f of 
+        vConn("==>",[f1,f2]) => 
         ([(G,f1::fl,f2)], sing (disch f1))
       | _ => raise ERR ("imp_tac.goal is not an implication",[],[],[f])
  
  
 fun dimp_tac (G,fl,f) = 
-    case f of
-        Conn("<=>",[f1,f2]) => 
-        ([(G,fl,Conn("==>",[f1,f2])),(G,fl,Conn("==>",[f2,f1]))],
+    case view_form f of
+        vConn("<=>",[f1,f2]) => 
+        ([(G,fl,mk_imp f1 f2),(G,fl,mk_imp f2 f1)],
          pairths dimpI)
       | _ => raise ERR ("dimp_tac.goal is not an double imp",[],[],[f])
 
 
 fun conj_tac ((G,fl,f):goal):goal list * validation = 
-    case f of 
-        (Conn("&",[f1,f2])) =>
+    case view_form f of 
+        (vConn("&",[f1,f2])) =>
         ([(G,fl,f1), (G,fl,f2)], pairths conjI)
       | _ => raise ERR ("conj_tac.goal is not conjunction",[],[],[f])
 
 fun exists_tac t (G,fl,f) = 
-    case f of 
-        Quant("?",n,s,b) =>
-        if sort_of t = s then 
+    case view_form f of 
+        vQ("?",n,s,b) =>
+        if eq_sort(sort_of t,s) then 
             ([(G,fl,subst_bound t b)], 
-             sing (existsI (n,s) t (subst_bound (Var(n,s)) b)))
-        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,Var(n,s)],[])
+             sing (existsI (n,s) t (subst_bound (var(n,s)) b)))
+        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
 fun spec_all_tac (G,fl,f) = 
-    case f of
-        Quant("!",n,s,b) =>
-        let val f' = subst_bound (Var(n,s)) b 
-            val G' = HOLset.union(G,fvt (Var(n,s))) 
+    case view_form f of
+        vQ("!",n,s,b) =>
+        let val f' = subst_bound (var(n,s)) b 
+            val G' = HOLset.union(G,fvt (var(n,s))) 
         in
             ([(G',fl,f')], sing (allI (n,s)))
         end
         | _ => raise ERR ("spec_all_tac.goal is not universally quantified",[],[],[f])
 
  
-fun h1_of l = 
-    case l of 
-        [] => []
-      | (a,b) :: t => a :: h1_of t
 
 fun then_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) = 
     let val (gl,func) = tac1 (G,fl,f)
         val branches = List.map tac2 gl
-        val gl1 = flatten (h1_of branches)
+        val gl1 = flatten (fst $ unzip branches)
         fun func1 l = 
             (if List.length l = List.length gl1 then 
-                 func (mapshape (List.map List.length (h1_of branches))
+                 func (mapshape (List.map List.length (fst $ unzip branches))
                            (List.map (fn (a,b) => b) branches) l)
              else raise ERR ("then_tac.length list not consistent,start with respectively: ",[],[],[concl (hd l),#3 (hd gl1)]))
     in (gl1,func1) 
@@ -260,8 +255,8 @@ fun then1_tac ((tac1:tactic),(tac2:tactic)) (G,fl,f) =
         val gl' = gl1 @ (tl gl)
         fun func' l = 
             (if length l = length gl' then
-                 case (func1 (List.take (l,length gl1))) of thm(G,A,C) =>
-                 func (thm(G,A,C) :: (List.drop (l,length gl1)))
+                 case view_thm (func1 (List.take (l,length gl1))) of vth(G,A,C) =>
+                 func ((mk_thm G A C) :: (List.drop (l,length gl1)))
              else raise simple_fail "then1_tac.incorrect number of list items")
     in (gl',func')
     end
@@ -322,7 +317,7 @@ fun conv_canon th =
         if is_dimp f then [th] else
         if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
         if is_neg f then [eqF_intro th]  else
-        if not (is_eqn f) then [eqT_intro th]
+        if not (is_eq f) then [eqT_intro th]
         else [th]
     end 
 
@@ -401,8 +396,6 @@ fun pop_assum thfun (ct,a :: asl, w) = thfun (assume a) (ct,asl, w)
 fun rev_pop_assum thfun (ct,a :: asl, w) = thfun (assume (hd (rev (a :: asl)))) (ct,(rev (tl (rev (a :: asl)))), w)
   | rev_pop_assum   _   (_,[], _) = raise simple_fail"rev_pop_assum.no assum"
 
-fun stp_rw thl g = 
-    repeat (stp_tac >> rw_tac thl) g
 
 (*only difference between pop_assum_list and assum_list is the former removes the assumptions?*)
 
@@ -423,12 +416,12 @@ fun choose_tac cn a0:tactic =
            val _ = not (mem cn (List.map fst (HOLset.listItems ct))) 
                    orelse raise simple_fail "name to be choose is already used"
            val ((n,s),b) = dest_exists a0
-           val newasm = subst_bound (Var(cn,s)) b
+           val newasm = subst_bound (var(cn,s)) b
        in ([(HOLset.add(ct,(cn,s)),newasm ::(ril a0 asl),w)],
            sing (existsE (cn,s) (assume a0)))
        end
 
-fun masquerade goal = thm goal
+fun masquerade (G,fl,f) = mk_thm G fl f
 
 datatype validity_failure = Concl of form | Ant of form| Cont of (string * sort)
 
@@ -440,7 +433,7 @@ fun bad_prf th (ct,asl,w) =
         in 
             case
                 List.find 
-                    (fn ns0 => List.all (fn ns => not (ns = ns0)) clct) clth
+                    (fn ns0 => List.all (fn ns => not (fst ns = fst ns0 andalso eq_sort(snd ns,snd ns0))) clct) clth
              of
                 SOME ns => SOME (Cont ns)
               | NONE => 
@@ -450,16 +443,18 @@ fun bad_prf th (ct,asl,w) =
                   | SOME h => SOME (Ant h))
         end
 
+(*AQ:what todo if I want to pp the ns of Cont ns with its sort here? *)
+
 fun error f t e =
        let
          val pfx = "Invalid " ^ t ^ ": theorem has "
-         val (desc, t) =
+         val (desc, sl,tl,fl) =
              case e of
-                 Ant h => ("bad hypothesis", string_of_form h)
-               | Concl c => ("wrong conclusion", string_of_form c)
-               | Cont ns => ("extra variable involved",(string_of_term (Var ns))^ ":" ^ (string_of_sort (snd ns)))
+                 Ant h => ("bad hypothesis",[],[],[h])
+               | Concl c => ("wrong conclusion",[],[],[c])
+               | Cont ns => ("extra variable involved",[sort_of $ var ns],[var ns],[])
        in
-         raise simple_fail(f^pfx ^ desc ^ " " ^ t)
+         raise ERR (desc,sl,tl,fl)
        end
 
 (*check the validaty error message: TODO, add term/form information*)
@@ -585,8 +580,6 @@ fun disj_cases th1 th2 th3 =
     end
 *)
 
-val disj_cases = disjE
-
 
 fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
    fn disth =>
@@ -603,7 +596,7 @@ fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
                let
                   val (thl1, thl2) = split_after (length gl1) thl
                in
-                  disj_cases disth (prf1 thl1) (prf2 thl2)
+                  disjE disth (prf1 thl1) (prf2 thl2)
                end)
          end
    end
@@ -625,7 +618,7 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
          fn (ct,asl,w) =>
             let
                val th = add_cont (HOLset.add(essps,(n0,s)))
-                                 (foo xth (subst_bound (Var (n0,s)) b))              
+                                 (foo xth (subst_bound (var (n0,s)) b))              
                val (gl,prf) = ttac th (ct,asl,w)
             in
                (gl, (existsE (n0,s) xth) o prf)
@@ -652,7 +645,7 @@ val choose_then: thm_tactical =
          fn (ct,asl,w) =>
          let
              val vd = HOLset.union(cot,ct)
-             val y = pvariantt vd (Var(n,s))|> dest_var|> fst
+             val y = pvariantt vd (var(n,s))|> dest_var|> fst
          in
             x_choose_then y ttac xth (ct,asl,w)
          end
@@ -718,7 +711,7 @@ fun abbrev_tac eq0:tactic =
                    raise simple_fail "the term to be abbrev has unknown variable" 
            val _ = not (mem n (List.map fst (HOLset.listItems ct)))
                    orelse raise simple_fail "name of the abbrev is already used"
-           val eth =  existsI (n,s) lhs (Pred("=",[lhs,Var(n,s)])) (refl lhs) 
+           val eth =  existsI (n,s) lhs (mk_pred "=" [lhs,var(n,s)]) (refl lhs) 
        in
            ([(HOLset.add(ct,(n,s)),eq0::asl,w)],fn [th] => existsE (n,s) eth th)
        end

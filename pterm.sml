@@ -471,6 +471,26 @@ and parse_arepeat1 (a,parsefn) tl =
     in (u::asts,tl2)
     end
 
+(*
+
+fun parse_arpt parsefn tl = 
+   case tl of 
+       (Key(b)::tl1) => parse_arpt1 parsefn tl handle _ => tl
+      | _ => ([],tl)
+and parse_arpt1 parsefn tl =
+    let val (u,tl1) = parsefn tl handle
+        val (asts,tl2) = parse_arpt parsefn tl1
+    in (u::asts,tl2)
+    end
+*)
+
+
+fun parse_arptl (parsefn:token list -> ast * token list) tl: ast list * token list =
+    let val (u,tl1) = parsefn tl 
+        val (asts,tl2) = parse_arptl parsefn tl1 handle _ => ([],tl1)
+    in (u::asts,tl2)
+    end
+
 exception ERROR of string
 
 
@@ -481,6 +501,69 @@ fun rparen s (x, Key(s')::toks) =
 
 (*doing rparen and then nothing is wrong, see parse_pt_atom*)
 
+
+fun parse_ast tl =
+    case tl of
+        Key"!"::tl =>
+        let val (asts,tl1) = parse_arptl parse_ast tl
+            fun foldthis (avar,abody) = aBinder("!",avar,abody)
+            (* val (ns,tl1) = parse_ast tl*)
+            val tl1' = List.tl tl1 (*remove the Key"." after quantified things*)
+            val (b,tl2) = parse_ast tl1'
+            val ast = List.foldr foldthis b asts
+        in
+            (ast, tl2)
+        end
+      | Key"?"::tl =>
+        let 
+            val (asts,tl1) = parse_arptl parse_ast tl
+            fun foldthis (avar,abody) = aBinder("?",avar,abody)
+            (* val (ns,tl1) = parse_ast tl*)
+            val tl1' = List.tl tl1
+            val (b,tl2) = parse_ast tl1'
+            val ast = List.foldr foldthis b asts
+        in
+            (ast, tl2)
+        end 
+      | _ => parse_ast_fix 0 (parse_ast_atom tl)
+and parse_ast_fix n (ast,tl) = 
+    case tl of 
+        Key(k) :: tl =>
+        if fxty k < n then (ast,Key(k) :: tl)
+        else
+            let
+                val (ast1,tl1) =
+                    if List.hd tl = Key "!" orelse 
+                       List.hd tl = Key "?" then 
+                        parse_ast tl 
+                    else 
+                    parse_ast_atom tl
+                val (ast2,tl2) = parse_ast_fix (fxty k) (ast1,tl1)
+                val ast' = aInfix (ast,k,ast2)
+            in parse_ast_fix n (ast',tl2)
+            end
+      | _ => (ast,tl)
+and parse_ast_atom tl = 
+    case tl of
+        (Key"~"::tl1) =>
+        let val (ast,tl2) = parse_ast tl1
+        in (aApp("~",[ast]),tl2)
+        end
+     | Id(a)::Key"("::tl1 => 
+       let 
+           val (astl,tl2) = rparen ")" (parse_arepeat1 (",",parse_ast) tl1)
+       in (aApp(a,astl),tl2)
+       end
+     | Key"("::tl => rparen ")" (parse_ast tl) 
+     | Id(a)::tl => (aId(a),tl)
+     | Key"<"::tl => 
+       let 
+           val (astl,tl2) = rparen ">" (parse_arepeat1 (",",parse_ast) tl)
+       in (aApp("pa",astl),tl2)
+       end
+     | _ => raise simple_fail""
+
+(*
 fun parse_ast tl =
     case tl of
         Key"!"::tl =>
@@ -536,17 +619,8 @@ and parse_ast_atom tl =
        in (aApp("pa",astl),tl2)
        end
      | _ => raise simple_fail""
-
-
-(*
-parse_ast (lex "! X. ~ areiso(X,0) ==> ? x: 1 -> X. T");
-Exception- ERR "" raised
 *)
-(*handle "()"*)
 
-
-
-(*need dict of infixes*)
 
 fun pPred_cons pf pt = 
     case pf of 
@@ -897,8 +971,9 @@ fun form_from_pf env pf =
       | pConn(co,pfl) => 
         mk_conn co (List.map (form_from_pf env) pfl)
       | pPred(P,ptl) => 
-        mk_pred P (List.map (term_from_pt env) ptl)
+        mk_P0 P (List.map (term_from_pt env) ptl)
 
+(*mk_P0 should be mk_pred! just testing! need to change it back*)
 fun read_t t = 
     let val (pt,env) = read_pt t
         val (ps,env1) = (ps_of_pt pt env)

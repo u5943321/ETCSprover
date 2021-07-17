@@ -240,7 +240,7 @@ fun T_imp1 f =
     end
 
 fun T_imp2 f = 
-    let val f2T2T = disch (mk_conj f TRUE) (trueI [mk_conj f TRUE])
+    let val f2T2T = disch (mk_imp f TRUE) (trueI [mk_imp f TRUE])
         val T2f2T = disch TRUE (disch f (trueI [f,TRUE]))
     in dimpI f2T2T T2f2T
     end
@@ -504,8 +504,8 @@ val exists_true_ob =
 val exists_true_ar = exists_true ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
 
  
-val exists_false_ob = exists_false ("A",ob)
-val exists_false_ar = exists_false ("a",ar(mk_ob "A",mk_ob "B"))
+val exists_false_ob = exists_false ("A",mk_ob_sort)
+val exists_false_ar = exists_false ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
 
 
 (*A \/ B ==> C  <=> A ==> C /\ B ==> C*)
@@ -550,10 +550,10 @@ fun disj_imp_distr_th th =
                 in
                     dimp_mp_l2r th (disj_imp_distr P Q R)
                 end
-            else raise ERR ("disj_imp_distr_th.antecedent is not a disjunction: ",[],[],[f])
+            else raise ERR ("disj_imp_distr_th.antecedent is not a disjunction: ",[],[],[concl th])
         end
     else
-        raise ERR ("disj_imp_distr_th.not a implication: ",[],[],[f])
+        raise ERR ("disj_imp_distr_th.not a implication: ",[],[],[concl th])
 
 
 (*function that deal with dimp_mp_l2r for thm?*)
@@ -833,7 +833,7 @@ fun double_neg_th th =
 fun elim_double_neg th = 
     dimp_mp_l2r th (double_neg(dest_neg (dest_neg (concl th)))) 
 
-fun exists_all (n,s) = 
+fun exists_forall (n,s) = 
     let 
         val f0 = mk_fvar "f0"
         val af0 = mk_forall n s f0
@@ -896,9 +896,9 @@ val nT2F =
 
 val double_neg_elim = double_neg (mk_fvar "f0")
 
-fun all_exists (n,s) = 
-    let val th0 = exists_all (n,s) |> neg_iff |> inst_thm (mk_inst [] [("f0",mk_neg (mk_fvar "f0"))]) 
-        val rhs1 = double_neg (mk_fvar "f0") |> all_iff (n,s)
+fun forall_exists (n,s) = 
+    let val th0 = exists_forall (n,s) |> neg_iff |> inst_thm (mk_inst [] [("f0",mk_neg (mk_fvar "f0"))]) 
+        val rhs1 = double_neg (mk_fvar "f0") |> forall_iff (n,s)
         val rhs2 = double_neg (mk_forall n s (mk_neg (mk_neg (mk_fvar "f0"))))
         val rhs = iff_trans rhs2 rhs1
         val th0' = iff_trans th0 rhs

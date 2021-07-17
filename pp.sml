@@ -1,6 +1,6 @@
 structure pp = 
 struct 
-open term form logic smpp symbols
+open term form logic smpp
 
 infix >>
 
@@ -23,14 +23,16 @@ fun int_option_less (n,n0) =
     case n0 of NONE => false
              | SOME m => n < m
 
+
+
 fun ppterm ss g t = 
-    case t of 
-        Var(n,s) => 
+    case view_term t of 
+        vVar(n,s) => 
         if ss then paren 
                        (add_string n >> add_string " :" >>
                                    add_break (1,2) >> ppsort g s)
         else add_string n
-      | Fun(f,s,[t1,t2]) => 
+      | vFun(f,s,[t1,t2]) => 
         if is_infix f then 
             case g of 
                 LR(lg,rg) => 
@@ -51,17 +53,25 @@ fun ppterm ss g t =
                 add_string "<" >> ppterm ss g t1 >> add_string " , " >> ppterm ss g t2 >> add_string ">"
             else
             add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) [t1,t2])
-      | Fun(f,s,args) => 
-        if args = [] then add_string f else
+      | vFun(f,s,args) => 
+        if length args = 0 then add_string f else
         add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) args)
-      | Bound i => add_string "B" >> paren (add_string (int_to_string i))
+      | vB i => add_string "B" >> paren (add_string (int_to_string i))
 and ppsort g s =
-    case s of
-        ob => add_string "ob"
-      | ar(d,c) => 
+    case view_sort s of
+        vo => add_string "ob"
+      | va(d,c) => 
         block HOLPP.INCONSISTENT 2 
               (ppterm false g d >> add_string " ->" >>
                       add_break(1,0) >> ppterm false g c)
+
+
+fun PPsort printdepth _ st = let val s = ppsort (LR (NONE,NONE)) st
+                             val SOME (pretty,_,_) = lower s ()
+                         in pretty
+                         end
+
+val _ = PolyML.addPrettyPrinter PPsort
 
 val show_types = ref false
                      
@@ -72,23 +82,20 @@ fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t
 
 val _ = PolyML.addPrettyPrinter PPterm
 
-fun is_quant f = 
-    case f of Quant _ => true
-             | _ => false
-
+(*
 fun ppform (ss:bool) g (f:form) = 
-    case f of 
-        Pred(p,[t1,t2]) => 
+    case view_form f of 
+        vPred(p,[t1,t2]) => 
         if is_infix p then 
             block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t1) >> add_break(1,0) >>
                   add_string p >> add_break(1,0) >>
                   block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t2)
         else
             add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) [t1,t2])
-      | Pred(p,args) => 
-        if args = [] then add_string p else
+      | vPred(p,args) => 
+        if length args = 0 then add_string p else
         add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) args)
-      | Conn(co,[f1,f2]) => 
+      | vConn(co,[f1,f2]) => 
             (case g of 
                 LR(lg,rg) => 
                 let 
@@ -103,20 +110,99 @@ fun ppform (ss:bool) g (f:form) =
                         ppform ss g1 f1 >>  add_break(1,0) >> add_string co >> add_break(1,0) >>
                                ppform ss g2 f2
                 end)
-      | Conn("~",[f]) => add_string "~" >> ppform ss g f
-      | Quant(q,n,s,b) =>
+      | vConn("~",[f]) => add_string "~" >> ppform ss g f
+      | vQ(q,n,s,b) =>
         (case g of
             LR(_,NONE) => 
         block HOLPP.INCONSISTENT 2
               (add_string q >> 
-                          (if s = ob then ppterm false (LR (NONE,NONE)) (Var(n,s)) else 
-add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (Var(n^"#",s)) b))
+                          (if eq_sort(s,mk_ob_sort) then ppterm false (LR (NONE,NONE)) (mk_var n s) else 
+add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (mk_var(n^"#") s) b))
           | _ => paren 
 (block HOLPP.INCONSISTENT 2
               (add_string q >> 
-                          (if s = ob then ppterm false (LR (NONE,NONE)) (Var(n,s)) else 
-add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (Var(n^"#",s)) b))))
-      | fVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
+                          (if eq_sort(s,mk_ob_sort) then ppterm false (LR (NONE,NONE)) (mk_var n s) else 
+add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (mk_var (n^"#") s) b))))
+      | vfVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
+      | _ => raise ERR ("ill-formed formula",[],[],[f])
+*)
+
+
+fun pr_tlist g tl = 
+    case tl of
+        h :: t => if eq_sort(sort_of h,mk_ob_sort) then ppterm false g h >> add_break (1,0) >> pr_tlist g t
+                  else ppterm true g h >> add_break (2,0) >> pr_tlist g t
+      | [] => add_string ""
+
+fun strip_forall' f = 
+    case view_form f of 
+        vQ("!",n,s,b) => 
+        let val (b1,l) = strip_forall' (subst_bound (mk_var (n^"#") s) b) in
+            (b1,(n,s) :: l) end
+      | _ => (f,[])
+
+fun strip_exists' f = 
+    case view_form f of 
+        vQ("?",n,s,b) => 
+        let val (b1,l) = strip_exists (subst_bound (mk_var (n^"#") s) b) in
+            (b1,(n,s) :: l) end
+      | _ => (f,[])
+
+fun strip_quants' f = 
+    case view_form f of 
+        vQ(q,_,_,_) => if q = "!" then strip_forall' f 
+                          else if q = "?" then strip_exists' f 
+                          else raise ERR ("strip_exists.not a quantified formula",[],[],[f])
+      | _ => raise ERR ("strip_exists.not a quantified formula",[],[],[f])
+
+
+
+fun ppform (ss:bool) g (f:form) = 
+    case view_form f of 
+        vPred(p,[t1,t2]) => 
+        if is_infix p then 
+            block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t1) >> add_break(1,0) >>
+                  add_string p >> add_break(1,0) >>
+                  block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t2)
+        else
+            add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) [t1,t2])
+      | vPred(p,args) => 
+        if length args = 0 then add_string p else
+        add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) args)
+      | vConn(co,[f1,f2]) => 
+            (case g of 
+                LR(lg,rg) => 
+                let 
+                    val g1 = LR (lg, SOME (fxty co))
+                    val g2 = LR (SOME (fxty co),rg)
+                in 
+                    if int_option_less (fxty co, lg) orelse int_option_leq (fxty co, rg) then 
+                        add_string "(" >> 
+                                   ppform ss (LR (NONE, SOME (fxty co))) f1 >> add_break(1,0) >> add_string co >> add_break(1,0) >>
+                                   ppform ss (LR (SOME (fxty co), NONE)) f2 >> add_string ")"
+                    else 
+                        ppform ss g1 f1 >>  add_break(1,0) >> add_string co >> add_break(1,0) >>
+                               ppform ss g2 f2
+                end)
+      | vConn("~",[f]) => add_string "~" >> ppform ss g f
+      | vQ(q,n,s,b) =>
+        let val (b0,vs) = strip_quants' f
+        in
+        case g of
+            LR(_,NONE) => 
+            block HOLPP.INCONSISTENT 2
+                  (add_string q >> pr_tlist (LR (NONE,NONE)) (List.map (uncurry mk_var) vs)
+                             (* pr_list (ppterm true (LR (NONE,NONE)))
+                              (add_string " " >> add_break (1,0))
+                              (List.map (uncurry mk_var) vs) *) >> 
+                              add_string ". " >> ppform ss (LR (NONE,NONE)) b0)
+          | _ => paren 
+                     (block HOLPP.INCONSISTENT 2
+                            (add_string q >> 
+                                        pr_tlist (LR (NONE,NONE)) (List.map (uncurry mk_var) vs)
+                         (* pr_list (ppterm true (LR (NONE,NONE))) (add_string " " >> add_break (1,0)) (List.map (uncurry mk_var) vs) *) >> add_string ". " >> ppform ss (LR (NONE,NONE)) b0))
+         end
+      | vfVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
       | _ => raise ERR ("ill-formed formula",[],[],[f])
 
 
@@ -127,9 +213,10 @@ fun PPform printdepth _ t = let val s = ppform (!show_types) (LR (NONE,NONE)) t
 
 val _ = PolyML.addPrettyPrinter PPform
 
-fun ppthm (thm(G,A,C)) =
+fun ppthm th  =
     let
-        val Gvl = List.map Var (HOLset.listItems G)
+        val (G,A,C) = dest_thm th
+        val Gvl = List.map (uncurry mk_var) (HOLset.listItems G)
     in
         pr_list (ppterm true (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) Gvl >> add_newline >>
                 block HOLPP.INCONSISTENT 2 

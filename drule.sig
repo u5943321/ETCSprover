@@ -39,7 +39,7 @@ val disj_iff: thm -> thm -> thm
 val imp_iff: thm -> thm -> thm
 val dimp_iff: thm -> thm -> thm
 
-val all_iff: string * sort -> thm -> thm
+val forall_iff: string * sort -> thm -> thm
 val exists_iff: string * sort -> thm -> thm 
 
 
@@ -64,11 +64,11 @@ val T_dimp_2: thm
 val F_dimp_1: thm
 val F_dimp_2: thm
 
-val all_true_ob: thm
-val all_true_ar: thm
+val forall_true_ob: thm
+val forall_true_ar: thm
 
-val all_false_ob: thm
-val all_false_ar: thm
+val forall_false_ob: thm
+val forall_false_ar: thm
 
 val exists_true_ar: thm
 val exists_true_ob: thm
@@ -87,7 +87,8 @@ val double_neg: form -> thm
 val undisch_all: thm -> thm
 val elim_double_neg:thm -> thm
 val strip_neg: thm -> thm
-val exists_all: (string * sort) -> thm
+val exists_forall: (string * sort) -> thm
+val forall_exists: (string * sort) -> thm
 val conj_all_assum: thm -> thm
 
 val nF2T: thm

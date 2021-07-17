@@ -97,7 +97,7 @@ fun is_neg f =
       | _ => false
 
 
-fun is_eqn f = 
+fun is_eq f = 
     case f of Pred("=",[t1,t2]) => true
             | _ => false
 
@@ -141,9 +141,14 @@ fun mk_exists n s b = Quant("?",n,s,abstract (n,s) b)
 
 fun mk_quant q n s b = Quant(q,n,s,abstract (n,s) b)
 
+fun mk_P0 p tl = if is_pred p then Pred(p,tl)
+                    else raise ERR ("mk_pred.psym: " ^ p ^ " not found",[],tl,[]) 
+
 fun mk_pred p tl = case lookup_pred (!psyms) p of 
                        NONE => raise ERR ("mk_pred.psym not found",[],tl,[]) 
                       | SOME l =>  Pred(p,tl)
+
+fun mk_eq t1 t2 = mk_pred "=" [t1,t2]
 
 fun mk_fvar f = fVar f
 
@@ -342,6 +347,23 @@ fun strip_forall f =
             (b1,(n,s) :: l) end
       | _ => (f,[])
 
+fun strip_exists f = 
+    case f of 
+        Quant("?",n,s,b) => 
+        let val (b1,l) = strip_exists (subst_bound (mk_var n s) b) in
+            (b1,(n,s) :: l) end
+      | _ => (f,[])
+
+fun strip_quants f = 
+    case f of 
+        Quant(q,_,_,_) => if q = "!" then strip_forall f 
+                          else if q = "?" then strip_exists f 
+                          else raise ERR ("strip_exists.not a quantified formula",[],[],[f])
+      | _ => raise ERR ("strip_exists.not a quantified formula",[],[],[f])
+
+
+
+(*TODO: strip_conj strip_disj etc, have it, in iffLR? *)
 
 fun inst_term (env:menv) t = 
     case view_term t of 

@@ -25,7 +25,7 @@ val is_neg: form -> bool
 val is_forall: form -> bool
 val is_exists: form -> bool
 val is_quant: form -> bool
-val is_eqn: form -> bool
+val is_eq: form -> bool
 
 val TRUE: form
 val FALSE: form
@@ -43,6 +43,7 @@ val mk_forall:  string -> sort -> form -> form
 val mk_exists: string -> sort -> form -> form
 val mk_quant: string -> string -> sort -> form -> form
 val mk_pred: string -> term list -> form
+val mk_P0: string -> term list -> form
 val mk_fvar: string -> form
 
 val dest_eq: form -> term * term
@@ -84,6 +85,8 @@ val match_sort: (string * sort) set -> sort -> sort -> menv -> menv
 val match_tl: (string * sort) set -> term list -> term list -> menv -> menv
 val match_form: (string * sort) set -> form -> form -> menv -> menv
 val strip_forall: form -> form * (string * sort) list
+val strip_exists: form -> form * (string * sort) list
+val strip_quants: form -> form * (string * sort) list
 
 
 val fsymsf: form -> string set

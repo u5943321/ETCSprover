@@ -1,8 +1,9 @@
 signature tactic = 
 sig
-type tactic = abbrev.tactic
+(*type tactic = abbrev.tactic
 type fconv = abbrev.fconv
-type thm_tactic = abbrev.thm_tactic
+type thm_tactic = abbrev.thm_tactic*)
+include abbrev
 val >> : (tactic * tactic) -> tactic
 val >-- : (tactic * tactic) -> tactic
 
