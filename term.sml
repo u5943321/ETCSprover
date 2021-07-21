@@ -121,6 +121,8 @@ fun mk_ar0 a A B = Var(a,ar(mk_ob A,mk_ob B))
 
 fun mk_var n s = Var(n,s)
 
+val var = uncurry mk_var
+
 fun mk_fun f s l = Fun(f,s,l)
 
 fun mk_bound i = Bound i
@@ -128,8 +130,8 @@ fun mk_bound i = Bound i
 fun mk_const n s = mk_fun n s []
 
 
-val one = mk_fun "one" ob []
-val zero = mk_fun "zero" ob []
+val one = mk_fun "1" ob []
+val zero = mk_fun "0" ob []
 val N = mk_fun "N" ob []
 val z = mk_fun "z" (ar (one,N)) []
 val s = mk_fun "s" (ar (N,N)) []
@@ -523,7 +525,30 @@ fun new_fun f (s,tl) = fsyms := Binarymap.insert (!fsyms,f,(s,tl))
 pretty printing
 **********************************************************************)
 (*
-open pp
+open smpp
+
+
+infix >>
+
+fun is_infix sym = 
+    if mem sym ["*","+","^","=","o"] then true else false
+
+ 
+fun paren pp = block HOLPP.INCONSISTENT 1 
+                     (add_string "(" >> pp >> 
+                                 add_string ")")
+
+datatype gravity = LR of int option * int option (*prec of left and right neighbours*)
+
+
+fun int_option_leq (n,n0) = 
+    case n0 of NONE => false
+             | SOME m => n <= m
+
+fun int_option_less (n,n0) = 
+    case n0 of NONE => false
+             | SOME m => n < m
+
 
 fun ppterm ss g t = 
     case t of 
@@ -579,7 +604,10 @@ fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t
                          in pretty
                          end
 
-val ppt = PolyML.addPrettyPrinter PPterm
+val () = PolyML.addPrettyPrinter PPterm
+
+(*after use "term.sml" should get pped
+*)
 
 *)
 end

@@ -1,6 +1,6 @@
 structure goalstack :> goalstack = 
 struct
-open term form logic abbrev tactic pterm smpp
+open term form logic abbrev tactic pterm smpp pp
 
 fun prove f tac = 
     let

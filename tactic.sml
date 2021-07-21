@@ -300,41 +300,69 @@ fun conj_pair th =
     handle ERR _ => 
       raise ERR ("conj_pair.not a conjunction",[],[],[concl th])
  
-fun fconv_canon th = 
-    let val th = spec_all th
-        val f = concl th
-    in 
-        if is_dimp f then [th] else
-        if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
-        if is_neg f then [eqF_intro th]  
-        else [eqT_intro th]
-    end 
 
-fun conv_canon th = 
+
+(*TODO: add the case for disj*)
+fun rw_canon th = 
     let val th = spec_all th
         val f = concl th
     in 
         if is_dimp f then [th] else
-        if is_conj f then (op@ o (fconv_canon ## fconv_canon) o conj_pair) th else
+        if is_conj f then (op@ o (rw_canon ## rw_canon) o conj_pair) th else
         if is_neg f then [eqF_intro th]  else
         if not (is_eq f) then [eqT_intro th]
         else [th]
     end 
 
 
+(*
 fun gen_rw_tac fc thl = 
     let 
         val conv = first_conv (mapfilter rewr_conv thl)
         val fconv = first_fconv (mapfilter rewr_fconv thl)
     in fconv_tac (fc conv fconv) 
     end
+*)
+
+fun is_refl_eq f = 
+    if is_eq f then if eq_term(dest_eq f) then true else false
+    else false
 
 
+fun is_refl_dimp f = 
+    if is_dimp f then if eq_form(dest_dimp f) then true else false
+    else false
+
+fun is_refl_th th = 
+    is_refl_eq (concl th) orelse is_refl_dimp (concl th)
+
+fun rewr_no_refl_conv th t = 
+    let val th' = rewr_conv th t 
+    in if is_refl_th th' then
+           raise ERR ("rewr_no_refl_conv.the result of term matching is a refl",[],[],[concl th'])
+       else th'
+    end
+
+
+fun rewr_no_refl_fconv th f = 
+    let val th' = rewr_fconv th f
+    in if is_refl_th th' then
+           raise ERR ("rewr_no_refl_fconv.the result of form matching causes loop",[],[],[concl th'])
+       else th'
+    end
+
+
+
+fun once_rw_tac thl = 
+    let 
+        val conv = first_conv (mapfilter rewr_no_refl_conv (flatten (mapfilter rw_canon thl)))
+        val fconv = first_fconv (mapfilter rewr_no_refl_fconv (flatten (mapfilter rw_canon thl)))
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+
+(*
 fun once_rw_tac thl = gen_rw_tac basic_once_fconv  (flatten (mapfilter conv_canon thl))
-
-fun once_rw_ftac thl = gen_rw_tac once_depth_fconv thl
-
-fun once_rw_ttac thl = gen_rw_tac once_depth_fconv thl
+*)
 
 (*
 fun rw'_conv th t = part_tmatch
@@ -342,10 +370,64 @@ okay to let rw_conv loop, but do check here, and discard the thm after inst rais
 
 *)
 
-fun rw_tac thl = 
+
+
+fun occurs_tt t1 t2 = 
+    case (view_term t1,view_term t2) of 
+        (vVar (n1,s1),vVar (n2,s2)) => 
+        if n1 = n2 andalso eq_sort(s1,s2) then 
+            true 
+        else if occurs_ts t1 s2 then true 
+        else false
+      | (vVar(n,s1),vFun(f,s2,l)) => 
+        occurs_ts t1 s2 orelse List.exists (occurs_tt t1) l
+      | _ => false
+and occurs_ts t s = 
+    case view_sort s of 
+        vo => false
+      | va(d,c) => occurs_tt t d orelse occurs_tt t c
+
+fun occurs_f f1 f2 = 
+    case (view_form f1,view_form f2) of
+        (vPred _,vPred _) => eq_form(f1,f2)
+      | (vQ(q1,n1,s1,b1) ,vQ(q2,n2,s2,b2)) => 
+        eq_form(f1,f2) orelse occurs_f b1 f2
+      | (vfVar _, vfVar _) => eq_form(f1,f2)
+      | (_,vConn(co,fl)) => List.exists (occurs_f f1) fl
+      | (_,vQ(_,_,_,b)) => occurs_f f1 b
+      | (_,_) => false
+
+
+fun cause_loop_eq th = 
+    let val (l,r) = dest_eq(concl th)
+    in if occurs_tt l r then true else false
+    end
+
+
+fun cause_loop_dimp th = 
+    let val (l,r) = dest_dimp(concl th)
+    in if occurs_f l r then true else false
+    end
+
+fun rewr_no_loop_conv th t = 
+    let val th' = rewr_conv th t 
+    in if cause_loop_eq th' then
+           raise ERR ("rewr_no_loop_conv.the result of term matching causes loop",[],[],[concl th'])
+       else th'
+    end
+
+
+fun rewr_no_loop_fconv th f = 
+    let val th' = rewr_fconv th f
+    in if cause_loop_dimp th' then
+           raise ERR ("rewr_no_loop_fconv.the result of form matching causes loop",[],[],[concl th'])
+       else th'
+    end
+
+fun rw_tac thl:tactic = 
     let 
-        val conv = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
-        val fconv = first_fconv (mapfilter rewr_fconv (flatten (mapfilter conv_canon thl)))
+        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_canon thl)))
+        val fconv = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_canon thl)))
     in fconv_tac (basic_fconv conv fconv) 
     end
 
@@ -397,7 +479,6 @@ fun rev_pop_assum thfun (ct,a :: asl, w) = thfun (assume (hd (rev (a :: asl)))) 
   | rev_pop_assum   _   (_,[], _) = raise simple_fail"rev_pop_assum.no assum"
 
 
-(*only difference between pop_assum_list and assum_list is the former removes the assumptions?*)
 
 fun every tacl = List.foldr (op then_tac) all_tac tacl
 
@@ -469,38 +550,35 @@ fun valid (tac: tactic) : tactic =
              | SOME e => error "VALID" "tactic" e
          end
 
+infix then_tcl
+infix orelse_tcl
 
-fun (ttcl1: thm_tactical) THEN_TCL (ttcl2: thm_tactical) =
+fun (ttcl1: thm_tactical) then_tcl (ttcl2: thm_tactical) =
    fn ttac => ttcl1 (ttcl2 ttac)
 
-fun (ttcl1: thm_tactical) ORELSE_TCL (ttcl2: thm_tactical) =
-   fn ttac => fn th => ttcl1 ttac th handle ERR _ => ttcl2 ttac th
+fun (ttcl1: thm_tactical) orelse_tcl (ttcl2: thm_tactical) =
+   fn ttac => fn th => ttcl1 ttac th handle _ => ttcl2 ttac th
 
-fun REPEAT_TCL ttcl ttac th =
-   ((ttcl THEN_TCL (REPEAT_TCL ttcl)) ORELSE_TCL I) ttac th
+fun repeat_tcl ttcl ttac th =
+   ((ttcl then_tcl (repeat_tcl ttcl)) orelse_tcl I) ttac th
 
-val ALL_THEN: thm_tactical = I
-val NO_THEN: thm_tactical = fn ttac => fn th => raise simple_fail "NO_THEN"
-val FIRST_TCL = List.foldr (op ORELSE_TCL) NO_THEN
+val all_then: thm_tactical = I
+val no_then: thm_tactical = fn ttac => fn th => raise simple_fail "no_then"
+val first_tcl = List.foldr (op orelse_tcl) no_then
 
-
-
-val CONTR_TAC: thm_tactic =
+val contr_tac: thm_tactic =
    fn cth => fn (ct,asl, w) =>
       let
-         val th = CONTR w cth
+         val th = contr w cth
       in
          ([], empty th)
       end
       handle e => raise (wrap_err "contr_tac." e)
 
-
-
-fun first tacl = 
+fun first tacl g =
     case tacl of
-        [] => all_tac
-      | h :: t => h Orelse (first t)
-
+        [] => raise simple_fail "no tactic"
+      | h :: t => h g handle _ => (first t) g
 
 fun conjuncts_then2 ttac1 ttac2 =
    fn cth =>
@@ -532,13 +610,13 @@ fun resolve th th' = mp (mp (F_imp (concl th)) th') th
 fun target_rule tm =
       if is_neg tm then (dest_neg tm, Lib.C resolve) else (mk_neg tm, resolve)
 
-fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
+fun opposite_tac th:tactic = fn (ct,asl, w) =>
     let
         val (opp, rule) = target_rule (concl th)
     in
         case List.find ((C (curry eq_form)) opp) asl of
-            NONE => raise simple_fail "OPPOSITE_TAC"
-          | SOME asm => CONTR_TAC (rule th (assume asm)) (ct,asl, w)
+            NONE => raise simple_fail "opposite_tac"
+          | SOME asm => contr_tac (rule th (assume asm)) (ct,asl, w)
     end
 
 (*discard_tac*)
@@ -548,37 +626,14 @@ fun OPPOSITE_TAC th:tactic = fn (ct,asl, w) =>
  *  TODO: do not quite understand why it is necessary                                                  *
  * --------------------------------------------------------------------------*)
 
-fun DISCARD_TAC th (ct,asl, w) =
+fun discard_tac th (ct,asl, w) =
    if Lib.exists ((curry eq_form) (concl th)) (TRUE :: asl) andalso HOLset.isSubset(cont th,ct)
       then all_tac (ct,asl, w)
-   else raise simple_fail "DISCARD_TAC"
+   else raise simple_fail "discard_tac"
 
 
 fun foo th m = mp (disch (concl th) (assume m)) th 
                handle e => raise wrap_err "foo." e
-
-(*
- A |- t1 \/ t2   ,   A1,t1 |- t   ,   A2,t2 |- t
- *   -----------------------------------------------
- *               A u A1 u A2 |- t
- *
- * fun DISJ_CASES th1 th2 th3 =
- *   let val (t1,t2) = dest_disj(concl th1)
- *       and t = concl th2
- *       val th4 = SPEC t2 (SPEC t1 (SPEC t OR_ELIM_THM))
- *   in
- *   MP (MP (MP th4 th1) (DISCH t1 th2)) (DISCH t2 th3)
- *   end
- *   handle _ => ERR{function = "DISJ_CASES",message = ""};
-
-*)
-(*
-fun disj_cases th1 th2 th3 = 
-    let val (A,B) = dest_disj(concl th1)
-        val _ = eq_form(concl th2, concl th3) orelse raise simple_fail"two concls no match"
-    in disjE A B (concl th2) th1 th2 th3
-    end
-*)
 
 
 fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
@@ -600,7 +655,7 @@ fun disj_cases_then2 (ttac1:thm_tactic) (ttac2:thm_tactic):thm_tactic =
                end)
          end
    end
-   handle e => raise wrap_err "DISJ_CASES_THEN2." e
+   handle e => raise wrap_err "disj_cases_then2." e
  
 val disj_cases_then: thm_tactical = fn ttac => disj_cases_then2 ttac ttac
 
@@ -624,7 +679,7 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
                (gl, (existsE (n0,s) xth) o prf)
             end
       end
-      handle e => raise wrap_err "X_CHOOSE_THEN." e
+      handle e => raise wrap_err "x_choose_then." e
 
 fun x_choosel_then nl (ttac: thm_tactic):thm_tactic =
     case nl of
@@ -650,7 +705,7 @@ val choose_then: thm_tactical =
             x_choose_then y ttac xth (ct,asl,w)
          end
       end
-      handle e => raise wrap_err "CHOOSE_THEN." e
+      handle e => raise wrap_err "choose_then." e
 
 val choose_tac' = choose_then assume_tac
 
@@ -660,16 +715,16 @@ fun x_choosel_tac xs = x_choosel_then xs assume_tac
 
 val check_assume_tac: thm_tactic =
    fn gth =>
-      first [CONTR_TAC gth, accept_tac gth, OPPOSITE_TAC gth,
-             DISCARD_TAC gth,assume_tac gth]
+      first [contr_tac gth, accept_tac gth, opposite_tac gth,
+             discard_tac gth,assume_tac gth]
       handle e => raise wrap_err "check_assume_tac." e
 
-val strip_thm_then = FIRST_TCL [conjuncts_then, disj_cases_then, choose_then]
+val strip_thm_then = first_tcl [conjuncts_then, disj_cases_then, choose_then]
 
-val STRIP_ASSUME_TAC = REPEAT_TCL strip_thm_then check_assume_tac
+val strip_assume_tac = repeat_tcl strip_thm_then check_assume_tac
                        handle e => raise wrap_err "strip_assume_tac." e
 
-val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac
+(*val STRIP_ASM_CONJ_TAC = conjuncts_then assume_tac*)
 
 fun find (ttac:thm_tactic) goal [] = raise simple_fail "find"
     | find ttac goal (a :: L) =
@@ -696,8 +751,8 @@ end
 
 fun rewr_rule thl =
     let 
-        val c = first_conv (mapfilter rewr_conv (flatten (mapfilter conv_canon thl)))
-        val fc = first_fconv (mapfilter rewr_fconv (flatten (mapfilter conv_canon thl)))
+        val c = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_canon thl)))
+        val fc = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_canon thl)))
     in
         conv_rule (basic_fconv c fc)
     end
@@ -713,7 +768,7 @@ fun abbrev_tac eq0:tactic =
                    orelse raise simple_fail "name of the abbrev is already used"
            val eth =  existsI (n,s) lhs (mk_pred "=" [lhs,var(n,s)]) (refl lhs) 
        in
-           ([(HOLset.add(ct,(n,s)),eq0::asl,w)],fn [th] => existsE (n,s) eth th)
+           ([(HOLset.add(ct,(n,s)),eq0::asl,w)],sing $ existsE (n,s) eth)
        end
 
 
@@ -764,9 +819,38 @@ fun disch_then (ttac: thm_tactic): tactic =
 
 fun strip_goal_then ttac : tactic = first [gen_tac, conj_tac, disch_then ttac] 
 
-val strip_tac:tactic = fn g => strip_goal_then STRIP_ASSUME_TAC g
+val strip_tac:tactic = fn g => strip_goal_then strip_assume_tac g
 
 fun disch_tac g = disch_then assume_tac g 
+
+
+
+
+fun drop r =
+      fn n =>
+         pop_assum_list
+           (fn l =>
+              map_every assume_tac
+                 (Lib.with_exn (r o List.take) (l, List.length l - n)
+                   (ERR ("drop.",[],[],[]))))
+
+fun simp_asm thms (t, l') = rewr_rule (l' @ thms) t :: l'
+
+
+fun f (drop,r) (tac:thm_tactic) thms asms:tactic = 
+    map_every tac (List.foldl (simp_asm thms) [] (r asms))
+              then_tac drop (List.length asms)
+
+fun gen_full_simp_tac (drop, r) tac thms =
+    assum_list (f (drop,r) tac thms) then_tac arw_tac thms
+ 
+val full_tac = gen_full_simp_tac (drop List.rev, Lib.I)
+val rev_full_tac = gen_full_simp_tac (drop Lib.I, List.rev)
+
+val full_simp_tac: thm list -> tactic = full_tac strip_assume_tac
+val rev_full_simp_tac: thm list -> tactic = rev_full_tac strip_assume_tac
+
+val cheat:tactic = fn (ct,asl,w) => ([], fn _ => mk_thm ct asl w)
 
 
 end

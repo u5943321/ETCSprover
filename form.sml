@@ -220,7 +220,7 @@ fun eq_forml (l1:form list) (l2:form list) =
     case (l1,l2) of 
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
-      | _  => raise simple_fail "eq_forml.different length of lists"
+      | _  => false
 
 fun fmem f fl = List.exists (curry eq_form f) fl
 

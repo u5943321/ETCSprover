@@ -12,8 +12,8 @@ sig
     val rpg: string -> gstk
     val rapg: string -> gstk
     val proved_th: gstk -> logic.thm
+    val ppgstk: gstk -> ('a, unit) smpp.t
     val expandf: tactic.tactic -> gstk -> gstk
-    val ppgstk: gstk -> ('a, unit) t
     val e0: tactic.tactic -> gstk -> gstk
     val current_goal: tac_result -> abbrev.goal
     val current_tac_result: gstk -> tac_result

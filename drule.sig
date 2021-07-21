@@ -81,7 +81,7 @@ val conj_assum: form -> form -> thm -> thm
 
 val F_imp: form -> thm
 val F2f: form -> thm
-val CONTR: form -> thm -> thm
+val contr: form -> thm -> thm
 
 val double_neg: form -> thm
 val undisch_all: thm -> thm
@@ -100,4 +100,5 @@ val fconv_canon: thm -> thm list
 *)
 (*type thm*)
 (*rules for inference*) 
+val strip_all_and_imp: thm -> thm
 end

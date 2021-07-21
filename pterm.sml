@@ -355,7 +355,18 @@ and type_infer env t ty =
             val env2 = type_infer env1' pt ps'
         in unify_ps env2 ty ps
         end
-      | pVar (name,ps) => unify_ps env ty ps 
+      | pVar (name,ps) => 
+        (case ps of pob => unify_ps env ty ps
+                   |par(d,c) => 
+                    let val (psd,env1) = ps_of_pt d env
+                        val env2 = type_infer env1 d psd
+                        val (psc,env3) = ps_of_pt c env2
+                        val env4 = type_infer env3 c psc
+                    in 
+                        unify_ps env4 ty ps
+                    end
+                   | _ => unify_ps env ty ps)
+      (*unify_ps env ty ps *)
       | ptUVar name => 
         (*to be carefully considered, worry about looping if generate a psvar here*)
         (case lookup_us env name of
@@ -723,9 +734,12 @@ and ast2pt ast env =
             val (cod,env2) = ast2pt ast2 env1
         in 
             case ps_of env n of 
-            NONE => let val env3 = record_ps n (par(dom,cod)) env2
+            NONE => (*let val env3 = record_ps n (par(dom,cod)) env2
                      in (pVar(n,par(dom,cod)),env3)
-                     end
+                     end *)
+            let val env3 = record_ps n (par(dom,cod)) env2
+            in (pAnno(pVar(n,par(dom,cod)),par(dom,cod)),env3)
+            end
            | SOME ps =>  (pAnno(pVar(n,ps),par(dom,cod)),env2)
         end
       | aInfix(ast1,str,ast2) => 
@@ -1006,6 +1020,8 @@ fun read_ast_t t =
     in (term_from_pt env1 pt,pdict env1)
     end
 
+
+
 fun read_ast_f f = 
     let val (pf,env) = read_ast_pf f
         val env1 = type_infer_pf env pf
@@ -1067,5 +1083,7 @@ fun pretty_form f =
 fun rpf f = pretty_form (readf f)
 
 fun rapf f = pretty_form (fst (read_ast_f f))
+
+val rastt = fst o read_ast_t
 
 end

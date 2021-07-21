@@ -11,7 +11,7 @@ datatype thm_view = vth of ((string * sort) set * form list * form)
 val dest_thm: thm -> (string * sort) set * form list * form
 val view_thm: thm -> thm_view
 val mk_thm: (string * sort) set -> form list -> form -> thm
-
+val mk_fth: form -> thm
 val eq_thm: thm -> thm -> bool
 
 val ant: thm -> form list

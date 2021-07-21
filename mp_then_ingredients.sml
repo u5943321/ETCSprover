@@ -6,11 +6,38 @@ fun is_imp f =
              |_ => false
 
 fun strip_all_and_imp th = 
-    if is_all (concl th) then 
+    if is_forall (concl th) then 
         strip_all_and_imp (spec_all th)
     else if is_imp (concl th) then 
         strip_all_and_imp (undisch th)
+(*before the undisch, check two cases:
+1.conjunction -> strip
+2.existential -> pull extential quantifier out
+otherwise just undisch, keep the disjs*)
     else th
+
+
+
+(*
+TODO: use conv to do this canon
+
+
+1.A /\ B
+2. C /\ D
+--------
+phi
+
+A
+B
+C
+D
+------
+phi
+
+A /\ B /\ C /\ D ==> phi
+
+
+*)
 
 fun mp_canon th = 
     let val th0 = strip_all_and_imp th 

@@ -28,6 +28,7 @@ val try_conv: conv -> conv
 val basic_fconv: conv -> fconv -> fconv
 val basic_taut_fconv: fconv
 val changed_fconv: fconv -> fconv
+val changed_conv: conv -> conv
 val conj_fconv: fconv -> fconv 
 val depth_fconv: conv -> fconv -> fconv
 val dimp_fconv: fconv -> fconv

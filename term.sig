@@ -32,6 +32,7 @@ val mk_ob_sort: sort
 val mk_ar_sort: term -> term -> sort
 
 val mk_var: string -> sort -> term
+val var: string * sort -> term
 val mk_fun: string -> sort -> term list -> term 
 val mk_bound: int -> term
 
