@@ -130,7 +130,7 @@ val psyms0 = insert_psym "areiso";
 
 val areiso_def = define_pred (rapf "!A B. areiso(A,B) <=> ?f: A -> B g: B -> A. f o g = id(B) & g o f = id(A)") 
 
-val ax6 = read_axiom "!X. ~ areiso(X,0) ==> ?x: 1 -> X. T"
+val ax6 = read_axiom "!X. (~ areiso(X,0)) ==> ?x: 1 -> X. T"
 
 val ax_elt = ax6
 

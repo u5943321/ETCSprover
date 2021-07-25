@@ -33,7 +33,7 @@ val mk_ar_sort: term -> term -> sort
 
 val mk_var: string -> sort -> term
 val var: string * sort -> term
-val mk_fun: string -> sort -> term list -> term 
+val mk_fun: string -> term list -> term 
 val mk_bound: int -> term
 
 val sort_of: term -> sort
@@ -96,8 +96,6 @@ val pair_compare: ('a * 'b -> order) -> ('c * 'd -> order) -> ('a * 'c) * ('b * 
 val sort_compare: sort * sort -> order
 val term_compare: term * term -> order
 val essps: (string * sort) set
-val emptyvd: (string * sort,term) Binarymap.dict
-val mk_tenv: ((string * sort) * term) list -> (string * sort, term) Binarymap.dict
 val pvariantt: (string * sort) set -> term -> term
 
 val fsymss: sort -> string set
@@ -131,6 +129,17 @@ val is_pred: string -> bool
 val new_pred:
    string -> (string * sort) list -> unit
 
+type vd
+val emptyvd:vd
+val mk_tenv: ((string * sort) * term) list -> vd
+val v2t: string * sort -> term -> vd -> vd
+val lookup_t: vd -> string * sort -> term option
+val match_term: (string * sort) set -> term -> term -> vd -> vd
+val match_sort: (string * sort) set -> sort -> sort -> vd -> vd
+val match_tl: (string * sort) set -> term list -> term list -> vd -> vd
+val pvd: vd -> ((string * sort) * term) list
 
+val inst_sort: vd -> sort -> sort
+val inst_term: vd -> term -> term
 end
 

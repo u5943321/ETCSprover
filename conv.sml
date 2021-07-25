@@ -14,7 +14,7 @@ exception unchanged of string * term list * form list
 
 fun part_tmatch partfn th t = 
     let 
-        val env = match_term (fvfl (ant th)) (partfn th) t mempty
+        val env = mk_menv (match_term (fvfl (ant th)) (partfn th) t emptyvd) emptyfvd
     in 
         inst_thm env th
     end
@@ -296,14 +296,12 @@ fun exists_fconv fc f =
         exists_iff (n,s) $ fc (subst_bound (mk_var n s) b)
       | _ => raise ERR ("exists_fconv.not an all",[],[],[f])
 
-val reflTob = equivT (refl (mk_var  "a" mk_ob_sort))
 
 val reflTar = equivT (refl (mk_var "a" 
                             (mk_ar_sort
                                  (mk_ob "A") (mk_ob "B"))))
 
-val refl_fconv = 
-    first_fconv [rewr_fconv reflTob,rewr_fconv reflTar]
+val refl_fconv = rewr_fconv reflTar
      
 fun sub_fconv c fc = 
     try_fconv (first_fconv [conj_fconv fc,
@@ -407,9 +405,6 @@ fun basic_once_fconv c fc =
                      (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
 
-fun basic_fconv c fc =
-    top_depth_fconv (top_depth_conv c) 
-                    (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
 
 fun conv_rule c th = dimp_mp_l2r th (c (concl th)) 
 
@@ -436,7 +431,7 @@ fun right_imp_forall_fconv f  =
 
 fun sym_fconv f = 
     case view_form f of 
-    vPred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (mk_pred "=" [t2,t1]) |> sym |> disch_all)
+    vPred("=",[t1,t2]) => dimpI (assume f|> sym |> disch_all) (assume (mk_eq t2 t1) |> sym |> disch_all)
   | vConn("<=>", [f1,f2]) => dimpI (assume f|> iff_swap |> disch_all) (assume (mk_dimp f2 f1)|> iff_swap |> disch_all)
   | _ => raise simple_fail "not an iff or equality"
 
@@ -444,6 +439,11 @@ fun sym_fconv f =
 val GSYM = conv_rule (once_depth_fconv no_conv sym_fconv)
 
 fun double_neg_fconv f = rewr_fconv double_neg_elim f
+
+
+fun basic_fconv c fc =
+    top_depth_fconv (top_depth_conv c) 
+                    (fc orelsefc basic_taut_fconv orelsefc refl_fconv orelsefc double_neg_fconv)
 
 val neg_neg_elim = conv_rule (once_depth_fconv no_conv double_neg_fconv)
 

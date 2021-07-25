@@ -84,6 +84,8 @@ val rev_full_simp_tac: thm list -> tactic
 
 val cheat: tactic
 
+(*val wrap_err: string -> exn -> exn*)
+
 
 
 

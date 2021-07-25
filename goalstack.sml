@@ -185,6 +185,6 @@ fun PPgstk printdepth _ (gstk:gstk) = let val s = ppgstk gstk
 (*print out the hd of tac result list, do not print out the prop*)
 val _ = PolyML.addPrettyPrinter PPgstk
 
-
+val cg = current_goal o current_tac_result
 
 end

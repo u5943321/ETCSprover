@@ -1,6 +1,3 @@
-open term form logic drule
-
-
 fun aimp_rule th =
     let
       val (l, r) = dest_imp (concl th)
@@ -12,20 +9,24 @@ fun aimp_rule th =
 
 fun (s1 - s2) = HOLset.difference(s1,s2)
 
+(*
 fun is_forall f = 
     case f of 
         Quant(q,_,_,_) => if q = "!" then true else false
       | _ => false
 
+
 fun dest_imp_only f = 
     case f of 
         Conn("==>",[f1,f2]) => (f1,f2)
       | _ => raise ERR ("dest_imp_only.not a implication",[],[],[f])
+*)
+
 
 fun norm th =
     if is_forall (concl th) then norm (spec_all th)
     else
-      case Lib.total dest_imp_only (concl th) of
+      case Lib.total dest_imp (concl th) of
           NONE => th
         | SOME (l,r) =>
           if is_conj l then norm (aimp_rule th)
@@ -114,7 +115,7 @@ fun reconstitute groups th = recurse [] groups th
 fun form_list_diff l1 l2 = 
     case l1 of 
         [] => []
-      | h :: t => if fmem h l2 then list_diff t l2 else h :: list_diff t l2
+      | h :: t => if fmem h l2 then form_list_diff t l2 else h :: form_list_diff t l2
 
 
 fun irule_canon th =

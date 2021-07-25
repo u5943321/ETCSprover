@@ -248,9 +248,298 @@ e0
 val ax1_5_applied = 
     ax1_5 |> spec_all |> conjE2 |> iffRL |> strip_all_and_imp |>
           rewr_rule[assume (rapf "x0 = eqinduce(f:A->B, g, h:X->A)")] |>
-          disch_all |> allI (dest_var $ rastt "x0:X->eqo(f:A->B,g:A->B)")
+          disch_all |> allI (dest_var $ rastt "x0:X->eqo(f,g:A->B)")
 
-         
+
+
+local
+   val imp_th = gen_all (el 5 (CONJUNCTS (SPEC_ALL IMP_CLAUSES)))
+in
+
+val i1_i2_disjoint = mk_fth (rapf "!X.!t.~ (i1(X,X) o (t:1->X) = i2(X,X) o t)")
+
+
+fun contrapos impth =
+      let
+         val (ant, conseq) = dest_imp (concl impth)
+         val notb = mk_neg conseq
+      in
+         disch notb
+           (dimp_mp_l2r 
+                  (disch ant (mp (assume notb |> eqF_intro |> dimpl2r) (mp impth (assume ant)))) (F_imp2 ant))
+      end
+      handle e => raise wrap_err "contrapos." e
+
+i1_i2_disjoint |> specl (List.map readt ["X"])eqF_intro 
+
+(*aq: subst
+  lookup_pred (!psyms) "T";
+val it = NONE: (string * sort) list option
+> new_pred "T";
+val it = fn: (string * sort) list -> unit
+> new_pred "T" [];
+val it = (): unit
+>  lookup_pred (!psyms) "T";
+val it = SOME []: (string * sort) list option
+> val hol_mode_time0 = 3.599: Time.time
+> # Exception- ERR ("subst_f.mk_pred.psym not found", [], [], []) raised
+
+ *)
+
+qabbrev_tac ‘k' = coeqa (i1 B B ∘ f) (i2 B B ∘ f)’ >>
+qabbrev_tac ‘I0 = eqo (k' ∘ i1 B B) (k' ∘ i2 B B)’ >>
+qabbrev_tac ‘R' = coeqo ((i1 B B) o f) ((i2 B B) o f)’ >>
+qabbrev_tac ‘q' = eqa (k' o i1 B B) (k' o i2 B B)’ >>
+
+val cg = current_goal o current_tac_result
+
+
+(*TODO: parser bug:
+rapg "!h:coeqo(f,g) -> X. f = g ==> ?h':coeqo(g,g) -> X.T"
+ Exception-
+   TER
+     ("match_sort.cannot match ob with ar: ",
+      [ar (Var ("A", ob), Var ("B", ob)), ob], []) raised
+
+*)
+
+
+(*
+
+
+> val hol_mode_time0 = 3.128: Time.time
+> # val it =
+   (A : ob),
+   (B : ob),
+   (X : ob),
+   (f : A -> B),
+   (g : A -> B),
+   (h : coeqo(f, g) -> X)
+   f = g
+   |-
+   ?(h' : coeqo(g, g) -> X). T: thm
+> # # # # # 
+*** Time taken: 0.002s
+> val th = it;
+val th =
+   (A : ob),
+   (B : ob),
+   (X : ob),
+   (f : A -> B),
+   (g : A -> B),
+   (h : coeqo(f, g) -> X)
+   f = g
+   |-
+   ?(h' : coeqo(g, g) -> X). T: thm
+> temp;
+val it =
+   (HOLset{("A", ob), ("B", ob), ("X", ob), ("g", A -> B),
+           ("h", coeqo(tv0, g) -> X), ("tv0", A -> B)}, [tv0 = g],
+    ?(h' : coeqo(g, g) -> X). T): (string * sort) set * form list * form
+> val hol_mode_time0 = 3.135: Time.time
+> # Exception-
+   ERR
+     ("not a templete, error in assumption list... ", [], [],
+      [Pred ("=", [f, g]), Pred ("=", [tv0, g])]) raised
+> # # # # # 
+*** Time taken: 0.002s
+> val (c0,asl0,w0) = temp;
+val asl0 = [tv0 = g]: form list
+val c0 =
+   HOLset{("A", ob), ("B", ob), ("X", ob), ("g", A -> B),
+          ("h", coeqo(tv0, g) -> X), ("tv0", A -> B)}: (string * sort) set
+val w0 = ?(h' : coeqo(g, g) -> X). T: form
+> val hol_mode_time0 = 3.144: Time.time
+> > > > # # poly: : error: Value or constructor (ct0) has not been declared
+Found near var $ List.hd $ HOLset.listItems $ HOLset.difference (ct0, ...)
+Static Errors
+> val (ct0,asl0,w0) = temp;
+val asl0 = [tv0 = g]: form list
+val ct0 =
+   HOLset{("A", ob), ("B", ob), ("X", ob), ("g", A -> B),
+          ("h", coeqo(tv0, g) -> X), ("tv0", A -> B)}: (string * sort) set
+val w0 = ?(h' : coeqo(g, g) -> X). T: form
+> val hol_mode_time0 = 3.152: Time.time
+> > > > # # val tv = h: term
+> # # # # # 
+*** Time taken: 0.011s
+> val hol_mode_time0 = 3.164: Time.time
+> # val it =
+   HOLset{("A", ob), ("B", ob), ("X", ob), ("f", A -> B), ("g", A -> B),
+          ("h", coeqo(f, g) -> X)}: (string * sort) set
+> # # # # # 
+*** Time taken: 0.002s
+> val hol_mode_time0 = 3.167: Time.time
+> # val it =
+   HOLset{("A", ob), ("B", ob), ("X", ob), ("g", A -> B),
+          ("h", coeqo(tv0, g) -> X), ("tv0", A -> B)}: (string * sort) set
+> # # # # # 
+*** Time taken: 0.003s
+> val hol_mode_time0 = 3.172: Time.time
+> > # val it = HOLset{("h", coeqo(tv0, g) -> X), ("tv0", A -> B)}:
+
+may take the intersection to get the tv0
+*)
+
+e0
+(strip_tac >> strip_tac >> subst_tac (assume (rapf "f:A->B = g")) >> 
+ exists_tac (rastt "h : coeqo(g:A->B, g) -> X") >> rw_tac[])
+(rapg "!h:coeqo(f:A->B,g) -> X. f = g ==> ?h':coeqo(g,g) -> X.T")
+
+e0
+(repeat strip_tac)
+(rapg "!h:coeqo(f:A->B,g) -> X. f = g ==> ?h':coeqo(g,g) -> X.T")
+
+val g0 = cg $
+e0 
+(strip_tac >> match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >> 
+ abbrev_tac (rapf "coeqa(i1(B,B) o f:A->B, i2(B,B) o f) = k'") >>
+ subst1_tac (assume (rapf "coeqa(i1(B,B) o f:A->B, i2(B,B) o f) = k'")) >>
+ rev_full_simp_tac[] >>
+ by_tac (rapf "?f'.f = f':A->B") >-- cheat >>
+ pop_assum strip_assume_tac >>
+ full_simp_tac[] >> 
+ 
+)
+(rapg "areiso(A,0) ==> areiso(eqo(coeqa(i1(B,B) o f:A->B, i2(B,B) o f) o i1(B,B),coeqa(i1(B,B) o f, i2(B,B) o f) o i2(B,B)),0)")   
+
+val i1_i2_disjoint' = 
+i1_i2_disjoint |> specl [rastt "eqo((ca: (B + B) -> coeqo(c1:A-> (B + B),c2:A->(B + B))) o i1(B, B), ca o i2(B, B))",
+rastt "t:1->eqo((ca: (B + B) -> coeqo(c1:A->(B + B),c2:A ->(B + B))) o i1(B, B), ca o i2(B, B))"] |> eqF_intro |> dimpl2r
+
+rastt "ca: (B + B) -> coeqo(c1:A-> (B + B),c2)"
+
+i1_i2_disjoint |> spec_all |> eqF_intro |> dimpl2r |> gen_all
+
+val coeq_of_equal = mk_fth (rapf "?ki. ki o (coeqa(f,f)) = id(B)")
+val from_iso_zero_eq = mk_fth (rapf "areiso(A,0) ==>!f:A->B g.f = g")
+
+val (ct,asl,w) = cg $
+e0 
+(strip_tac >> match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >>
+ abbrev_tac (rapf "(i1(B, B) o f:A->B) = c1") >>
+ abbrev_tac (rapf "(i2(B, B) o f:A->B) = c2") >>
+ subst1_tac (assume (rapf "(i1(B, B) o f:A->B) = c1")) >>
+ subst1_tac (assume (rapf "(i2(B, B) o f:A->B) = c2")) >>
+ full_simp_tac[] >>
+ abbrev_tac (rapf "coeqa(c1:A->(B + B), c2) = k'") >>
+ subst1_tac (assume (rapf "coeqa(c1:A->(B + B), c2) = k'")) >>
+ abbrev_tac (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i1(B,B) = c3") >>
+ abbrev_tac (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i2(B,B) = c4") >>
+ subst1_tac (assume (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i1(B,B) = c3")) >>
+ subst1_tac (assume (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i2(B,B) = c4")) >> 
+ abbrev_tac (rapf "eqa(c3:B -> coeqo(c1:A -> (B + B),c2:A -> (B + B)),c4) = q'")>>
+ match_mp_tac (i1_i2_disjoint |> spec_all |> eqF_intro |> dimpl2r |> gen_all) >>
+ exists_tac (rastt "B") >>
+ exists_tac (rastt "(q':eqo(c3,c4:B -> coeqo(c1,c2:A -> (B + B))) -> B) o (t:1->eqo(c3,c4:B->coeqo(c1,c2)))") >>
+ by_tac (rapf "k' o i1(B,B) o q' = (k':(B+B)->coeqo(c1:A->(B+B),c2:A->(B+B))) o i2(B,B) o q':eqo(c3:B->coeqo(c1,c2),c4:B->coeqo(c1,c2)) -> B") >--
+ (pick_x_assum (rapf "eqa(c3:B -> coeqo(c1: A -> (B + B), c2), c4) = q'") (assume_tac o GSYM) >>
+ rw_tac[GSYM o_assoc] >> arw_tac[ax1_5 |> spec_all |> conjE1]) >>
+ rw_tac[GSYM o_assoc] >>
+ suffices_tac (rapf "i1(B, B) o q':eqo(c3:B -> coeqo(c1:A->(B+B),c2),c4)->B = i2(B,B) o q'") >-- 
+ (strip_tac >> arw_tac[]) >>
+ assume_tac (from_iso_zero_eq |> allI ("B",mk_ob_sort) |> allE (rastt "B+B")|> undisch |> specl [rastt"c1:A->(B+B)",rastt"c2:A->(B+B)"]) >--
+ subst1_tac (assume (rapf "c1:A ->(B+B) = c2"))
+ 
+)
+(rapg "areiso(A,0) ==> areiso(eqo(coeqa(i1(B,B) o f:A->B, i2(B,B) o f) o i1(B,B),coeqa(i1(B,B) o f, i2(B,B) o f) o i2(B,B)),0)")  
+
+
+
+x_choose_then "ki" assume_tac (coeq_of_equal |> gen_all |> allE (rastt "A") |>
+allE (rastt "B+B") |> allE (rastt "c2:A->(B+B)"))
+
+
+
+val (ct,asl,w) = cg $
+e0 
+(strip_tac >> (*match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >>*)
+ abbrev_tac (rapf "(i1(B, B) o f:A->B) = c1") >>
+ abbrev_tac (rapf "(i2(B, B) o f:A->B) = c2") >>
+ assume_tac (from_iso_zero_eq |> allI ("B",mk_ob_sort) |> allE (rastt "B+B")|> undisch |> specl [rastt"c1:A->(B+B)",rastt"c2:A->(B+B)"]) >> 
+ full_simp_tac[] >> 
+ pop_assum (K all_tac) >> 
+ match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >>
+ x_choose_then "ki" assume_tac
+ (coeq_of_equal |> gen_all |> allE (rastt "A") |>
+                allE (rastt "B+B") |> allE (rastt "c2:A->(B+B)")) >> (*>>
+ abbrev_tac (rapf "coeqa(c2:A->(B + B), c2) = k'") >>
+ subst1_tac (assume (rapf "coeqa(c2:A->(B + B), c2) = k'")) if do so, then complain*)
+ last_x_assum subst1_tac (*>>
+ remove_asm_tac (rapf "i1(B, B) o f:A->B = c2") >>
+(*AQ: if do not do remove asm, use last_x_assume, then will subst other eqn and complain as in existsE, do not know why*)
+ first_x_assum subst1_tac >>
+ abbrev_tac (rapf "coeqa(c2:A->(B + B), c2) = k'") >>
+ subst1_tac (assume (rapf "coeqa(c2:A->(B + B), c2) = k'"))*)
+
+ 
+(*
+ subst1_tac (assume (rapf "(i1(B, B) o f:A->B) = c1")) >>
+ subst1_tac (assume (rapf "(i2(B, B) o f:A->B) = c2")) >>
+ full_simp_tac[] >>
+ abbrev_tac (rapf "coeqa(c1:A->(B + B), c2) = k'") >>
+ subst1_tac (assume (rapf "coeqa(c1:A->(B + B), c2) = k'")) >>
+ abbrev_tac (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i1(B,B) = c3") >>
+ abbrev_tac (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i2(B,B) = c4") >>
+ subst1_tac (assume (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i1(B,B) = c3")) >>
+ subst1_tac (assume (rapf "(k':(B + B)->coeqo(c1:A -> (B + B),c2:A -> (B + B))) o i2(B,B) = c4")) >> 
+ abbrev_tac (rapf "eqa(c3:B -> coeqo(c1:A -> (B + B),c2:A -> (B + B)),c4) = q'")>>
+ match_mp_tac (i1_i2_disjoint |> spec_all |> eqF_intro |> dimpl2r |> gen_all) >>
+ exists_tac (rastt "B") >>
+ exists_tac (rastt "(q':eqo(c3,c4:B -> coeqo(c1,c2:A -> (B + B))) -> B) o (t:1->eqo(c3,c4:B->coeqo(c1,c2)))") >>
+ by_tac (rapf "k' o i1(B,B) o q' = (k':(B+B)->coeqo(c1:A->(B+B),c2:A->(B+B))) o i2(B,B) o q':eqo(c3:B->coeqo(c1,c2),c4:B->coeqo(c1,c2)) -> B") >--
+ (pick_x_assum (rapf "eqa(c3:B -> coeqo(c1: A -> (B + B), c2), c4) = q'") (assume_tac o GSYM) >>
+ rw_tac[GSYM o_assoc] >> arw_tac[ax1_5 |> spec_all |> conjE1]) >>
+ rw_tac[GSYM o_assoc] >>
+ suffices_tac (rapf "i1(B, B) o q':eqo(c3:B -> coeqo(c1:A->(B+B),c2),c4)->B = i2(B,B) o q'") >-- 
+ (strip_tac >> arw_tac[]) >>
+ assume_tac (from_iso_zero_eq |> allI ("B",mk_ob_sort) |> allE (rastt "B+B")|> undisch |> specl [rastt"c1:A->(B+B)",rastt"c2:A->(B+B)"]) >--
+ subst1_tac (assume (rapf "c1:A ->(B+B) = c2")) *)
+ 
+)
+(rapg "areiso(A,0) ==> areiso(eqo(coeqa(i1(B,B) o f:A->B, i2(B,B) o f) o i1(B,B),coeqa(i1(B,B) o f, i2(B,B) o f) o i2(B,B)),0)")  
+
+
+
+
+
+
+val (ct,asl,w) = cg $
+e0 
+(strip_tac >> 
+ by_tac (rapf "i1(B, B) o f:A->B = i2(B, B) o f:A->B") 
+ >-- (match_mp_tac from_iso_zero_eq >> arw_tac[]) >>
+ first_x_assum subst1_tac
+ (*match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >>*)
+ (*abbrev_tac (rapf "(i1(B, B) o f:A->B) = c1") >>
+ abbrev_tac (rapf "(i2(B, B) o f:A->B) = c2") >>
+ assume_tac (from_iso_zero_eq |> allI ("B",mk_ob_sort) |> allE (rastt "B+B")|> undisch |> specl [rastt"c1:A->(B+B)",rastt"c2:A->(B+B)"]) >> 
+ full_simp_tac[] >> 
+ pop_assum (K all_tac) >> 
+ match_mp_tac (contrapos (spec_all ax6) |> neg_neg_elim) >>
+ ccontra_tac >> pop_assum $ x_choose_tac "t" >>
+ x_choose_then "ki" assume_tac
+ (coeq_of_equal |> gen_all |> allE (rastt "A") |>
+                allE (rastt "B+B") |> allE (rastt "c2:A->(B+B)"))*)
+)
+(rapg "areiso(A,0) ==> areiso(eqo(coeqa(i1(B,B) o f:A->B, i2(B,B) o f) o i1(B,B),coeqa(i1(B,B) o f, i2(B,B) o f) o i2(B,B)),0)")  
+
+
+
+ax1_5 |> spec_all |> conjE1
+
+
+Theorem Thm3_A_zero_I_zero:
+∀A B f h. f∶ A → B ∧ A≅ zero ⇒ 
+          (eqo ((coeqa (i1 B B o f) (i2 B B o f)) o (i1 B B))
+                  ((coeqa (i1 B B o f) (i2 B B o f)) o (i2 B B))) ≅ zero
+
+
 
 Theorem eq_fac:
 ∀A B f g X h. f∶A → B ∧ g∶A → B ∧ h∶X → A ∧ f ∘ h = g ∘ h ⇒

@@ -123,70 +123,70 @@ fun mk_var n s = Var(n,s)
 
 val var = uncurry mk_var
 
-fun mk_fun f s l = Fun(f,s,l)
+fun mk_fun0 f s l = Fun(f,s,l)
 
 fun mk_bound i = Bound i
 
-fun mk_const n s = mk_fun n s []
+fun mk_const n s = mk_fun0 n s []
 
 
-val one = mk_fun "1" ob []
-val zero = mk_fun "0" ob []
-val N = mk_fun "N" ob []
-val z = mk_fun "z" (ar (one,N)) []
-val s = mk_fun "s" (ar (N,N)) []
+val one = mk_fun0 "1" ob []
+val zero = mk_fun0 "0" ob []
+val N = mk_fun0 "N" ob []
+val z = mk_fun0 "z" (ar (one,N)) []
+val s = mk_fun0 "s" (ar (N,N)) []
 
 
 (*construct terms that appears in axioms*)
 
 fun id A = if sort_of A = ob 
-           then mk_fun "id" (ar(A,A)) [A]
+           then mk_fun0 "id" (ar(A,A)) [A]
            else raise TER ("id.wrong sort of input",[],[A])
 
 fun to1 X = if sort_of X = ob
-            then mk_fun "to1" (ar(X,one)) [X]
+            then mk_fun0 "to1" (ar(X,one)) [X]
             else raise TER ("to1.wrong sort of input",[],[X])
 
 fun from0 X = if sort_of X = ob then
-                  mk_fun "form0" (ar(zero, X)) [X]
+                  mk_fun0 "form0" (ar(zero, X)) [X]
               else raise TER ("form0.wrong sort of input",[],[X])
 
 fun po A B = if sort_of A = ob andalso 
-                sort_of B = ob then mk_fun "*" ob [A,B]
+                sort_of B = ob then mk_fun0 "*" ob [A,B]
              else raise TER ("po.wrong sort of input",[],[A,B]) 
 
 fun pa f g = case (sort_of f, sort_of g) of 
                  (ar (C1,A), ar (C2,B)) => 
                  if C1 = C2
-                 then mk_fun "pa" (ar(C1, po A B)) [f,g]
+                 then mk_fun0 "pa" (ar(C1, po A B)) [f,g]
                  else raise TER ("pa.different domains",[],[f,g]) 
                | _ => raise TER ("pa.wrong sort of input",[],[f,g]) 
 
 fun p1 A B = if sort_of A = ob andalso sort_of B = ob
-             then mk_fun "p1" (ar(po A B,A)) [A,B]
+             then mk_fun0 "p1" (ar(po A B,A)) [A,B]
              else raise TER ("p1.wrong sort of input",[],[A,B]) 
 
 
 fun p2 A B = if sort_of A = ob andalso sort_of B = ob
-             then mk_fun "p1" (ar(po A B,B)) [A,B]
+             then mk_fun0 "p1" (ar(po A B,B)) [A,B]
              else raise TER ("p2.wrong sort of input",[],[A,B]) 
 
 (*
 fun copo A B = if sort_of A = ob andalso sort_of B = ob
-               then mk_fun "+" (ar(A,B)) [A,B]
+               then mk_fun0 "+" (ar(A,B)) [A,B]
              else raise TER ("copo.wrong sort of input",[],[A,B]) 
 
 fun copa f g = case (sort_of f, sort_of g) of 
                    (ar (A,C1), ar (B,C2)) =>
-                   if C1 = C2 then mk_fun "copo" (ar(copo A B,C1)) [A,B] else raise TER ("copa.different codomains",[],[f,g])   | _ => raise TER ("copa.wrong sort of input",[],[f,g])
+                   if C1 = C2 then mk_fun0 "copo" (ar(copo A B,C1)) [A,B] else raise TER ("copa.different codomains",[],[f,g])   | _ => raise TER ("copa.wrong sort of input",[],[f,g])
 
 fun i1 A B = if sort_of A = ob andalso sort_of B = ob then 
-                 mk_fun "i1" (ar(A,copo A B)) [A,B]
+                 mk_fun0 "i1" (ar(A,copo A B)) [A,B]
              else raise TER ("i1.wrong sort of input",[],[A,B])  
 
 
 fun i2 A B = if sort_of A = ob andalso sort_of B = ob then 
-                 mk_fun "i2" (ar(B,copo A B)) [A,B]
+                 mk_fun0 "i2" (ar(B,copo A B)) [A,B]
              else raise TER ("i2.wrong sort of input",[],[A,B])  
 
 fun eqo f g = (case (sort_of f, sort_of g) of 
@@ -271,7 +271,7 @@ fun substt (V as (m,s:sort),t2) t =
         vVar(n,s') => 
         if m = n andalso eq_sort(s,s') then t2 
         else mk_var n (substs (V,t2) s')
-      | vFun(f,s',tl) => mk_fun f (substs (V,t2) s') (List.map (substt (V,t2)) tl)
+      | vFun(f,s',tl) => mk_fun0 f (substs (V,t2) s') (List.map (substt (V,t2)) tl)
       | _ => t
 and substs (V,t2) s = 
     case view_sort s of 
@@ -321,13 +321,72 @@ and term_compare (t1,t2) =
 val essps = 
     HOLset.empty (pair_compare String.compare sort_compare)
 
-val emptyvd:(string * sort,term)Binarymap.dict = Binarymap.mkDict (pair_compare String.compare sort_compare)
 
+
+type vd = ((string * sort),term)Binarymap.dict
+
+fun pvd vd = Binarymap.listItems vd
+
+val emptyvd:vd = Binarymap.mkDict (pair_compare String.compare sort_compare)
 
 fun mk_tenv l = 
     case l of 
         [] => emptyvd
       | ((n,s),t) :: l0 => Binarymap.insert(mk_tenv l0,(n,s),t)
+
+fun v2t (V:string * sort) (t:term) (vd:vd):vd = Binarymap.insert(vd,V,t)
+
+fun lookup_t (vd:vd) V = Binarymap.peek (vd,V)
+
+
+fun match_term nss pat ct (env:vd) = 
+    case (view_term pat,view_term ct) of 
+        (vFun(f1,s1,l1),vFun(f2,s2,l2)) => 
+        if f1 <> f2 then 
+            raise TER("match_term.different function names: ",[],[pat,ct])
+        else match_sort nss s1 s2 (match_tl nss l1 l2 env)  
+      | (vVar(n1,s1),_) => 
+        if HOLset.member(nss,(n1,s1)) then
+            if eq_term(pat,ct) then env 
+            else raise TER ("match_term.current term is local constant: ",[],[pat,ct])
+        else 
+            (case (lookup_t env (n1,s1)) of
+                 SOME t => if eq_term(t,ct) then env else
+                           raise TER ("match_term.double bind: ",[],[pat,t,ct])
+               | _ => 
+                 v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env))
+      | (vB i1,vB i2) => 
+        if i1 <> i2 then 
+            raise TER ("match_term.bound variables have different levels: ",[],[pat,ct])
+        else env
+      | _ => raise Fail "match_term.unexpected term constructor"
+and match_sort nss sp cs env = 
+    case (view_sort sp,view_sort cs) of 
+        (vo,vo) => env
+      | (va(d1,c1),va(d2,c2)) => 
+        match_term nss c1 c2 (match_term nss d1 d2 env)
+      | _ => raise TER ("match_sort.cannot match ob with ar: ",[sp,cs],[])
+and match_tl nss l1 l2 env =
+    case (l1,l2) of 
+        ([],[]) => env
+      | (h1 :: t1,h2 :: t2) => 
+        match_tl nss t1 t2 (match_term nss h1 h2 env)
+      | _ => raise TER ("match_sort.incorrect length of list",[],[])
+
+
+
+fun inst_term (env:vd) t = 
+    case view_term t of 
+        vVar(n,s) => 
+        (case lookup_t env (n,s) of 
+             SOME t' => t'
+           | _ => mk_var n (inst_sort env s))
+      | vFun(f,s,tl) => mk_fun0 f (inst_sort env s) (List.map (inst_term env) tl)
+      | _ => t
+and inst_sort env s = 
+    case view_sort s of
+        vo => s
+      | va(t1,t2) => mk_ar_sort (inst_term env t1) (inst_term env t2)
 
 
 fun pvariantt vd t = 
@@ -409,11 +468,12 @@ val psyms0:psymd =
                    Binarymap.insert (d,p,l)) (Binarymap.mkDict String.compare)
                [("isgroup",[("G",mk_ob_sort),
                             ("m",mk_ar_sort
-                                     (mk_fun "*" mk_ob_sort [mk_ob "G",mk_ob "G"]) (mk_ob "G")),
+                                     (mk_fun0 "*" mk_ob_sort [mk_ob "G",mk_ob "G"]) (mk_ob "G")),
                             ("i",mk_ar_sort one (mk_ob "G")),
                             ("inv",mk_ar_sort (mk_ob "G") (mk_ob "G"))]),
                 ("=",[("a",mk_ar_sort (mk_ob "A") (mk_ob "B")),
-                      ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))])]
+                      ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))]),
+                ("T",[]),("F",[])]
 
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
@@ -437,31 +497,31 @@ val fsyms0:fsymd =
                                         ("g",ar(mk_ob "A",mk_ob "B"))])),
          ("*",(ob,[("A",ob),("B",ob)])),
          ("+",(ob,[("A",ob),("B",ob)])),
-         ("p1",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
-         ("p2",(ar(mk_fun "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
-         ("i1",(ar(mk_ob "A",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("i2",(ar(mk_ob "B",mk_fun "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("pa",(ar(mk_ob "X",mk_fun "*" ob [mk_ob "A",mk_ob "B"]),
+         ("p1",(ar(mk_fun0 "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
+         ("p2",(ar(mk_fun0 "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
+         ("i1",(ar(mk_ob "A",mk_fun0 "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
+         ("i2",(ar(mk_ob "B",mk_fun0 "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
+         ("pa",(ar(mk_ob "X",mk_fun0 "*" ob [mk_ob "A",mk_ob "B"]),
                 [("f",ar(mk_ob "X",mk_ob "A")),("g",ar(mk_ob "X",mk_ob "B"))])),
-         ("copa",(ar(mk_fun "+" ob [mk_ob "A",mk_ob "B"],mk_ob "X"),
+         ("copa",(ar(mk_fun0 "+" ob [mk_ob "A",mk_ob "B"],mk_ob "X"),
                 [("f",ar(mk_ob "A",mk_ob "X")),("g",ar(mk_ob "B",mk_ob "X"))])),
          ("eqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
          ("coeqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqa",(ar(mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "A"),
+         ("eqa",(ar(mk_fun0 "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "A"),
                  [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("coeqa",(ar(mk_ob "B",mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
+         ("coeqa",(ar(mk_ob "B",mk_fun0 "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
                  [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqinduce",(ar(mk_ob "X",mk_fun "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
+         ("eqinduce",(ar(mk_ob "X",mk_fun0 "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
                  [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
                   ("h",ar(mk_ob "X",mk_ob "A"))])),
-         ("coeqinduce",(ar(mk_fun "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "X"),
+         ("coeqinduce",(ar(mk_fun0 "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "X"),
                  [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
                   ("h",ar(mk_ob "B",mk_ob "X"))])),
          ("exp",(ob,[("A",ob),("B",ob)])),
-         ("tp",(mk_ar_sort (mk_ob "B") (mk_fun "exp" ob [mk_ob "A", mk_ob "C"]),
-                [("f",ar(mk_fun "*" ob [mk_ob "A", mk_ob "B"],mk_ob "C"))])),
+         ("tp",(mk_ar_sort (mk_ob "B") (mk_fun0 "exp" ob [mk_ob "A", mk_ob "C"]),
+                [("f",ar(mk_fun0 "*" ob [mk_ob "A", mk_ob "B"],mk_ob "C"))])),
          ("ev",(mk_ar_sort 
-                    (mk_fun "*" ob [mk_ob "A",mk_fun "exp" ob [mk_ob "A",mk_ob "B"]]) 
+                    (mk_fun0 "*" ob [mk_ob "A",mk_fun0 "exp" ob [mk_ob "A",mk_ob "B"]]) 
                     (mk_ob "B"),
                 [("A",ob),("B",ob)])),
          ("s",(ar(mk_const "N" ob,mk_const "N" ob),[])),
@@ -495,6 +555,17 @@ val fpdict = ref fpdict0
 val fsyms = ref fsyms0
 val psyms = ref psyms0
 
+
+fun mk_fun f tl = 
+    case lookup_fun (!fsyms) f of 
+        NONE => raise TER ("mk_fun.function: " ^ f ^ " not found",[],tl)
+      | SOME(s,l) => 
+        let val vd = (match_tl essps (List.map (uncurry mk_var) l) tl emptyvd)
+            val s' = inst_sort vd s
+        in mk_fun0 f s' tl
+        end
+
+
 fun insert_fsym s = fpdict:= Binarymap.insert(!fpdict,s,fsym) 
 fun insert_psym s = fpdict:= Binarymap.insert(!fpdict,s,psym)
 
@@ -519,6 +590,7 @@ fun is_const sr =
 fun new_pred p tl = psyms := Binarymap.insert (!psyms,p,tl)
 
 fun new_fun f (s,tl) = fsyms := Binarymap.insert (!fsyms,f,(s,tl))
+
 
 
 (**********************************************************************

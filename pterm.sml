@@ -967,7 +967,7 @@ fun term_from_pt env pt =
         in mk_var n s
         end
       | pVar(n,ps) => mk_var n (sort_from_ps env ps) 
-      | pFun(f,ps,ptl) => mk_fun f (sort_from_ps env ps)
+      | pFun(f,ps,ptl) => mk_fun f (*(sort_from_ps env ps)*)
                                  (List.map (term_from_pt env) ptl)
       | pAnno(pt,ps) => term_from_pt env pt
 and sort_from_ps env ps = 
@@ -1075,7 +1075,7 @@ fun pretty_form f =
             end
         val envl = snd (List.foldr foldfun (map_HOLset fst used_names0 String.compare,[]) l)
         val env0 = mk_tenv (List.map (fn (n1,n2) => ((n1,mk_ob_sort),mk_var n2 mk_ob_sort)) envl)
-        val env = mk_menv env0 (Binarymap.mkDict String.compare)
+        val env = mk_menv env0 emptyfvd
     in
         inst_form env f
     end

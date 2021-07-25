@@ -17,4 +17,5 @@ sig
     val e0: tactic.tactic -> gstk -> gstk
     val current_goal: tac_result -> abbrev.goal
     val current_tac_result: gstk -> tac_result
+    val cg: gstk -> abbrev.goal
 end

@@ -57,4 +57,5 @@ val conv_rule: fconv -> thm -> thm
 val GSYM: thm -> thm
 val right_imp_forall_fconv: fconv
 val sym_fconv: fconv
+val neg_neg_elim: thm -> thm
 end

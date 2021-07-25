@@ -56,5 +56,5 @@ val disch: form -> thm -> thm
 val mp: thm -> thm -> thm
 val add_cont: (string * sort) set -> thm -> thm
 
- 
+val subst: thm -> thm -> thm 
 end

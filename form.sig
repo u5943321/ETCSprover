@@ -13,6 +13,8 @@ val view_form: form -> form_view
 
 exception ERR of string * sort list * term list * form list 
 val simple_fail: string -> exn
+val wrap_err: string -> exn -> exn
+
 
 val eq_forml: form list -> form list -> bool
 val fmem: form -> form list -> bool
@@ -38,13 +40,13 @@ val mk_conj: form -> form -> form
 val mk_disj: form -> form -> form
 val mk_imp: form -> form -> form
 val mk_dimp: form -> form -> form
-val mk_fun: string -> sort -> term list -> term
 val mk_forall:  string -> sort -> form -> form
 val mk_exists: string -> sort -> form -> form
 val mk_quant: string -> string -> sort -> form -> form
 val mk_pred: string -> term list -> form
 val mk_P0: string -> term list -> form
 val mk_fvar: string -> form
+val mk_eq: term -> term -> form
 
 val dest_eq: form -> term * term
 val dest_imp: form -> form * form
@@ -64,25 +66,29 @@ val fvfl: form list -> (string * sort) set
 val subst_bound: term -> form -> form
 val abstract: string * sort -> form -> form
 
+type vd = term.vd
+type fvd
 type menv
 
-val vd_of: menv -> (string * sort,term)Binarymap.dict
-val fvd_of: menv -> (string,form)Binarymap.dict
+val vd_of: menv -> vd
+val fvd_of: menv -> fvd
 val mempty: menv
 val pmenv: menv -> ((string * sort) * term) list * (string * form) list
 
-val emptyfvd: (string,form)Binarymap.dict
-val lookup_f: menv -> string -> form option
-val lookup_t: menv -> string * sort -> term option
+val emptyfvd: fvd
+val lookup_f: fvd -> string -> form option
 
 
-val mk_fenv: (string * form) list -> (string, form) Binarymap.dict
+val mk_fenv: (string * form) list -> fvd
 val mk_inst: ((string * sort) * term) list -> (string * form) list -> menv
-val mk_menv:(string * sort, term) Binarymap.dict -> (string, form) Binarymap.dict -> menv
+val mk_menv: vd -> fvd -> menv
 
+(*
 val match_term: (string * sort) set -> term -> term -> menv -> menv
 val match_sort: (string * sort) set -> sort -> sort -> menv -> menv
 val match_tl: (string * sort) set -> term list -> term list -> menv -> menv
+*)
+
 val match_form: (string * sort) set -> form -> form -> menv -> menv
 val strip_forall: form -> form * (string * sort) list
 val strip_exists: form -> form * (string * sort) list
@@ -95,9 +101,11 @@ val psymsf: form -> string set
 (*
 val string_of_form: form -> string
 *)
-
+(*
 val inst_sort: menv -> sort -> sort
 val inst_term: menv -> term -> term
+*)
+
 val inst_form: menv -> form -> form
 
 val is_wfmenv: menv -> bool

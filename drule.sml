@@ -28,6 +28,7 @@ A1 u (A2 - {t1}) |- t2
 **********************************************************************)
 
 fun prove_hyp th1 th2 = mp (disch (concl th1) th2) th1
+                        handle e => raise wrap_err "prove_hyp." e
 
 (*equivT should be eqT_intro*)
 

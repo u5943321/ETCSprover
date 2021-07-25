@@ -2,6 +2,9 @@ structure form :> form =
 struct
 open term 
 
+
+
+
 datatype form =
 Pred of string * term list
 | Conn of string * form list
@@ -21,9 +24,15 @@ fun view_form f =
       | Pred pi => vPred pi
       | fVar f => vfVar f
 
-exception ERR of string * sort list * term list * form list 
+exception ERR of string * sort list * term list * form list
 
 fun simple_fail s = ERR (s,[],[],[]) 
+
+fun wrap_err s exn = 
+    case exn of ERR (s0,sl,tl,fl) => ERR (s^s0,sl,tl,fl)
+              | TER (s0,sl,tl) => ERR (s^s0,sl,tl,[])
+              | _ => raise simple_fail s 
+
 
 fun subst_bound t = 
     let fun subst i (Pred(a,ts)) = Pred(a, List.map (replacet (mk_bound i, t)) ts) 
@@ -32,7 +41,6 @@ fun subst_bound t =
             Quant(q, n, replaces (mk_bound (i + 1),t) s, subst (i+1) b)
           | subst i (fVar fm) = fVar fm 
     in subst 0 end
-
 
 
 fun substf (V,t2) f = 
@@ -144,12 +152,6 @@ fun mk_quant q n s b = Quant(q,n,s,abstract (n,s) b)
 fun mk_P0 p tl = if is_pred p then Pred(p,tl)
                     else raise ERR ("mk_pred.psym: " ^ p ^ " not found",[],tl,[]) 
 
-fun mk_pred p tl = case lookup_pred (!psyms) p of 
-                       NONE => raise ERR ("mk_pred.psym not found",[],tl,[]) 
-                      | SOME l =>  Pred(p,tl)
-
-fun mk_eq t1 t2 = mk_pred "=" [t1,t2]
-
 fun mk_fvar f = fVar f
 
 (*TODO: check mk_fun as well!! edit it to do a matching!*)
@@ -241,41 +243,56 @@ and fvfl G =
     case G of [] => essps
             | h :: t => HOLset.union (fvf h,fvfl t)
 
-type menv = ((string * sort),term)Binarymap.dict * (string,form)Binarymap.dict
+type fvd = (string,form)Binarymap.dict
+type menv = vd * fvd
 
 (*matching environment: records where are term variables and formula variables matched to*)
-
-
-
-val emptyfvd:(string,form)Binarymap.dict = Binarymap.mkDict String.compare
-
-val mempty : menv = (emptyvd, Binarymap.mkDict String.compare)
-
-fun v2t V t ((vd,fvd):menv):menv = (Binarymap.insert(vd,V,t),fvd)
-    
-fun fv2f fm f ((vd,fvd):menv):menv =
-    (vd,Binarymap.insert(fvd,fm,f))
 
 fun vd_of ((vd,fvd):menv) = vd
 
 fun fvd_of ((vd,fvd):menv) = fvd
 
+fun mk_menv tenv fenv :menv = (tenv,fenv)
+
+val emptyfvd:fvd = Binarymap.mkDict String.compare
+
+val mempty : menv = (emptyvd,emptyfvd)
+(*
+fun v2t V t ((vd,fvd):menv):menv = (Binarymap.insert(vd,V,t),fvd)
+
+    
+fun fv2f fm f ((vd,fvd):menv):menv =
+    (vd,Binarymap.insert(fvd,fm,f))
+*)
+
+fun fv2f fm f (fvd:fvd):fvd = Binarymap.insert(fvd,fm,f)
+
+fun fv2f' fm f menv0: menv = mk_menv (vd_of menv0) (fv2f fm f (fvd_of menv0))
+ 
+fun lookup_f (fvd:fvd) fm = Binarymap.peek (fvd,fm)
+
+fun lookup_f' (menv:menv) fm = Binarymap.peek (fvd_of menv,fm)
+
+
+ 
+(*
 fun lookup_t ((vd,fvd):menv) V = Binarymap.peek (vd,V)
 
 fun lookup_f ((vd,fvd):menv) fm = Binarymap.peek (fvd,fm)
+*)
 
-fun mk_menv tenv fenv :menv = (tenv,fenv)
 
-fun mk_fenv l = 
+
+fun mk_fenv l :fvd= 
     case l of 
         [] => emptyfvd
       | (n:string,f:form) :: l0 => Binarymap.insert(mk_fenv l0,n,f)
 
 fun mk_inst tl fl = mk_menv (mk_tenv tl) (mk_fenv fl)
 
-fun pmenv (env:menv) = (Binarymap.listItems (vd_of env),Binarymap.listItems (fvd_of env))
+fun pmenv (env:menv) = (pvd (vd_of env),Binarymap.listItems (fvd_of env))
 
-
+(*
 fun match_term nss pat ct (env:menv) = 
     case (view_term pat,view_term ct) of 
         (vFun(f1,s1,l1),vFun(f2,s2,l2)) => 
@@ -309,7 +326,20 @@ and match_tl nss l1 l2 env =
       | (h1 :: t1,h2 :: t2) => 
         match_tl nss t1 t2 (match_term nss h1 h2 env)
       | _ => raise ERR ("incorrect length of list",[],[],[])
+*)
 
+fun match_tl' nss l1 l2 env0 = 
+    let val (vd0,fvd0) = (vd_of env0,fvd_of env0)
+        val vd = match_tl nss l1 l2 vd0 
+    in mk_menv vd fvd0
+    end
+
+
+fun match_sort' nss s1 s2 env0 = 
+    let val (vd0,fvd0) = (vd_of env0,fvd_of env0)
+        val vd = match_sort nss s1 s2 vd0 
+    in mk_menv vd fvd0
+    end
 
 
 fun match_form nss pat cf env:menv = 
@@ -317,7 +347,7 @@ fun match_form nss pat cf env:menv =
         (Pred(P1,l1),Pred(P2,l2)) => 
         if P1 <> P2 then 
             raise ERR ("different predicates: ",[],[],[pat,cf])
-        else match_tl nss l1 l2 env
+        else match_tl' nss l1 l2 env
       | (Conn(co1,l1),Conn(co2,l2)) => 
         if co1 <> co2 then 
             raise ERR ("different connectives: ",[],[],[pat,cf])
@@ -325,12 +355,12 @@ fun match_form nss pat cf env:menv =
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
         if q1 <> q2 then 
             raise ERR ("different quantifiers: ",[],[],[pat,cf])
-        else match_form nss b1 b2 (match_sort nss s1 s2 env)
+        else match_form nss b1 b2 (match_sort' nss s1 s2 env)
       | (fVar fm,_) => 
-            (case (lookup_f env fm) of
+            (case (lookup_f' env fm) of
                  SOME f => if eq_form(f,cf) then env else
                            raise ERR ("double bind of formula variables",[],[],[pat,f,cf])
-               | _ => fv2f fm cf env)
+               | _ => fv2f' fm cf env)
       | _ => raise ERR ("different formula constructors",[],[],[pat,cf])
 and match_fl nss l1 l2 env = 
     case (l1,l2) of 
@@ -365,6 +395,7 @@ fun strip_quants f =
 
 (*TODO: strip_conj strip_disj etc, have it, in iffLR? *)
 
+(*
 fun inst_term (env:menv) t = 
     case view_term t of 
         vVar(n,s) => 
@@ -377,10 +408,15 @@ and inst_sort env s =
     case view_sort s of
         vo => s
       | va(t1,t2) => mk_ar_sort (inst_term env t1) (inst_term env t2)
+*)
+
+fun inst_term' env t = inst_term (vd_of env) t
+
+fun inst_sort' env s = inst_sort (vd_of env) s
 
 fun name_clash n env = 
     let
-        val new_terms = List.map snd (Binarymap.listItems (vd_of env))
+        val new_terms = List.map snd (pvd (vd_of env))
         val new_names = mapfilter (fst o dest_var) new_terms
     in 
         List.exists (fn n0 => n0 = n) new_names
@@ -391,18 +427,18 @@ fun rename_once_need n env =
 
 fun inst_form env f = 
     case f of
-        Pred(P,tl) => Pred(P,List.map (inst_term env) tl)
+        Pred(P,tl) => Pred(P,List.map (inst_term' env) tl)
       | Conn(co,fl) => Conn(co,List.map (inst_form env) fl)
       | Quant(q,n,s,b) => 
         let 
-            val s' = inst_sort env s
+            val s' = inst_sort' env s
             val b' = inst_form env b
             val n' = rename_once_need n env 
         in 
             Quant(q,n',s',b')
         end
       | fVar fvn => 
-        (case lookup_f env fvn of
+        (case lookup_f' env fvn of
              SOME f' => f'
            | NONE => f)
 
@@ -436,12 +472,25 @@ fun is_ss_ob (n:string,s) = if eq_sort(s,mk_ob_sort) then true else false
 (*dpcy for dependency*)
 
 fun ok_dpdc (env:menv) ((n:string,s),t) = 
-    if eq_sort(sort_of t,inst_sort env s) then true else false
+    if eq_sort(sort_of t,inst_sort' env s) then true else false
     
 
 fun is_wfmenv menv = 
-    let val pairs = Binarymap.listItems (vd_of menv)
+    let val pairs = pvd (vd_of menv)
     in List.all (ok_dpdc menv) pairs
     end
+
+
+
+fun mk_pred p tl = 
+    case lookup_pred (!psyms) p of 
+        NONE => raise ERR ("mk_pred.psym not found",[],tl,[]) 
+      | SOME l => 
+        let val _ = match_tl essps (List.map var l) tl emptyvd
+                    handle _ => raise ERR ("mk_pred.wrong input of predicate:" ^ p,List.map sort_of tl,tl,[])
+        in Pred(p,tl)
+        end
+
+fun mk_eq t1 t2 = mk_pred "=" [t1,t2]
 
 end

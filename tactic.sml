@@ -2,9 +2,11 @@ structure tactic :> tactic =
 struct
 open term form logic drule abbrev conv
 
+(*
 fun wrap_err s exn = 
     case exn of ERR (s0,sl,tl,fl) => ERR (s^s0,sl,tl,fl)
                | _ => raise simple_fail s
+*)
 
 fun empty th [] = th
   | empty th _ = raise simple_fail "empty" 
@@ -824,7 +826,7 @@ val strip_tac:tactic = fn g => strip_goal_then strip_assume_tac g
 fun disch_tac g = disch_then assume_tac g 
 
 
-
+(*
 
 fun drop r =
       fn n =>
@@ -834,24 +836,117 @@ fun drop r =
                  (Lib.with_exn (r o List.take) (l, List.length l - n)
                    (ERR ("drop.",[],[],[]))))
 
+*)
+
 fun simp_asm thms (t, l') = rewr_rule (l' @ thms) t :: l'
 
-
+(*
 fun f (drop,r) (tac:thm_tactic) thms asms:tactic = 
     map_every tac (List.foldl (simp_asm thms) [] (r asms))
-              then_tac drop (List.length asms)
+             (* then_tac drop (List.length asms)*)
+*)
 
-fun gen_full_simp_tac (drop, r) tac thms =
-    assum_list (f (drop,r) tac thms) then_tac arw_tac thms
+
+fun f r (tac:thm_tactic) thms asms:tactic = 
+    map_every tac (r (List.foldl (simp_asm thms) [] (r asms)))
+
+fun gen_full_simp_tac r tac thms =
+    pop_assum_list (f r tac thms) then_tac arw_tac thms
  
-val full_tac = gen_full_simp_tac (drop List.rev, Lib.I)
-val rev_full_tac = gen_full_simp_tac (drop Lib.I, List.rev)
+val full_tac = gen_full_simp_tac Lib.I
+val rev_full_tac = gen_full_simp_tac List.rev
 
+fun full_simp_tac thms = 
+    pop_assum_list (f Lib.I strip_assume_tac thms) then_tac arw_tac thms
+
+fun rev_full_simp_tac thms = 
+    pop_assum_list (f List.rev strip_assume_tac thms) then_tac arw_tac thms
+
+
+(*
 val full_simp_tac: thm list -> tactic = full_tac strip_assume_tac
 val rev_full_simp_tac: thm list -> tactic = rev_full_tac strip_assume_tac
+*)
 
 val cheat:tactic = fn (ct,asl,w) => ([], fn _ => mk_thm ct asl w)
 
+(* A , B ,   
+   (f : A -> B),
+             (k' : B + B -> coeqo(i1(B, B) o f, i2(B, B) o f)),
+             (t :
+                1 ->
+                  eqo(coeqa((i1(B, B) o f), (i2(B, B) o f)) o i1(B, B),
+                   coeqa((i1(B, B) o f), (i2(B, B) o f)) o i2(B, B)))
+   1.areiso(A, 0)
+   2.T
+   3.coeqa(i1(B, B) o f, i2(B, B) o f) = k'
+   ----------------------------------------------------------------------
+   F
+   : gstk
+
+A , B ,   
+   (f : A -> B),
+             (k' : B + B -> coeqo(i1(B, B) o f, i2(B, B) o f)),
+             (t :
+                1 ->
+                  eqo(k' o i1(B, B),
+                    k' o i2(B, B)))
+   1.areiso(A, 0)
+   2.T
+   3.coeqa(i1(B, B) o f, i2(B, B) o f) = k'
+   ----------------------------------------------------------------------
+   F
+   : gstk
+
+
+apply subst k'= coeqa(i1(B, B) o f, i2(B, B) o f) 
+have 
+
+
+A , B ,   
+   (f : A -> B),
+             (k' : B + B -> coeqo(i1(B, B) o f, i2(B, B) o f)),
+             (t :
+                1 ->
+                  eqo(k' o i1(B, B),
+                    k' o i2(B, B)))
+   1.areiso(A, 0)
+   2.T
+   3.coeqa(i1(B, B) o f, i2(B, B) o f) = coeqa(i1(B, B) o f, i2(B, B) o f) 
+   ----------------------------------------------------------------------
+   F
+   : gstk
+*)
+
+(*if no ril, then have k' = k' in asm list*)
+
+fun subst1_tac th (g as (ct,asl,w):goal) = 
+    let val (ot,nt) = dest_eq (concl th)
+        val (ct1,asl1,w1) = dest_thm (subst th (mk_thm ct asl w))
+        val asl2 = ril (mk_eq nt nt) asl1
+    in ([(ct1,asl2,w1)], fn [th0] => subst (sym th) th0 |> prove_hyp (refl ot))
+    end
+
+
+fun subst_tac eqth (g as (ct,asl,w):goal) = 
+    let val (ot,nt) = dest_eq (concl eqth)
+        val (tv,temp as (ct0,asl0,w0)) = mk_temp (mk_thm ct asl w) ot
+        val (ct1,asl1,w1) = dest_thm (subst eqth temp tv (mk_thm ct asl w))
+        val asl2 = ril (mk_eq nt nt) asl1
+    in ([(ct1,asl2,w1)], 
+        fn [th0] => 
+           subst (sym eqth) (HOLset.union(ct0,cont eqth),
+                            ril (mk_eq tv nt) (asml_U[asl0,ant eqth]),w0) tv th)
+    end
+
+
+
+
+(*
+val assume_tac:thm_tactic = 
+    fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
+    ([(HOLset.union(G,cont th),concl th:: fl,f)], sing (prove_hyp th))
+*)
 
 end
     
