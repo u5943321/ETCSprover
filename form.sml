@@ -24,7 +24,16 @@ fun view_form f =
       | Pred pi => vPred pi
       | fVar f => vfVar f
 
+
 exception ERR of string * sort list * term list * form list
+
+(*
+datatype exninfo = EI of sort list * term list * form list
+
+(*TODO: a ppter for exninfo and *)
+
+exception ERR' of string * exninfo
+*)
 
 fun simple_fail s = ERR (s,[],[],[]) 
 

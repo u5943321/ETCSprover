@@ -102,4 +102,5 @@ val fconv_canon: thm -> thm list
 (*rules for inference*) 
 val strip_all_and_imp: thm -> thm
 val F_imp2: form -> thm
+val contrapos: thm -> thm
 end

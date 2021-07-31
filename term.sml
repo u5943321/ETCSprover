@@ -8,10 +8,24 @@ and term =
     | Bound of int
     | Fun of string * sort * term list;
 
+(*
+datatype sterm = svar of string | sbound of int | sconst of string
+
+datatype sort' = ob 
+               | ar of sterm * sterm 
+*)
+
 datatype term_view =
     vVar of string * sort
   | vB of int 
   | vFun of string * sort * term list
+
+(*
+datatype 'a term_view =
+    vVar of string * sort
+  | vB of int 
+  | vFun of string * sort * 'a list
+*)
 
 datatype sort_view = 
          vo
@@ -27,43 +41,21 @@ fun view_sort s =
     case s of 
         ar dc => va dc
       | _ => vo
-
-exception TER of string * sort list * term list 
-
 (*
-fun enclose a = "(" ^ a ^ ")";
+datatype 'a terinfo = TERI of sort list * 'a list
 
-fun conc_list sep l = 
-    case l of 
-        [] => ""
-      | h :: t => sep ^ h ^ conc_list sep t
-
-fun conc_list1 sep l = 
-    case l of [] => ""
-            | h :: t => h  ^ (conc_list sep t);
-
-
-fun string_of_tl l = 
-    case l of
-        [] => ""
-      | h :: t => 
-        enclose (conc_list1 ","
-                            (List.map string_of_term (h :: t)))
-and string_of_term t = 
-    case t of
-        Var(n,s) => n
-      | Fun(f,s,[t1,t2]) => 
-        enclose 
-            ((string_of_term t1) ^ " " ^ f ^ " " ^ 
-             (string_of_term t2)) 
-      | Fun(f,s,l) => 
-        f ^ (string_of_tl l)
-      | _ => ""
-and string_of_sort s = 
-    case s of 
-        ob => "ob"
-      | ar(A,B) => (string_of_term A) ^ "-->" ^ (string_of_term B)
+exception TER of string * term terinfo
 *)
+
+
+
+exception TER of string * sort list * term list
+
+
+
+
+fun wrap_ter s sl tl e = case e of TER (s0,sl0,tl0) => TER (s ^ s0,sl @ sl0,tl @ tl0)
+                           | _ => e
 
 
 fun sort_of t = 
@@ -109,6 +101,15 @@ fun dest_fun t =
         Fun(n,s,l) => (n,s,l)
       | _ => raise TER ("not a function: ",[],[t])
 
+
+(*
+fun dest_fun' t = 
+    case  t of 
+        Fun(n,s,l) => (n,s,l)
+      | _ => raise TER ("not a function: ",TERI ([],[t])
+
+
+*)
 val mk_ob_sort = ob
 
 fun mk_ar_sort t1 t2 = ar(t1,t2)
@@ -142,101 +143,6 @@ val s = mk_fun0 "s" (ar (N,N)) []
 fun id A = if sort_of A = ob 
            then mk_fun0 "id" (ar(A,A)) [A]
            else raise TER ("id.wrong sort of input",[],[A])
-
-fun to1 X = if sort_of X = ob
-            then mk_fun0 "to1" (ar(X,one)) [X]
-            else raise TER ("to1.wrong sort of input",[],[X])
-
-fun from0 X = if sort_of X = ob then
-                  mk_fun0 "form0" (ar(zero, X)) [X]
-              else raise TER ("form0.wrong sort of input",[],[X])
-
-fun po A B = if sort_of A = ob andalso 
-                sort_of B = ob then mk_fun0 "*" ob [A,B]
-             else raise TER ("po.wrong sort of input",[],[A,B]) 
-
-fun pa f g = case (sort_of f, sort_of g) of 
-                 (ar (C1,A), ar (C2,B)) => 
-                 if C1 = C2
-                 then mk_fun0 "pa" (ar(C1, po A B)) [f,g]
-                 else raise TER ("pa.different domains",[],[f,g]) 
-               | _ => raise TER ("pa.wrong sort of input",[],[f,g]) 
-
-fun p1 A B = if sort_of A = ob andalso sort_of B = ob
-             then mk_fun0 "p1" (ar(po A B,A)) [A,B]
-             else raise TER ("p1.wrong sort of input",[],[A,B]) 
-
-
-fun p2 A B = if sort_of A = ob andalso sort_of B = ob
-             then mk_fun0 "p1" (ar(po A B,B)) [A,B]
-             else raise TER ("p2.wrong sort of input",[],[A,B]) 
-
-(*
-fun copo A B = if sort_of A = ob andalso sort_of B = ob
-               then mk_fun0 "+" (ar(A,B)) [A,B]
-             else raise TER ("copo.wrong sort of input",[],[A,B]) 
-
-fun copa f g = case (sort_of f, sort_of g) of 
-                   (ar (A,C1), ar (B,C2)) =>
-                   if C1 = C2 then mk_fun0 "copo" (ar(copo A B,C1)) [A,B] else raise TER ("copa.different codomains",[],[f,g])   | _ => raise TER ("copa.wrong sort of input",[],[f,g])
-
-fun i1 A B = if sort_of A = ob andalso sort_of B = ob then 
-                 mk_fun0 "i1" (ar(A,copo A B)) [A,B]
-             else raise TER ("i1.wrong sort of input",[],[A,B])  
-
-
-fun i2 A B = if sort_of A = ob andalso sort_of B = ob then 
-                 mk_fun0 "i2" (ar(B,copo A B)) [A,B]
-             else raise TER ("i2.wrong sort of input",[],[A,B])  
-
-fun eqo f g = (case (sort_of f, sort_of g) of 
-                       (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then Fun("eqo",ob,[f,g])
-                                                 else raise no_sort
-                     | _ => raise no_sort)
-
-fun eqa f g = (case (sort_of f, sort_of g) of 
-                       (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then Fun("eqa",ar(eqo f g,A2),[f,g])
-                                                 else raise no_sort
-                     | _ => raise no_sort)
-
-
-fun coeqo f g = (case (sort_of f, sort_of g) of 
-                       (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then Fun("coeqo",ob,[f,g])
-                                                 else raise no_sort
-                     | _ => raise no_sort)
-
-fun coeqa f g = (case (sort_of f, sort_of g) of 
-                       (ar (A1,B1), ar (A2,B2)) => if (A1 = A2 andalso B1 = B2)
-                                                   then Fun("coeqa",ar(B2,coeqo f g),[f,g])
-                                                 else raise no_sort
-                     | _ => raise no_sort)
-
-fun exp A B = Fun("exp",ob,[A,B])
-
-fun tp f =  (case sort_of f of 
-                 (ar (P,C)) =>
-                 (case P of (Fun ("*",ob,[A,B])) => 
-                            Fun ("tp",ar(B, exp A C),[f])
-                          | _ => raise no_sort) 
-               | _ => raise no_sort) 
-
-fun N_ind X x0 t = (case (sort_of X, sort_of x0, sort_of t) of 
-                       (ob, ar (A,B), ar (C,D)) => if (A = one andalso B = X
-                                                               andalso C = X
-                                                               andalso D = X)
-                                                   then Fun("N_ind",ar(N,X),[X,x0,t])
-                                                 else raise no_sort
-                     | _ => raise no_sort)
-
-infix O
-fun op O (f,g) = (case (sort_of f,sort_of g) of 
-                       (ar (A,B1),ar (B2,C)) => if B1 = B2 then Fun("o",ar(A,C),[f,g])
-                                                 else raise no_sort
-                                     | _ => raise no_sort)
-*)
 
 fun replacet (u,new) t = 
     if t=u then new else 
@@ -344,7 +250,8 @@ fun match_term nss pat ct (env:vd) =
         (vFun(f1,s1,l1),vFun(f2,s2,l2)) => 
         if f1 <> f2 then 
             raise TER("match_term.different function names: ",[],[pat,ct])
-        else match_sort nss s1 s2 (match_tl nss l1 l2 env)  
+        else (match_sort nss s1 s2 (match_tl nss l1 l2 env)  
+             handle e => raise wrap_ter "match_term." [s1,s2] [pat,ct] e)
       | (vVar(n1,s1),_) => 
         if HOLset.member(nss,(n1,s1)) then
             if eq_term(pat,ct) then env 
@@ -354,7 +261,8 @@ fun match_term nss pat ct (env:vd) =
                  SOME t => if eq_term(t,ct) then env else
                            raise TER ("match_term.double bind: ",[],[pat,t,ct])
                | _ => 
-                 v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env))
+                 v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env)
+                 handle e => raise wrap_ter "match_term." [] [pat,ct] e)
       | (vB i1,vB i2) => 
         if i1 <> i2 then 
             raise TER ("match_term.bound variables have different levels: ",[],[pat,ct])
@@ -447,9 +355,6 @@ fun fxty i =
       | "~" => 900
       | "&" => 400
       | "|" => 300
-      | "*" => 600
-      | "+" => 500
-      | "^" => 700
       | "o" => 800
       | _ => ~1
 
@@ -473,71 +378,94 @@ val psyms0:psymd =
                             ("inv",mk_ar_sort (mk_ob "G") (mk_ob "G"))]),
                 ("=",[("a",mk_ar_sort (mk_ob "A") (mk_ob "B")),
                       ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))]),
+                ("ispr",[("p1",ar(mk_ob "AB",mk_ob "A")),
+                         ("p2",ar(mk_ob "AB",mk_ob "B"))]),
+                ("iscopr",[("i1",ar(mk_ob "A",mk_ob "AB")),
+                         ("i2",ar(mk_ob "B",mk_ob "AB"))]),
+                ("iseq",[("e",ar(mk_ob "E",mk_ob "A")),
+                         ("f",ar(mk_ob "A",mk_ob "B")),
+                         ("g",ar(mk_ob "A",mk_ob "B"))]),
+                ("iscoeq",[("e",ar(mk_ob "B",mk_ob "cE")),
+                           ("f",ar(mk_ob "A",mk_ob "B")),
+                           ("g",ar(mk_ob "A",mk_ob "B"))]),
+                ("isexp",[("p1",ar(mk_ob "efs",mk_ob "A")),
+                          ("p2",ar(mk_ob "efs",mk_ob "A2B")),
+                          ("ev",ar(mk_ob "efs",mk_ob "B"))]),
+                ("ismono",[("f",mk_ar_sort (mk_ob "A") (mk_ob "B"))]),
+                ("ismem",[("x",mk_ar_sort (mk_const "1" mk_ob_sort) (mk_ob "A")),("a",mk_ar_sort (mk_ob "A0") (mk_ob "A"))]),
+                ("is0",[("zero",ob)]),
+                ("is1",[("one",ob)]),
+                ("isN0",[("z0",mk_ar_sort (mk_ob "one") (mk_ob "N0")),("s0",mk_ar_sort (mk_ob "N0") (mk_ob "N0"))]),
                 ("T",[]),("F",[])]
 
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
+val ob_sort = mk_ob_sort
 
+                  
 val fsyms0:fsymd =  
     List.foldr 
         (fn ((p:string,(s:sort,l:(string * sort) list)),d) =>
             Binarymap.insert (d,p,(s,l)))
         (Binarymap.mkDict String.compare)
-        [("N",(mk_ob_sort,[])),
-         ("0",(mk_ob_sort,[])),
-         ("1",(mk_ob_sort,[])),
+        [("N",(ob_sort,[])),
+         ("0",(ob_sort,[])),
+         ("1",(ob_sort,[])),
          ("id",(mk_ar_sort (mk_ob "A") (mk_ob "A"),
-                [("A",mk_ob_sort)])),
-         ("to1",(mk_ar_sort (mk_ob "X") one,
-                 [("X",mk_ob_sort)])),
-         ("from0",(mk_ar_sort zero (mk_ob "X"),
-                   [("X",mk_ob_sort)])),
+                [("A",ob_sort)])),
+         ("to1",(mk_ar_sort (mk_ob "X") (mk_ob "one"),
+                 [("X",ob_sort),("one",ob_sort)])),
+         ("from0",(mk_ar_sort (mk_ob "zero") (mk_ob "X"),
+                   [("zero",ob_sort),("X",ob_sort)])),
          ("o",(ar(mk_ob "A",mk_ob "C"),[("f",ar(mk_ob "B",mk_ob "C")),
                                         ("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("*",(ob,[("A",ob),("B",ob)])),
-         ("+",(ob,[("A",ob),("B",ob)])),
-         ("p1",(ar(mk_fun0 "*" ob [mk_ob "A",mk_ob "B"],mk_ob "A"),[("A",ob),("B",ob)])),
-         ("p2",(ar(mk_fun0 "*" ob [mk_ob "A",mk_ob "B"],mk_ob "B"),[("A",ob),("B",ob)])),
-         ("i1",(ar(mk_ob "A",mk_fun0 "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("i2",(ar(mk_ob "B",mk_fun0 "+" ob [mk_ob "A",mk_ob "B"]),[("A",ob),("B",ob)])),
-         ("pa",(ar(mk_ob "X",mk_fun0 "*" ob [mk_ob "A",mk_ob "B"]),
-                [("f",ar(mk_ob "X",mk_ob "A")),("g",ar(mk_ob "X",mk_ob "B"))])),
-         ("copa",(ar(mk_fun0 "+" ob [mk_ob "A",mk_ob "B"],mk_ob "X"),
-                [("f",ar(mk_ob "A",mk_ob "X")),("g",ar(mk_ob "B",mk_ob "X"))])),
-         ("eqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("coeqo",(ob,[("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqa",(ar(mk_fun0 "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "A"),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("coeqa",(ar(mk_ob "B",mk_fun0 "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B"))])),
-         ("eqinduce",(ar(mk_ob "X",mk_fun0 "eqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"]),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
-                  ("h",ar(mk_ob "X",mk_ob "A"))])),
-         ("coeqinduce",(ar(mk_fun0 "coeqo" ob [mk_ar0 "f" "A" "B",mk_ar0 "g" "A" "B"],mk_ob "X"),
-                 [("f",ar(mk_ob "A",mk_ob "B")),("g",ar(mk_ob "A",mk_ob "B")),
-                  ("h",ar(mk_ob "B",mk_ob "X"))])),
-         ("exp",(ob,[("A",ob),("B",ob)])),
-         ("tp",(mk_ar_sort (mk_ob "B") (mk_fun0 "exp" ob [mk_ob "A", mk_ob "C"]),
-                [("f",ar(mk_fun0 "*" ob [mk_ob "A", mk_ob "B"],mk_ob "C"))])),
-         ("ev",(mk_ar_sort 
-                    (mk_fun0 "*" ob [mk_ob "A",mk_fun0 "exp" ob [mk_ob "A",mk_ob "B"]]) 
-                    (mk_ob "B"),
-                [("A",ob),("B",ob)])),
+         ("pa",(ar(mk_ob "X",mk_ob "AB"),
+                [("p1",ar(mk_ob "AB",mk_ob "A")),
+                 ("p2",ar(mk_ob "AB",mk_ob "B")),
+                 ("f",ar(mk_ob "X",mk_ob "A")),
+                 ("g",ar(mk_ob "X",mk_ob "B"))])),
+         ("copa",(ar(mk_ob "AB",mk_ob "X"),
+                  [("i1",ar(mk_ob "A",mk_ob "AB")),
+                   ("i2",ar(mk_ob "B",mk_ob "AB")),
+                   ("f",ar(mk_ob "A",mk_ob "X")),
+                   ("g",ar(mk_ob "B",mk_ob "X"))])),
+         ("eqind",(ar(mk_ob "X",mk_ob "E"),
+                      [("e",ar(mk_ob "E",mk_ob "A")),
+                       ("f",ar(mk_ob "A",mk_ob "B")),
+                       ("g",ar(mk_ob "A",mk_ob "B")),
+                       ("x",ar(mk_ob "X",mk_ob "A"))])),
+         ("coeqind",(ar(mk_ob "cE",mk_ob "X"),
+                      [("ce",ar(mk_ob "B",mk_ob "cE")),
+                       ("f",ar(mk_ob "A",mk_ob "B")),
+                       ("g",ar(mk_ob "A",mk_ob "B")),
+                       ("x",ar(mk_ob "B",mk_ob "X"))])),
+         ("tp",(ar(mk_ob "X",mk_ob "A2B"),
+                [("p1",ar(mk_ob "efs",mk_ob "A")),
+                 ("p2",ar(mk_ob "efs",mk_ob "A2B")),
+                 ("ev",ar(mk_ob "efs",mk_ob "B")),
+                 ("p1'",ar(mk_ob "AX",mk_ob "A")),
+                 ("p2'",ar(mk_ob "AX",mk_ob "X")),
+                 ("f",ar(mk_ob "AX",mk_ob "B"))])),
          ("s",(ar(mk_const "N" ob,mk_const "N" ob),[])),
          ("z",(ar(mk_const "1" ob,mk_const "N" ob),[])),
-         ("Nind",(ar(mk_const "N" ob,mk_ob "X"),
-                  [("x0",ar(mk_const "1" ob,mk_ob "X")),
+         ("Nind0",(ar(mk_ob "N0",mk_ob "X"),
+                  [("z0",ar (mk_ob "one0",mk_ob "N0")),
+                   ("s0",ar (mk_ob "N0",mk_ob "N0")),
+                   ("x0",ar(mk_ob "one0",mk_ob "X")),
+                   ("t",ar(mk_ob "X",mk_ob "X"))])),
+          ("Nind",(ar(mk_const "N" ob,mk_ob "X"),
+                  [("x0",ar(one,mk_ob "X")),
                    ("t",ar(mk_ob "X",mk_ob "X"))]))
         ]
 
-
+(*
 
 datatype ForP = fsym | psym
 
 val fpdict0:(string,ForP) Binarymap.dict =
     foldr (fn ((n,forp),d) => Binarymap.insert(d,n,forp)) (Binarymap.mkDict String.compare) 
-          [("=",psym),(*"\cong",psym*) ("T",psym),("F",psym),
+          [("=",psym),("T",psym),("F",psym),
            ("P",psym),("Q",psym),("R",psym),("S",psym),
            ("ismono",psym),("isgroup",psym),("ismem",psym),("areiso",psym),
            ("o",fsym),("id",fsym),
@@ -551,7 +479,13 @@ val fpdict0:(string,ForP) Binarymap.dict =
            ]
 
 
+
+
 val fpdict = ref fpdict0
+
+*)
+
+
 val fsyms = ref fsyms0
 val psyms = ref psyms0
 
@@ -565,25 +499,25 @@ fun mk_fun f tl =
         in mk_fun0 f s' tl
         end
 
-
+(*
 fun insert_fsym s = fpdict:= Binarymap.insert(!fpdict,s,fsym) 
 fun insert_psym s = fpdict:= Binarymap.insert(!fpdict,s,psym)
-
+*)
 
 fun is_fun sr = 
-    case (Binarymap.peek (!fpdict,sr)) of 
-        SOME fsym => true
+    case (Binarymap.peek (!fsyms,sr)) of 
+        SOME _ => true
       | _ => false
 
 fun is_pred sr =
-    case (Binarymap.peek (!fpdict,sr)) of
-        SOME psym => true
+    case (Binarymap.peek (!psyms,sr)) of
+        SOME _ => true
       | _ => false
 
 
 fun is_const sr = 
     case (Binarymap.peek (!fsyms,sr)) of 
-        SOME (_,l) => if l = [] then true else false
+        SOME (_,l) => if length l = 0 then true else false
       | _ => false
 
 
@@ -597,39 +531,16 @@ fun new_fun f (s,tl) = fsyms := Binarymap.insert (!fsyms,f,(s,tl))
 pretty printing
 **********************************************************************)
 (*
-open smpp
-
-
-infix >>
-
-fun is_infix sym = 
-    if mem sym ["*","+","^","=","o"] then true else false
-
- 
-fun paren pp = block HOLPP.INCONSISTENT 1 
-                     (add_string "(" >> pp >> 
-                                 add_string ")")
-
-datatype gravity = LR of int option * int option (*prec of left and right neighbours*)
-
-
-fun int_option_leq (n,n0) = 
-    case n0 of NONE => false
-             | SOME m => n <= m
-
-fun int_option_less (n,n0) = 
-    case n0 of NONE => false
-             | SOME m => n < m
-
+open smpp pp 
 
 fun ppterm ss g t = 
-    case t of 
-        Var(n,s) => 
+    case view_term t of 
+        vVar(n,s) => 
         if ss then paren 
                        (add_string n >> add_string " :" >>
                                    add_break (1,2) >> ppsort g s)
         else add_string n
-      | Fun(f,s,[t1,t2]) => 
+      | vFun(f,s,[t1,t2]) => 
         if is_infix f then 
             case g of 
                 LR(lg,rg) => 
@@ -650,36 +561,31 @@ fun ppterm ss g t =
                 add_string "<" >> ppterm ss g t1 >> add_string " , " >> ppterm ss g t2 >> add_string ">"
             else
             add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) [t1,t2])
-      | Fun(f,s,args) => 
-        if args = [] then add_string f else
+      | vFun(f,s,args) => 
+        if length args = 0 then add_string f else
         add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) args)
-      | Bound i => add_string "B" >> paren (add_string (int_to_string i))
+      | vB i => add_string "B" >> paren (add_string (int_to_string i))
 and ppsort g s =
-    case s of
-        ob => add_string "ob"
-      | ar(d,c) => 
+    case view_sort s of
+        vo => add_string "ob"
+      | va(d,c) => 
         block HOLPP.INCONSISTENT 2 
               (ppterm false g d >> add_string " ->" >>
                       add_break(1,0) >> ppterm false g c)
 
-val show_types = ref false
 
 fun PPsort printdepth _ st = let val s = ppsort (LR (NONE,NONE)) st
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
 
-val pps = PolyML.addPrettyPrinter PPsort
+val _ = PolyML.addPrettyPrinter PPsort
+
+val show_types = ref false
                      
 fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t 
                              val SOME (pretty,_,_) = lower s ()
                          in pretty
                          end
-
-val () = PolyML.addPrettyPrinter PPterm
-
-(*after use "term.sml" should get pped
-*)
-
 *)
 end

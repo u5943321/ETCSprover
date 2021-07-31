@@ -1,6 +1,6 @@
 structure pp = 
 struct 
-open term form logic smpp
+open (* term form logic*) smpp
 
 infix >>
 
@@ -81,51 +81,6 @@ fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t
                          end
 
 val _ = PolyML.addPrettyPrinter PPterm
-
-(*
-fun ppform (ss:bool) g (f:form) = 
-    case view_form f of 
-        vPred(p,[t1,t2]) => 
-        if is_infix p then 
-            block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t1) >> add_break(1,0) >>
-                  add_string p >> add_break(1,0) >>
-                  block HOLPP.INCONSISTENT 2 (ppterm ss (LR (NONE,NONE)) t2)
-        else
-            add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) [t1,t2])
-      | vPred(p,args) => 
-        if length args = 0 then add_string p else
-        add_string p >> paren (pr_list (ppterm ss (LR (NONE,NONE))) (add_string "," >> add_break (1,0)) args)
-      | vConn(co,[f1,f2]) => 
-            (case g of 
-                LR(lg,rg) => 
-                let 
-                    val g1 = LR (lg, SOME (fxty co))
-                    val g2 = LR (SOME (fxty co),rg)
-                in 
-                    if int_option_less (fxty co, lg) orelse int_option_leq (fxty co, rg) then 
-                        add_string "(" >> 
-                                   ppform ss (LR (NONE, SOME (fxty co))) f1 >>  add_break(1,0) >> add_string co >> add_break(1,0) >>
-                                   ppform ss (LR (SOME (fxty co), NONE)) f2 >> add_string ")"
-                    else 
-                        ppform ss g1 f1 >>  add_break(1,0) >> add_string co >> add_break(1,0) >>
-                               ppform ss g2 f2
-                end)
-      | vConn("~",[f]) => add_string "~" >> ppform ss g f
-      | vQ(q,n,s,b) =>
-        (case g of
-            LR(_,NONE) => 
-        block HOLPP.INCONSISTENT 2
-              (add_string q >> 
-                          (if eq_sort(s,mk_ob_sort) then ppterm false (LR (NONE,NONE)) (mk_var n s) else 
-add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (mk_var(n^"#") s) b))
-          | _ => paren 
-(block HOLPP.INCONSISTENT 2
-              (add_string q >> 
-                          (if eq_sort(s,mk_ob_sort) then ppterm false (LR (NONE,NONE)) (mk_var n s) else 
-add_string (n^ ": ") >> ppsort (LR (NONE,NONE)) s) >> add_string "." >> add_break (1,0) >> ppform ss (LR (NONE,NONE)) (subst_bound (mk_var (n^"#") s) b))))
-      | vfVar fv => add_break (1,0)  >> add_string fv >> add_break (1,0) 
-      | _ => raise ERR ("ill-formed formula",[],[],[f])
-*)
 
 
 fun pr_tlist g tl = 

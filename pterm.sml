@@ -353,8 +353,14 @@ and type_infer env t ty =
         let val env1 = type_infer env pt ps
             val (ps',env1') = (ps_of_pt pt env1)
             val env2 = type_infer env1' pt ps'
+              (*newly_added!!!TODO: test*)
         in unify_ps env2 ty ps
         end
+     (*   let val (ps',env1') = (ps_of_pt pt env1)
+            val env2 = unify_ps env1' ps ps'
+            val env3 = type_infer env2 pt ps'
+        in type_infer env3 pt ps
+end*)
       | pVar (name,ps) => 
         (case ps of pob => unify_ps env ty ps
                    |par(d,c) => 
@@ -977,6 +983,7 @@ and sort_from_ps env ps =
       | par(A,B) => mk_ar_sort (term_from_pt env A) (term_from_pt env B)
 
 
+
 fun form_from_pf env pf = 
     case pf of 
         pQuant(q,n,ps,pb) => 
@@ -1020,7 +1027,14 @@ fun read_ast_t t =
     in (term_from_pt env1 pt,pdict env1)
     end
 
+fun dest_peq pf = case pf of pPred("=",[pt1,pt2]) => (pt1,pt2)
+                           | _ => raise ERR ("not a peq",[],[],[])
 
+fun dest_p_o pt = case pt of pFun("o",s,[pt1,pt2]) => (pt1,pt2)
+                           | _ => raise simple_fail ("not a p_o")
+
+fun dest_par ps = case ps of par(pd,pc) =>(pd,pc) 
+                           | _ => raise simple_fail ("not a par")
 
 fun read_ast_f f = 
     let val (pf,env) = read_ast_pf f

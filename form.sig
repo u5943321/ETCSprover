@@ -11,6 +11,8 @@ datatype form_view =
 
 val view_form: form -> form_view
 
+(*exception ERR of string * sort list * term list * 'a list  *)
+
 exception ERR of string * sort list * term list * form list 
 val simple_fail: string -> exn
 val wrap_err: string -> exn -> exn

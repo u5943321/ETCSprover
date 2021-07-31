@@ -13,20 +13,12 @@ datatype term_view =
   | vFun of string * sort * term list
 
 val view_sort: sort -> sort_view
-val view_term: term -> term_view
+val view_term: term -> (*term*) term_view
 
 val eq_term: term * term -> bool
 val eq_sort: sort * sort -> bool
 
 exception TER of string * sort list * term list
-(*
-val enclose: string -> string
-val conc_list: string -> string list -> string
-val conc_list1: string -> string list -> string
-val string_of_sort: sort -> string
-val string_of_term: term -> string
-val string_of_tl: term list -> string
-*)
 
 val mk_ob_sort: sort
 val mk_ar_sort: term -> term -> sort
@@ -101,14 +93,20 @@ val pvariantt: (string * sort) set -> term -> term
 val fsymss: sort -> string set
 val fsymst: term -> string set
 
+(*
 datatype ForP = fsym | psym
+*)
+
 val fxty: string -> int
 val is_const: string -> bool
+
+(*
 val fpdict: (string, ForP) Binarymap.dict ref
 val fpdict0: (string, ForP) Binarymap.dict
+
 val insert_fsym: string -> unit
 val insert_psym: string -> unit
-
+*)
 
 type fsymd = (string, sort * (string * sort) list) Binarymap.dict
 val fsyms0: fsymd
@@ -141,5 +139,7 @@ val pvd: vd -> ((string * sort) * term) list
 
 val inst_sort: vd -> sort -> sort
 val inst_term: vd -> term -> term
+
+(*val PPterm: 'a -> 'b -> term -> PolyML.pretty*)
 end
 

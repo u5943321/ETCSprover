@@ -84,7 +84,18 @@ fun read_axiom thstr =
         mk_thm essps [] f
     end
 
+val idL = read_axiom "!B A f:B -> A. id (A) o f = f"
 
+val idR = read_axiom "!A B f: A -> B. f o id(A) = f"
+
+val o_assoc = read_axiom "!A.!B.!f: A -> B.!C.!g:B -> C.!D.!h: C -> D.(h o g) o f = h o g o f"
+
+val psyms0 = insert_psym "istml";
+
+val istml_def = define_pred (rapf "!one.istml(one) <=> !X.!t1x:X->one.t1x =to1(one,X)")
+
+
+(*
 val idL = read_axiom "!B A f:B -> A. id(A) o f = f"
 
 val idR = read_axiom "!A B f: A -> B. f o id(A) = f"
@@ -158,3 +169,4 @@ val ax_mcp = ax7
 val ax8 = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~ x1 = x2"
 
 val ax_delt = ax8
+*)

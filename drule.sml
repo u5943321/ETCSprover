@@ -341,6 +341,7 @@ fun forall_true (n,s) =
         val G = HOLset.union(HOLset.add(essps,(n,s)),fvs s)
         val aT2T = disch aT (trueI [aT])
         val T2aT = disch TRUE (allI (n,s) (add_cont G (assume TRUE)))
+(*(allI (n,s) ( (assume TRUE))) *)
     in dimpI aT2T T2aT
     end
 
@@ -979,5 +980,17 @@ fun strip_all_and_imp th =
     else if is_imp (concl th) then 
         strip_all_and_imp (undisch th)
     else th
+
+
+fun contrapos impth =
+      let
+         val (ant, conseq) = dest_imp (concl impth)
+         val notb = mk_neg conseq
+      in
+         disch notb
+           (dimp_mp_l2r 
+                  (disch ant (mp (assume notb |> eqF_intro |> dimpl2r) (mp impth (assume ant)))) (F_imp2 ant))
+      end
+      handle e => raise wrap_err "contrapos." e
 
 end

@@ -359,7 +359,7 @@ fun once_rw_tac thl =
     let 
         val conv = first_conv (mapfilter rewr_no_refl_conv (flatten (mapfilter rw_canon thl)))
         val fconv = first_fconv (mapfilter rewr_no_refl_fconv (flatten (mapfilter rw_canon thl)))
-    in fconv_tac (basic_fconv conv fconv) 
+    in fconv_tac (basic_once_fconv conv fconv) 
     end
 
 (*
@@ -919,7 +919,7 @@ A , B ,
 *)
 
 (*if no ril, then have k' = k' in asm list*)
-
+(*
 fun subst1_tac th (g as (ct,asl,w):goal) = 
     let val (ot,nt) = dest_eq (concl th)
         val (ct1,asl1,w1) = dest_thm (subst th (mk_thm ct asl w))
@@ -936,17 +936,12 @@ fun subst_tac eqth (g as (ct,asl,w):goal) =
     in ([(ct1,asl2,w1)], 
         fn [th0] => 
            subst (sym eqth) (HOLset.union(ct0,cont eqth),
-                            ril (mk_eq tv nt) (asml_U[asl0,ant eqth]),w0) tv th)
+                            ril (mk_eq tv nt) (rev $ asml_U[asl0,ant eqth]),w0) tv th0)
     end
-
-
-
-
-(*
-val assume_tac:thm_tactic = 
-    fn th => fn (G:(string * sort) set,fl:form list,f:form) =>
-    ([(HOLset.union(G,cont th),concl th:: fl,f)], sing (prove_hyp th))
 *)
+
+
+
 
 end
     
