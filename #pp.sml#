@@ -9,7 +9,6 @@ fun is_infix sym =
 
 
 (*also want this pp for HOLset... *)
- 
 fun paren pp = block HOLPP.INCONSISTENT 1 
                      (add_string "(" >> pp >> 
                                  add_string ")")
