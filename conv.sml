@@ -264,6 +264,11 @@ fun conj_fconv fc f =
         vConn("&",[p,q]) => conj_iff (fc p) (fc q)
       | _ => raise ERR ("conj_fconv.not a conjunction",[],[],[f])
 
+fun neg_fconv fc f = 
+    case view_form f of 
+        vConn("~",[f0]) => neg_iff (fc f0)
+      | _ => raise ERR ("neg_fconv.not a negation",[],[],[f])
+
 (*if needed, add try_conv on fc*)
 
 
@@ -308,10 +313,12 @@ fun sub_fconv c fc =
                  disj_fconv fc,
                  imp_fconv fc,
                  dimp_fconv fc,
+                 neg_fconv fc,
                  forall_fconv fc,
                  exists_fconv fc,
                  pred_fconv c])
 
+(*TODO: neg_fconv*)
 
 
 
@@ -346,7 +353,7 @@ val taut_imp_fconv =
 val taut_dimp_fconv = 
     first_fconv 
         (List.map rewr_fconv 
-                  [T_dimp_1,T_dimp_2,F_dimp_1,F_dimp_2])
+                  [T_dimp_1,T_dimp_2,F_dimp_1,F_dimp_2,eqT_intro (frefl (mk_fvar "f0"))])
 
 
 
@@ -402,7 +409,7 @@ fun once_depth_fconv c fc f =
 
 fun basic_once_fconv c fc = 
     once_depth_fconv (once_depth_conv c) 
-                     (fc orelsefc basic_taut_fconv orelsefc refl_fconv)
+                     (fc orelsefc (*basic_*)taut_fconv orelsefc refl_fconv)
 
 
 
@@ -443,7 +450,7 @@ fun double_neg_fconv f = rewr_fconv double_neg_elim f
 
 fun basic_fconv c fc =
     top_depth_fconv (top_depth_conv c) 
-                    (fc orelsefc basic_taut_fconv orelsefc refl_fconv orelsefc double_neg_fconv)
+                    (fc orelsefc (* basic_*)taut_fconv orelsefc refl_fconv orelsefc double_neg_fconv)
 
 val neg_neg_elim = conv_rule (once_depth_fconv no_conv double_neg_fconv)
 

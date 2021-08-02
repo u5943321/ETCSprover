@@ -224,7 +224,19 @@ fun exists_tac t (G,fl,f) =
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
-(*TODO: need to generate a var which is not in the body, so the var in the body with name n do not get covered by this*)
+fun exists_tac' t (G,fl,f) = 
+    case view_form f of 
+        vQ("?",n,s,b) =>
+        if eq_sort(sort_of t,s) then 
+            let val nv = pvariantt (fvf b) (var(n,s))
+            in
+            ([(G,fl,subst_bound t b)], 
+             sing (existsI (dest_var nv) t (subst_bound nv b)))
+            end
+        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
+      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
+
+(*TODO: need to generate a var which is not in the body, so the var in the body with name n do not get substted*)
 
 fun spec_all_tac (G,fl,f) = 
     case view_form f of

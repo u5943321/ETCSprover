@@ -129,8 +129,8 @@ fun neg_iff th =
         val a2ona1 = undisch (dimpr2l th)
         val neg1 = mk_neg a1
         val neg2 = mk_neg a2
-        val neg1a22F = negE (assume neg1) a2ona1
-        val neg2a12F = negE (assume neg2) a1ona2
+        val neg1a22F = negE a2ona1 (assume neg1)
+        val neg2a12F = negE a1ona2 (assume neg2)
         val neg12neg2 = disch neg1 (negI a2 neg1a22F)
         val neg22neg1 = disch neg2 (negI a1 neg2a12F)
     in 

@@ -38,6 +38,7 @@ val conj_iff: thm -> thm -> thm
 val disj_iff: thm -> thm -> thm
 val imp_iff: thm -> thm -> thm
 val dimp_iff: thm -> thm -> thm
+val neg_iff: thm -> thm
 
 val forall_iff: string * sort -> thm -> thm
 val exists_iff: string * sort -> thm -> thm 
