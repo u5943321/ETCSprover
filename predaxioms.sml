@@ -722,7 +722,61 @@ e0
  )
 (rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q. ispb(f,g,p,q)")
 
- 
+(*∀X Y Z f g. g∶ Y → Z ∧  f∶ X → Z  ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
+            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
+             ∃a. a∶ A → P ∧ p o a = u ∧ q o a = v)*)
+
+val pb_fac_exists = proved_th $
+e0
+(repeat strip_tac >> 
+ x_choosel_then ["P","p","q"] assume_tac (pb_exists |> rewr_rule [ispb_def_alt] |> strip_all_and_imp) >> 
+ exists_tac (rastt "P") >> exists_tac (rastt "p:P->X") >> exists_tac (rastt "q:P->Y") >>
+ pop_assum strip_assume_tac >> arw_tac[] >> repeat strip_tac >> first_x_assum drule >>
+ arw_tac[] >> pop_assum (x_choosel_then ["a"] assume_tac) >> exists_tac (rastt "a:A->P")>>
+ arw_tac[])
+(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q:P->Y. f o p = g o q & !A u:A->X v:A->Y. f o u = g o v ==> ?a:A->P. p o a = u & q o a = v")
+
+
+
+
+val ispb_def_alt' = proved_th $
+e0
+(repeat strip_tac >> rw_tac[ispb_def_alt] >> dimp_tac >> strip_tac >> arw_tac[] >>
+ repeat strip_tac >> first_x_assum drule (* 3 *)
+ >-- (pop_assum (x_choosel_then ["a"] assume_tac) >> exists_tac (rastt "a:A->P") >>
+     arw_tac[])
+ >-- (pop_assum (x_choosel_then ["a"] strip_assume_tac) >>
+      first_x_assum match_mp_tac >> arw_tac[]) >> 
+ pop_assum strip_assume_tac >> exists_tac (rastt "a:A->P") >>
+ arw_tac[])
+(rapg "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y. ispb(f, g, p, q) <=> f o p = g o q & !A u : A -> X v : A -> Y. f o u = g o v ==> (?a : A -> P. p o a = u & q o a = v) & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2")
+
+(*!P p q f g. is_pb P p q f g /\ is_mono g ==> is_mono p*)
+val pb_equality = ispb_def_alt' |> iffLR |> strip_all_and_imp
+                                |> conjE1 |> disch_all|> gen_all
+
+val pb_fac_unique = 
+    ispb_def_alt' |> iffLR |> strip_all_and_imp |> conjE2 
+                  |> strip_all_and_imp |> conjE2
+                  |> disch (rapf "(f:X->Z) o (u:A->X) = (g:Y->Z) o v")
+                  |> gen_all |> disch_all |> gen_all
+
+
+val pb_mono_mono = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac ismono_applied >> repeat strip_tac >>
+ by_tac (rapf "(q:P->Y) o (g':X'->P) = q o h")
+ >-- (suffices_tac (rapf "(g:Y->Z) o (q:P->Y) o (g':X'->P) = g o q o h")
+      >-- (drule ismono_property >> strip_tac >> first_x_assum drule >>
+          arw_tac[]) >>
+      drule (GSYM pb_equality) >> arw_tac[GSYM o_assoc] >> arw_tac[o_assoc]) >>
+ drule pb_fac_unique >> 
+ suffices_tac (rapf "(f:X->Z) o (p:P->X) o (h:X'->P) = (g:Y->Z) o q o h")
+ >-- (strip_tac >> first_x_assum drule >> first_x_assum match_mp_tac >> arw_tac[]) >>
+ drule pb_equality >> arw_tac[GSYM o_assoc]
+ (*drule ismono_property >> *) )
+(rapg "ispb(f:X->Z,g:Y->Z,p:P->X,q:P->Y) ==> ismono(g) ==> ismono(p)")
+
 (rapg "!X Z f:X->Z Y g:Y->Z. ?P p:P->X q:P->Y. f o p = g o q & ")
 
 rapf "!p1AN:AN->A p2AN:AN->N. "
