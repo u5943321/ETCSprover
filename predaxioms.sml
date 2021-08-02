@@ -1269,20 +1269,37 @@ fun exists_tac' t (G,fl,f) =
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
 (*AQ: example of name clash issue again*)
+
+(*AQ: if not use once rw, but use rw, then will loop*)
+
 val tp_elements_ev = proved_th $
 e0
 (repeat strip_tac >>
  by_tac (rapf "ispr(p1:efs->X,p2:efs->X2Y)")
- assume_tac 
  >-- (drule exp_ispr >> arw_tac[]) >>
  by_tac (rapf "pa(p1:efs->X, p2:efs->X2Y, x:1->X, tp(p1, p2, ev:efs->Y, pX:X1->X, pone:X1->1, f o pX)) = pa(p1,p2,pX,tp(p1, p2, ev, pX, pone, f o pX) o pone) o pa(pX,pone,x,id(1))")
  >-- (match_mp_tac (irule_canon to_p_eq) >> exists_tac (rastt "X") >>
       exists_tac (rastt "X2Y") >> exists_tac' (rastt "p1:efs->X") >> 
-      exists_tac' (rastt "p2:efs->X2Y") >> arw_tac[] >> repeat strip_tac (* 3 *)
-      >-- (drule p2_of_pa >> arw_tac[GSYM o_assoc] >> rw_tac[o_assoc]))
-(* >> drule ev_of_tp >> first_x_assum drule >>
- first_x_assum (specl_then [rastt "(f:X->Y) o pX:X1->X"] assume_tac)*))
+      exists_tac' (rastt "p2:efs->X2Y") >> arw_tac[] >> repeat strip_tac (* 2 *) 
+      >-- (drule p2_of_pa >> arw_tac[GSYM o_assoc] >> rw_tac[o_assoc] >>
+           by_tac (rapf "pone o pa(pX:X1->X, pone:X1->1, x:1->X, id(1)) = id(1)")
+           >-- (once_rw_tac[one_to_one_id] >> rw_tac[]) >>
+           arw_tac[idR])
+      >-- (drule p1_of_pa >> arw_tac[GSYM o_assoc] >> 
+           pick_x_assum (rapf "ispr(pX:X1->X, pone:X1->1)") assume_tac >>
+           drule p1_of_pa >> arw_tac[])) >>
+ by_tac (rapf "(f:X->Y) o pX = ev o pa(p1:efs->X,p2:efs->X2Y,pX:X1->X, tp(p1, p2, ev:efs->Y, pX, pone:X1->1, f o pX) o pone)")
+ >-- (drule ev_of_tp >> first_x_assum (specl_then [rastt "X1"] assume_tac) >>
+      first_x_assum drule >> arw_tac[]) >>
+ pop_assum (assume_tac o GSYM) >> once_arw_tac[] >>
+ rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[o_assoc] >> 
+ pick_x_assum (rapf "ispr(p1:efs->X,p2:efs->X2Y)") (K all_tac) >>
+ drule p1_of_pa >> once_arw_tac[] >> rw_tac[]
+)
 (rapg "!X x:1->X Y f:X->Y X2Y efs ev p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==> ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x")
+
+(*Maybe TODO or AQ: first_x_assum (specl_then [rastt "X1"] assume_tac) >>
+      first_x_assum drule need, otherwise always look for the p1*)
 
 (*AQ: example:
 (rapg "!X x:1->X Y f:X->Y ev X2Y efs p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==> ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x")
