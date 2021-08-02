@@ -136,7 +136,7 @@ val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.x o z = x0 & x o s = t o 
 (*to be edited, switch the ordrr of s0 and z0*)
 val ax3 = constN_def
 
-val ax_wp = read_axiom "!A B f: A -> B g:A ->B.~(f = g) ==> ?a: 1 -> A. ~(f o a = g o a)";
+val ax_wp = read_axiom "!A B f: A -> B g:A ->B.(~(f = g)) ==> ?a: 1 -> A. ~(f o a = g o a)";
 
 val ax4 = ax_wp
 
@@ -776,6 +776,317 @@ e0
  drule pb_equality >> arw_tac[GSYM o_assoc]
  (*drule ismono_property >> *) )
 (rapg "ispb(f:X->Z,g:Y->Z,p:P->X,q:P->Y) ==> ismono(g) ==> ismono(p)")
+
+(*∀A B f. f∶ A → B ∧ ¬(A ≅ zero) ⇒ ∃g. g∶B → A ∧ f ∘ g ∘ f = f*)
+
+val non_zero_pinv = proved_th $
+e0
+(strip_tac >> drule ax6 >> pop_assum strip_assume_tac >> strip_tac >>
+ match_mp_tac ax5 >> exists_tac one >> exists_tac (rastt "x:1->A") >> 
+ rw_tac[const1_def])
+(rapg "(~is0(A)) ==>!B f:A->B.?g:B->A. f o g o f = f")
+
+(*∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_epi f ∧ f ∘ g ∘ f = f ⇒ f o g = id B*)
+
+val epi_pinv_pre_inv = proved_th $
+e0
+(repeat strip_tac >> drule isepi_property >> first_x_assum match_mp_tac >> 
+arw_tac[o_assoc,idL])
+(rapg "!A B f:A->B. isepi(f) ==> !g:B->A. f o g o f = f ==> f o g = id(B)")
+
+
+(*∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_mono f ∧ f ∘ g ∘ f = f ⇒
+          g o f = id A*)
+
+val mono_pinv_post_inv = proved_th $
+e0
+(repeat strip_tac >> drule ismono_property >> first_x_assum match_mp_tac >> 
+arw_tac[o_assoc,idR])
+(rapg "!A B f:A->B. ismono(f) ==> !g:B->A. f o g o f = f ==> g o f = id(A)")
+
+(*∀A B f. f∶ A → B ∧ is_epi f ∧ ¬(A ≅ zero) ⇒ ∃g. g∶ B → A ∧ f o g = id B*)
+
+val epi_non_zero_pre_inv = proved_th $
+e0 
+(repeat strip_tac >> drule non_zero_pinv >> 
+ first_x_assum (specl_then (List.map rastt ["B","f:A->B"]) strip_assume_tac) >>
+ drule epi_pinv_pre_inv >> first_x_assum drule >> exists_tac (rastt "g:B->A") >>
+ arw_tac[])
+(rapg "!A B f:A->B. isepi(f) ==> (~is0(A)) ==> ?g:B->A. f o g = id(B)")
+
+(*∀A B f. f∶ A → B ∧ is_mono f ∧ ¬(A ≅ zero) ⇒ ∃g. g∶ B → A ∧ g o f = id A*)
+
+val mono_non_zero_post_inv = proved_th $
+e0 
+(repeat strip_tac >> drule non_zero_pinv >> 
+ first_x_assum (specl_then (List.map rastt ["B","f:A->B"]) strip_assume_tac) >>
+ drule mono_pinv_post_inv >> first_x_assum drule >> exists_tac (rastt "g:B->A") >>
+ arw_tac[])
+(rapg "!A B f:A->B. ismono(f) ==> (~is0(A)) ==> ?g:B->A. g o f = id(A)")
+
+(*∀A B C f g. is_mono f ∧ is_mono g ∧ f∶ A → B ∧ g∶ B → C ⇒ is_mono (g o f)*)
+
+val o_mono_mono = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac ismono_applied >> repeat strip_tac >> 
+ drule ismono_property >> full_simp_tac[o_assoc] >> first_x_assum drule >> 
+ pick_x_assum (rapf "ismono(g:B->C)") (K all_tac) >> 
+ drule ismono_property >> first_x_assum drule >> arw_tac[])
+(rapg "!A B f:A->B. ismono(f) ==> !C g:B->C. ismono(g) ==> ismono(g o f)")
+
+(*∀f A B. f∶ A → B ⇒
+        (is_iso f ⇔
+         ∃f'. f'∶ B → A ∧ f' o f = id A ∧ f o f' = id B)*)
+val _ = new_pred "isiso" [("f",mk_ar_sort (mk_ob "A") (mk_ob "B"))]
+
+val isiso_def = read_axiom "!A B f:A->B. isiso(f) <=> ?f':B->A. f' o f = id(A) & f o f' = id(B)"
+
+(*!A B X f i. is_iso i /\ is_mono f /\ f∶ A → B /\ i∶ X → A ==> (is_mono (f o i))*)
+
+val iso_is_mono = proved_th $ 
+e0
+(rw_tac[isiso_def,ismono_def] >> repeat strip_tac >> 
+ suffices_tac (rapf "(f':B->A) o (f:A->B) o (g:X->A) = f' o f o h")
+ >-- (arw_tac[GSYM o_assoc,idL] >> strip_tac >> arw_tac[]) >>
+ arw_tac[])
+(rapg "isiso(f) ==> ismono(f)")
+
+val mono_o_iso_mono = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac (irule_canon o_mono_mono) >> drule iso_is_mono >>
+ arw_tac[])
+(rapg "!X A i:X->A.isiso(i) ==> !B f:A->B. ismono(f) ==> ismono(f o i)")
+
+(*∀A B C f m. f∶ A → B ∧ m∶ B → C ∧ is_mono (m o f) ⇒ is_mono f*)
+
+val o_mono_imp_mono = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac ismono_applied >> repeat strip_tac >> 
+ drule ismono_property >> first_x_assum match_mp_tac >> arw_tac[o_assoc])
+(rapg "!A B f:A->B C m:B->C. ismono(m o f) ==> ismono(f)")
+
+(*∀A B C f e. f∶ A → B ∧ e∶ C → A ∧ is_epi (f o e) ⇒ is_epi f*)
+
+val o_epi_imp_epi = 
+proved_th $
+e0
+(repeat strip_tac >> match_mp_tac isepi_applied >> repeat strip_tac >> 
+ drule isepi_property >> first_x_assum match_mp_tac >> arw_tac[GSYM o_assoc])
+(rapg "!A B f:A->B C e:C->A. isepi(f o e) ==> isepi(f)")
+
+(*∀A B f g. f∶ A → B ∧ g∶ A → B ∧ (∀a. a∶ one → A ⇒ f o a = g o a) ⇒ f = g*)
+
+val fun_ext = proved_th $
+e0
+(repeat strip_tac >> ccontra_tac >> drule ax4 >> pop_assum strip_assume_tac >> 
+ first_x_assum (specl_then [rastt "a:1->A"] assume_tac) >> full_simp_tac[])
+(rapg "!A B f:A->B g. (!a:1->A. f o a = g o a) ==> f = g")
+
+(*∀A B f. f∶ A → B ∧ (∀b. b∶ one → B ⇒ ∃b0. b0∶ one → A ∧ f o b0 = b) ⇒ is_epi f*)
+
+
+val surj_is_epi = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac isepi_applied >> repeat strip_tac >> 
+ match_mp_tac fun_ext >> strip_tac >> 
+ first_x_assum (specl_then [rastt "a:1->B"] assume_tac) >> 
+ pop_assum (strip_assume_tac o GSYM) >> arw_tac[GSYM o_assoc])
+(rapg "!A B f:A->B. (!b:1->B. ?b0:1->A. f o b0 = b) ==> isepi(f)")
+
+(*∀A B. A ≅ B ⇔ ∃f. f∶ A → B ∧ is_iso f*)
+
+val _ = new_pred "areiso" [("A",mk_ob_sort),("B",mk_ob_sort)]
+
+val areiso_def = read_axiom "!A B. areiso(A,B) <=> ?f:A->B g:B->A. f o g = id(B) & g o f = id(A)"
+
+val areiso_isiso = proved_th $
+e0
+(rw_tac[areiso_def,isiso_def] >> dimp_tac >> strip_tac >>
+ pop_assum strip_assume_tac (*2  *)
+ >-- (exists_tac (rastt "f:A->B") >> exists_tac (rastt "g:B->A") >> arw_tac[]) >>
+ exists_tac (rastt "f:A->B") >> exists_tac (rastt "f':B->A") >> arw_tac[])
+(rapg "areiso(A,B) <=> ?f:A->B. isiso(f)")
+
+(*∀A B. A ≅ B ⇔ ∃f. f∶ B → A ∧ is_iso f*)
+
+val areiso_isiso' = proved_th $
+e0
+(rw_tac[areiso_def,isiso_def] >> dimp_tac >> strip_tac >>
+ pop_assum strip_assume_tac (*2  *)
+ >-- (exists_tac (rastt "g:B->A") >> exists_tac (rastt "f:A->B") >> arw_tac[]) >>
+ exists_tac (rastt "f':A->B") >> exists_tac (rastt "f:B->A") >> arw_tac[])
+(rapg "areiso(A,B) <=> ?f:B->A. isiso(f)")
+
+val iso_is_epi = proved_th $ 
+e0
+(rw_tac[isiso_def,isepi_def] >> repeat strip_tac >> 
+ suffices_tac (rapf "(f'':B->X) o (f:A->B) o (f':B->A) = g o f o f'")
+ >-- arw_tac[idR] >>
+ arw_tac[GSYM o_assoc])
+(rapg "isiso(f) ==> isepi(f)")
+
+
+(*∀A B X f g i. is_iso i ∧ f∶ A→ B ∧ g∶ A → B ∧ i∶ X → A ∧ f o i = g o i ⇒ f = g*)
+
+val o_iso_eq_eq = proved_th $
+e0
+(rw_tac[isiso_def] >> repeat strip_tac >> 
+ suffices_tac (rapf "(f:A->B) o i o (f':A->X) = g o i o f'")
+ >-- arw_tac[idR] >> arw_tac[GSYM o_assoc])
+(rapg "!X A i:X->A. isiso(i) ==> !B f:A->B g. f o i = g o i ==> f = g")
+
+(*TODO: !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables, is that bad?*)
+
+(*∀A B f g. A≅ zero ∧ f∶ A → B ∧ g∶ A → B ⇒ f = g*)
+
+val is0_def = read_axiom "!zero. is0(zero) <=> !X. ?f0x:zero ->X.!f0x':zero->X. f0x'= f0x"
+
+
+val iso_0_is0 = proved_th $
+e0
+(rw_tac[areiso_def,is0_def] >> strip_tac >> strip_tac >> 
+ strip_assume_tac (const0_def |> rewr_rule [is0_def] |> allE (rastt "X")) >>
+ exists_tac (rastt "(f0x:0->X) o (f:A->0)") >> strip_tac >> 
+ suffices_tac (rapf "f0x' o g o f = (f0x:0->X) o (f:A->0) o (g:0->A) o (f:A->0)")
+ >-- arw_tac[idR] >>
+ rw_tac[GSYM o_assoc] >> arw_tac[])
+(rapg "areiso(A,0) ==> is0(A)")
+
+
+(*
+A , B ,   
+   (f : A -> B), (g : A -> B)
+   1.areiso(A, 0)
+   2.is0(A)
+   3.!X (f0x : A -> X#). f0x# = from0(A, X#)
+   ----------------------------------------------------------------------
+   f = g
+arw_tac[]
+loops
+*)
+
+val from_iso_zero_eq = proved_th $
+e0
+(repeat strip_tac >> drule iso_0_is0 >> drule (is0_def|> iffLR) >> 
+first_x_assum (specl_then [rastt "B"] strip_assume_tac) >>
+arw_tac[])
+(rapg "!A. areiso(A,0) ==> !B f:A->B g. f = g")
+
+val iso_zero_is_zero = proved_th $
+e0
+(rw_tac[areiso_def,is0_def] >> strip_tac >> dimp_tac >> repeat strip_tac 
+ >-- (assume_tac const0_def >> drule (iffLR is0_def) >> 
+      first_x_assum (specl_then [rastt "X"] strip_assume_tac) >>
+      exists_tac (rastt "(f0x:0->X) o f:A->0") >> strip_tac >>
+      suffices_tac (rapf "f0x' o g o f = (f0x:0->X) o (f:A->0) o (g:0->A) o f") 
+      >-- arw_tac[idR] >> arw_tac[GSYM o_assoc]) >>
+ first_assum (specl_then [zero] strip_assume_tac) >>
+ exists_tac (rastt "f0x:A->0") >> assume_tac const0_def >> drule (iffLR is0_def) >>
+ first_assum (specl_then [rastt "A"] strip_assume_tac) >> 
+ exists_tac (rastt "f0x':0->A") >> 
+ first_assum (specl_then [zero] strip_assume_tac) >> once_arw_tac[] >>
+ last_assum (specl_then [rastt "A"] strip_assume_tac) >>  once_arw_tac[] >>
+ rw_tac[])
+(rapg "!A.areiso(A,0) <=> is0(A)")
+
+(*∀f. f∶ one → one ⇒ f = id one*)
+val is1_def = read_axiom "!one. is1(one) <=> !X. ?t1x:X ->one.!t1x':X->one. t1x' = t1x"
+
+
+val one_to_one_id = proved_th $
+e0
+(strip_tac >> assume_tac const1_def >> drule (iffLR is1_def) >>
+ first_x_assum (specl_then [one] strip_assume_tac) >>
+ arw_tac[])
+(rapg "!f:1->1.f = id(1)")
+
+(*∀f A B. is_epi f ∧ f∶ A → B ∧ ¬(B≅ zero) ⇒ ¬(A ≅ zero)*)
+
+
+(*TODO:rw with one_to_one_id from            (x : 1 -> B)
+   1.isepi(f)
+   2.~is0(B)
+   3.is0(A)
+   4.iscopr(i1, i2)
+   5.is1(1)
+   6.!(t1x' : B -> 1). t1x'# = t1x
+   7.T
+   8.i1 o t1x = i2 o t1x
+   ----------------------------------------------------------------------
+   t1x o x = id(1)
+   : gstk
+causes loop
+
+*)
+
+val no_epi_from_zero = proved_th $
+e0
+(repeat strip_tac >> ccontra_tac >> 
+   specl_then [one,one] (x_choose_then "oneone" strip_assume_tac) copr_ex >> 
+ suffices_tac (rapf "i1:1->oneone = i2") 
+ >-- (drule i1_ne_i2 >> strip_tac) >> 
+ assume_tac const1_def >> drule (iffLR is1_def) >> pop_assum strip_assume_tac >>
+ first_x_assum (specl_then [rastt "B"] strip_assume_tac) >> 
+ suffices_tac (rapf "i1 o t1x = (i2:1->oneone) o t1x:B->1")
+ >-- (drule ax6 >> pop_assum strip_assume_tac >>
+      strip_tac >> 
+      by_tac (rapf "(t1x:B->1) o x = id(1)") 
+      >-- accept_tac (one_to_one_id|> allE (rastt "(t1x:B->1) o (x:1->B)")) >>
+      suffices_tac (rapf "i1 o t1x o (x:1->B) = (i2:1->oneone) o t1x:B->1 o x") 
+      >-- arw_tac[idR] >>
+      arw_tac[GSYM o_assoc]) >>
+ drule isepi_property >> first_x_assum match_mp_tac >> 
+ drule (iffLR is0_def) >> first_x_assum (specl_then [rastt "oneone"] strip_assume_tac) >>
+ arw_tac[]
+ )
+(rapg "!A B f:A->B. isepi(f) ==> (~is0(B)) ==> ~is0(A)")
+
+(*∀A B f. is_epi f /\ f∶ A → B /\ ¬(B ≅ zero)⇒ ∃g. g∶ B → A ∧ f o g = id B*)
+
+
+val epi_pre_inv = proved_th $
+e0
+(repeat strip_tac >> drule no_epi_from_zero >> first_x_assum drule >> 
+ drule epi_non_zero_pre_inv >> first_x_assum drule >> arw_tac[])
+(rapg "!A B f:A->B. isepi(f) ==> (~is0(B)) ==> ?g:B->A. f o g = id(B)")
+
+(*∀f. ¬(f∶ one → zero)*)
+
+(* (f : 1 -> 0), (x1 : 1 -> X), (x2 : 1 -> X)
+   1.T
+   2.~x1 = x2
+   ----------------------------------------------------------------------
+   ~x1 = x2 
+TODO: arw do not use eqn as predicates, so arw does nothing onthis
+*)
+
+val from0_unique = proved_th $
+e0
+(repeat strip_tac >> drule (iffLR is0_def) >> 
+first_x_assum (specl_then [rastt "X"] strip_assume_tac) >> 
+arw_tac[])
+(rapg "!zero.is0(zero) ==> !X f:zero ->X g. f = g")
+
+val from0_exists = proved_th $
+e0
+(repeat strip_tac >> exists_tac (rastt "from0(zero,X)") >> rw_tac[])
+(rapg "!zero.is0(zero) ==> !X.?f:zero->X.T")
+
+val zero_no_mem = proved_th $
+e0
+(ccontra_tac >> pop_assum strip_assume_tac >> 
+ strip_assume_tac ax8 >>
+ suffices_tac (rapf "x1:1->X = x2") >-- (arw_tac[] >> first_x_assum accept_tac) >>
+ assume_tac const0_def >> drule from0_exists >> 
+ first_assum (specl_then [one] strip_assume_tac) >> 
+ suffices_tac (rapf "x1 o f':0->1 o f:1->0 = (x2:1->X) o f' o f") 
+ >-- (assume_tac (one_to_one_id |> allE (rastt "f':0->1 o f:1->0")) >>
+      arw_tac[idR]) >>
+ suffices_tac (rapf "x1 o f':0->1 = (x2:1->X) o f'")
+ >-- (strip_tac >> arw_tac[] >> arw_tac[GSYM o_assoc]) >>
+ match_mp_tac from0_unique >> rw_tac[const0_def])
+(rapg "~?f:1->0.T")
+
 
 (rapg "!X Z f:X->Z Y g:Y->Z. ?P p:P->X q:P->Y. f o p = g o q & ")
 
