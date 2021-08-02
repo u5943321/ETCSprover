@@ -100,7 +100,7 @@ val pr_def = read_axiom "!A.!B.!AB.!p1:AB->A.!p2:AB->B.ispr(p1,p2)<=>!X.!f:X->A.
 
 val pa_def = read_axiom "!A.!B.!AB.!p1:AB->A.!p2:AB->B.ispr(p1,p2)==>!X.!f:X->A.!g:X->B.!fg:X->AB.p1 o fg = f & p2 o fg = g <=> fg = pa(p1,p2,f,g)";
 
-val pr_ex = read_axiom "!A.!B.?AB.?p1:AB->A.?p2:AB->A.ispr(p1,p2)";
+val pr_ex = read_axiom "!A.!B.?AB.?p1:AB->A.?p2:AB->B.ispr(p1,p2)";
 
 val ax1_3 = pr_ex 
 
@@ -636,7 +636,7 @@ e0
 (*∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_epi (coeqa f g)*)
 
 
-val eqa_is_mono = proved_th $
+val coeqa_is_epi = proved_th $
 e0 
 (rw_tac[isepi_def] >> repeat strip_tac >> 
  suffices_tac  (rapf "f:cE0->X = coeqind(ce0:B0->cE0,f0:A0->B0,g0, g o ce0) & g:cE0->X = coeqind(ce0:B0->cE0,f0:A0->B0,g0, g o ce0)") 
@@ -646,6 +646,84 @@ e0
  >> (match_mp_tac (irule_canon is_coeqind) >> arw_tac[o_assoc]) 
  )
 (rapg "iscoeq(ce0:B0->cE0,f0:A0->B0,g0) ==> isepi(ce0)")
+
+
+(*∀X Y Z f g. f∶ X → Z ∧ g∶ Y → Z ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
+            (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
+             ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)*)
+
+
+(*TODO:,again: c = pa(pX, pY, u, v) <=> c = pa(pX, pY, u, v)*)
+
+val eqind_def' = eqind_def |> strip_all_and_imp |> conjE2 |> disch_all |> gen_all
+
+
+(* TODO: drule bug:
+first_x_assum (specl_then (List.map rastt ["A","pa(pX:XY->X, pY:XY->Y, u:A->X, v)"]) assume_tac) >> first_x_assum drule
+
+*)
+
+
+val ispb_def_alt = proved_th $
+e0
+(repeat strip_tac >> rw_tac[ispb_def] >> dimp_tac >> strip_tac >> arw_tac[] >>
+ repeat strip_tac >> first_x_assum drule >> 
+ first_x_assum (x_choose_then "a" assume_tac) >> exists_tac (rastt "a:A->P") >>
+ repeat strip_tac (* 4 *)
+ >-- (pop_assum (assume_tac o (fn th => th |> allE (rastt "a:A->P") 
+                                          |> (C dimp_mp_r2l) (refl (rastt "a:A->P")))) >>
+      arw_tac[])
+ >-- (pop_assum (assume_tac o (fn th => th |> allE (rastt "a:A->P") 
+                                          |> (C dimp_mp_r2l) (refl (rastt "a:A->P")))) >>
+      arw_tac[])
+ >-- (suffices_tac (rapf "a1 = a & a2 = a:A->P") 
+      >-- (strip_tac >> arw_tac[]) >> 
+      strip_tac >> first_x_assum (match_mp_tac o iffLR) >> arw_tac[]) >>
+ dimp_tac >> strip_tac >> arw_tac[] >> pop_assum_list (map_every strip_assume_tac) >>
+ first_x_assum match_mp_tac >> arw_tac[])
+(rapg "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y. ispb(f, g, p, q) <=> f o p = g o q & !A u : A -> X v : A -> Y. f o u = g o v ==> ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2")
+
+val long_induced_map = rastt "eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y))"
+
+(*TODO: match_mp_bug  e o a1 = e o a2 ==> a1 = a2 ismono_property h is double bind to a1 and a2*)
+
+val pb_exists = proved_th $ 
+e0
+(rw_tac[ispb_def_alt] >> repeat strip_tac  >> 
+ (specl_then (List.map rastt ["X","Y"])
+             (x_choosel_then ["XY","pX","pY"] assume_tac)) pr_ex >>
+ (specl_then (List.map rastt ["XY","Z","(f:X->Z)o (pX:XY->X)","(g:Y->Z)o (pY:XY->Y)"])
+             (x_choosel_then ["E","e"] assume_tac)) eq_ex >>
+ exists_tac (rastt "E") >>  exists_tac (rastt "(pX:XY->X) o (e:E->XY)") >>
+ exists_tac (rastt "(pY:XY->Y) o (e:E->XY)") >>
+ by_tac (rapf "(f:X->Z) o pX o e = (g:Y->Z) o pY o (e:E->XY)")
+ >-- (drule eq_equality >> arw_tac[GSYM o_assoc]) >>
+ arw_tac[] >> repeat strip_tac >> rw_tac[o_assoc] >> 
+ by_tac (rapf "!c:A->XY. (pX:XY->X) o c = u:A->X & (pY:XY->Y) o c = v:A->Y <=> c = pa(pX,pY,u,v)") 
+ >-- (drule pa_def >> strip_tac >> arw_tac[] >> dimp_tac >> rw_tac[]) >>
+ drule eqind_def' >> 
+ by_tac (rapf "((f:X->Z) o pX) o pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y) = (g o pY) o pa(pX, pY, u, v)")
+ >-- (rw_tac[o_assoc] >> drule p12_of_pa >> arw_tac[]) >>
+ first_x_assum (specl_then (List.map rastt ["A","pa(pX:XY->X, pY:XY->Y, u:A->X, v)"]) assume_tac) >> first_x_assum drule >> 
+ exists_tac long_induced_map >> 
+ by_tac (rapf "pX o e o eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y)) = u & pY o e o eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y)) = v")
+ >-- (pop_assum (assume_tac o (fn th => th |> allE long_induced_map |> (C dimp_mp_r2l) (refl long_induced_map))) >> arw_tac[]) >> repeat strip_tac (* 3 *)
+ >-- arw_tac[]
+ >-- arw_tac[] >>
+ suffices_tac (rapf "e o a1 = (e:E->XY) o (a2:A->E)") 
+ >-- (suffices_tac (rapf "ismono(e:E->XY)") 
+      >-- (strip_tac >> drule ismono_property >> 
+           strip_tac >> first_x_assum drule >> arw_tac[]) >>
+      drule eqa_is_mono >> arw_tac[]) >>
+ suffices_tac (rapf "(e:E->XY) o a1 = pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y) & e o a2 = pa(pX, pY, u, v)")
+ >-- (strip_tac >> arw_tac[]) >>
+ strip_tac (* 2 *)
+ >> (first_x_assum (match_mp_tac o iffLR) >> arw_tac[])
+ )
+(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q. ispb(f,g,p,q)")
+
+ 
+(rapg "!X Z f:X->Z Y g:Y->Z. ?P p:P->X q:P->Y. f o p = g o q & ")
 
 rapf "!p1AN:AN->A p2AN:AN->N. "
 ∀g h A B. g∶ A → B ∧ h∶ (po (po A N) B) → B ⇒
