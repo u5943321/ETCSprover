@@ -72,6 +72,30 @@ val assume_tac:thm_tactic =
 
 val hyp = ant
 
+
+
+fun drule0 optfn  th (G,fl:form list,f) = 
+    let 
+        val c = concl th
+        val (b,vs) = strip_forall c
+        val (ant,con) = dest_imp b
+        fun mfn _ asm = 
+            let 
+                val menv = match_form (fvfl (hyp th)) ant asm mempty
+                val ith = inst_thm menv (spec_all th)
+            in
+                SOME (mp ith (assume asm))
+            end
+            handle _ => NONE 
+    in
+        case (optfn mfn fl) of 
+            NONE => raise simple_fail "drule.no match"
+          | SOME th => assume_tac th (G,fl,f)
+    end
+
+val drule = drule0 first_opt
+(*val rev_drule = drule0 last_opt TODO:*)
+(*
 fun drule th (G,fl:form list,f) = 
     let 
         val c = concl th
@@ -90,6 +114,8 @@ fun drule th (G,fl:form list,f) =
             NONE => raise simple_fail "drule.no match"
           | SOME th => assume_tac th (G,fl,f)
     end
+*)
+
 
 (*
 require specially that the name of free variable substituted is precisely the bounded variable name.
@@ -110,10 +136,12 @@ fun efn (n,s) (f,th) =
 
 val var = uncurry mk_var
 
+(*val hyp = #2 o dest_thm*)
+
 fun match_mp_tac th (ct:cont,asl:form list,w) = 
     let
-        val (imp,gvs) = strip_forall (concl th)
-        val (ant,conseq) = dest_imp imp
+        val (impl,gvs) = strip_forall (concl th)
+        val (ant,conseq) = dest_imp impl
         val (con,cvs) = strip_forall (conseq)
         val th1 = (C specl) (undisch ((C specl) th (List.map var gvs))) (List.map var cvs) 
         val (vs,evs) = partition (fn v => HOLset.member(fvf con,v)) gvs
@@ -223,6 +251,24 @@ fun exists_tac t (G,fl,f) =
              sing (existsI (n,s) t (subst_bound (var(n,s)) b)))
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
+
+
+(*
+?a. P(a#,b,c) <=> Q(a)
+
+P(a0,b,c) <=> Q(a0)
+
+
+
+P(a0,b,c) <=> Q(a)
+
+view_form (rapf "?x:X->Y.ismono(x)");
+val it = vQ ("?", "x", X -> Y, Pred ("ismono", [B(0)])): form_view
+ >
+
+*)
+
+
 
 fun exists_tac' t (G,fl,f) = 
     case view_form f of 
@@ -376,6 +422,15 @@ fun once_rw_tac thl =
     in fconv_tac (basic_once_fconv conv fconv) 
     end
 
+(*TODO: !X (f : X# -> A)  (g : X# -> B). g# = p2 o pa(p1, p2, f#, g#)
+
+check before rewr_conv that the variables in RHS is a subset of the variables in the LHS.
+
+if subset error happens then drop the thm and do not use it.
+
+ *)
+
+
 (*
 fun once_rw_tac thl = gen_rw_tac basic_once_fconv  (flatten (mapfilter conv_canon thl))
 *)
@@ -389,6 +444,7 @@ okay to let rw_conv loop, but do check here, and discard the thm after inst rais
 
 
 fun occurs_tt t1 t2 = 
+    eq_term(t1,t2) orelse
     case (view_term t1,view_term t2) of 
         (vVar (n1,s1),vVar (n2,s2)) => 
         if n1 = n2 andalso eq_sort(s1,s2) then 
@@ -413,6 +469,14 @@ fun occurs_f f1 f2 =
       | (_,vQ(_,_,_,b)) => occurs_f f1 b
       | (_,_) => false
 
+(*specl [rastt "id(1)"] one_to_one_id;
+val it =
+   
+   
+   |-
+   id(1) = id(1): thm
+> cause_loop_eq it;
+val it = false: bool*)
 
 fun cause_loop_eq th = 
     let val (l,r) = dest_eq(concl th)

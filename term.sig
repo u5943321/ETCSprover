@@ -1,7 +1,7 @@
 signature term = 
 sig
-type sort
-type term
+eqtype sort
+eqtype term
 
 datatype sort_view = 
          vo

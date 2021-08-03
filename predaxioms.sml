@@ -422,7 +422,7 @@ val p2_of_pa =  pa_def |> iffRL |> spec_all |> undisch
 
 
 (*AQ: massive conditional rw here *)
-
+(*AQ: why is pb proof so slow*)
 val parallel_p_compose = proved_th $
 e0
 (strip_tac >> match_mp_tac (irule_canon to_p_eq) >> 
@@ -656,7 +656,6 @@ e0
              ∃!a. a∶ A → P ∧ p o a = u ∧ q o a = v)*)
 
 
-(*TODO:,again: c = pa(pX, pY, u, v) <=> c = pa(pX, pY, u, v)*)
 
 val eqind_def' = eqind_def |> strip_all_and_imp |> conjE2 |> disch_all |> gen_all
 
@@ -688,9 +687,9 @@ e0
 
 val long_induced_map = rastt "eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y))"
 
-(*TODO: match_mp_bug  e o a1 = e o a2 ==> a1 = a2 ismono_property h is double bind to a1 and a2*)
+(*TODO: match_mp_bug  e o a1 = e o a2 ==> a1 = a2 ismono_property h is double bind to a1 and a2 because ismono_property is not in correct order!!!!!*)
 
-val pb_exists = proved_th $ 
+val pb_exists = proved_th $ (*val (ct,asl,w) = cg $*)
 e0
 (rw_tac[ispb_def_alt] >> repeat strip_tac  >> 
  (specl_then (List.map rastt ["X","Y"])
@@ -1079,7 +1078,8 @@ val zero_no_mem = proved_th $
 e0
 (ccontra_tac >> pop_assum strip_assume_tac >> 
  strip_assume_tac ax8 >>
- suffices_tac (rapf "x1:1->X = x2") >-- (arw_tac[] >> first_x_assum accept_tac) >>
+ suffices_tac (rapf "x1:1->X = x2") 
+ >-- (arw_tac[] (*>> first_x_assum accept_tac*)) >>
  assume_tac const0_def >> drule from0_exists >> 
  first_assum (specl_then [one] strip_assume_tac) >> 
  suffices_tac (rapf "x1 o f':0->1 o f:1->0 = (x2:1->X) o f' o f") 
@@ -1118,7 +1118,7 @@ arw does nothing on this
 val no_epi_from_iso_zero = contrapos (no_epi_from_zero |> spec_all |> undisch) |> neg_neg_elim |> rewr_rule [GSYM iso_zero_is_zero] |> contrapos|> disch_all |> gen_all
 
 
-(*This one is messy, should consistently use one of the predicates*) 
+(*maybe TODO:This one is messy, should consistently use one of the predicates*) 
 
 val is_epi_surj = proved_th $
 e0
@@ -1290,7 +1290,7 @@ e0
            drule p1_of_pa >> arw_tac[])) >>
  by_tac (rapf "(f:X->Y) o pX = ev o pa(p1:efs->X,p2:efs->X2Y,pX:X1->X, tp(p1, p2, ev:efs->Y, pX, pone:X1->1, f o pX) o pone)")
  >-- (drule ev_of_tp >> first_x_assum (specl_then [rastt "X1"] assume_tac) >>
-      first_x_assum drule >> arw_tac[]) >>
+       first_x_assum drule >> arw_tac[]) >>
  pop_assum (assume_tac o GSYM) >> once_arw_tac[] >>
  rw_tac[GSYM o_assoc] >> once_arw_tac[] >> rw_tac[o_assoc] >> 
  pick_x_assum (rapf "ispr(p1:efs->X,p2:efs->X2Y)") (K all_tac) >>
@@ -1298,6 +1298,316 @@ e0
 )
 (rapg "!X x:1->X Y f:X->Y X2Y efs ev p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==> ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x")
 
+(*last_x_assum (first_assum o mp_then Any mp_tac) rev_drule 
+use mp_then, but a better style is to use spec first.
+
+or jusr write a rev_drule FREEZE_THEN
+*)
+(*is_mono a ∧ a∶ A → X ∧ x∶ one → X ∧
+ ¬(∃x0. x0∶ one → A ∧ a o x0 = x) ⇒ is_mono (copa a x)*)
+
+(*TODO: a drule such that if !x.~ P(x) in assumption, then know p(a) is false*)
+
+fun neg_disch t th =
+   if eq_form(concl th,FALSE) then negI t th 
+   else disch t th
+
+
+
+fun disch_then (ttac: thm_tactic): tactic = 
+ fn ((ct,asl,w):goal) =>
+   let
+      val (ant, conseq) = dest_imp w
+      val (gl, prf) = ttac (assume ant) (ct,asl,conseq)
+   in
+      (gl, (if is_neg w then neg_disch ant else disch ant) o prf):(goal list * validation)
+   end
+ 
+
+fun disch_tac g = disch_then assume_tac g 
+val copa_not_mem_mono_mono = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac ismono_applied >> repeat strip_tac >>
+ match_mp_tac fun_ext >> drule to_copa_fac >> strip_tac >>
+ first_assum (specl_then [rastt "(h:X'->A1) o (a':1->X')"] strip_assume_tac)
+ (* 2 *)
+ >-- (first_assum 
+          (specl_then [rastt "(g:X'->A1) o (a':1->X')"] strip_assume_tac) 
+      (*generates 2 more subgoals, 3 subgoals in total*)
+      >-- (suffices_tac (rapf "x0':1->A = x0")
+          >-- (strip_tac >> full_simp_tac[]) >>
+          match_mp_tac (irule_canon ismono_property) >>
+          exists_tac' (rastt "X") >> exists_tac' (rastt "a:A->X") >>
+          drule i1_of_copa >>
+          by_tac (rapf "a = copa(iA:A->A1,ione:1->A1,a:A->X, x:1->X) o iA")
+          >-- arw_tac[] >> 
+          once_arw_tac[] >> rw_tac[o_assoc] >> arw_tac[] >> 
+          rw_tac[GSYM o_assoc] >> 
+          pop_assum (K all_tac) >> pop_assum (K all_tac) >> 
+          once_arw_tac[] >> rw_tac[]) >>
+      assume_tac (specl (List.map readt ["1","id(1)","x0':1->1"]) to1_unique) >>
+      suffices_tac (rapf "?x0:1->A. (a:A->X) o x0 = x") 
+      >-- (disch_tac >> first_assum opposite_tac) >> 
+      exists_tac' (rastt "x0:1->A") >>
+      by_tac (rapf "copa(iA,ione,a,x) o ione o (x0':1->1) = copa(iA:A->A1,ione:1->A1,a:A->X,x:1->X) o iA o (x0:1->A)") 
+      >-- (arw_tac[] >> arw_tac[GSYM o_assoc]) >>
+      pop_assum mp_tac >> rw_tac[GSYM o_assoc] >> drule i12_of_copa >> 
+      arw_tac[idR] >> strip_tac >> arw_tac[]) >> 
+first_assum 
+          (specl_then [rastt "(g:X'->A1) o (a':1->X')"] strip_assume_tac)
+>-- (assume_tac (specl (List.map readt ["1","id(1)","x0:1->1"]) to1_unique) >>
+     suffices_tac (rapf "?x0:1->A. (a:A->X) o x0 = x") 
+     >-- (disch_tac >> first_assum opposite_tac) >> 
+     exists_tac' (rastt "x0':1->A") >> 
+     by_tac (rapf "copa(iA,ione,a,x) o ione o (x0:1->1) = copa(iA:A->A1,ione:1->A1,a:A->X,x:1->X) o iA o (x0':1->A)")
+     >-- (arw_tac[] >> arw_tac[GSYM o_assoc]) >>
+     pop_assum mp_tac >> rw_tac[GSYM o_assoc] >> drule i12_of_copa >> 
+     arw_tac[idR] >> strip_tac >> arw_tac[]) >>
+pop_assum mp_tac >> pop_assum (assume_tac o GSYM) >> strip_tac >> 
+pop_assum (assume_tac o GSYM) >> arw_tac[] >> 
+once_rw_tac[one_to_one_id] >> rw_tac[idR])
+(rapg "!A X a.ismono(a:A->X) ==> !x:1->X.(~(?x0:1->A.a o x0 = x))==> !A1 iA:A->A1 ione:1->A1. iscopr(iA,ione) ==> ismono(copa(iA,ione,a,x))")
+
+(*∀X Y. X ≅ Y ⇔ Y ≅ X*)
+val rw = rw_tac 
+val once_rw = once_rw_tac
+
+val iso_symm = proved_th $
+e0
+(rw[areiso_def] >> dimp_tac >> strip_tac (* 2 *)
+ >-- (exists_tac' (rastt "g:Y->X") >> exists_tac' (rastt "f:X->Y") >>
+      arw_tac[]) >>
+(exists_tac' (rastt "g:X->Y") >> exists_tac' (rastt "f:Y->X") >>
+ arw_tac[]))
+(rapg "areiso(X,Y) <=> areiso(Y,X)")
+
+(*∀X Y Z f g. is_iso f ∧ is_iso g ∧ f∶ X → Y ∧ g∶ Y → Z ⇒
+            is_iso (g o f)*)
+
+val iso_o_iso = proved_th $
+e0
+(rw[isiso_def] >> repeat strip_tac >> 
+ exists_tac' (rastt "(f':Y->X) o (f'':Z-> Y)") >> 
+ by_tac (rapf "((g:Y->Z) o (f:X->Y)) o (f':Y->X) o (f'':Z->Y) = g o (f o f') o f''") >-- rw[o_assoc] >> 
+ by_tac (rapf "((f':Y->X) o (f'':Z->Y)) o (g:Y->Z) o (f:X->Y) = f' o (f'' o g) o f") >-- rw[o_assoc] >> arw_tac[] >> rw_tac[idL,idR] >> arw_tac[])
+(rapg "!X Y f:X->Y. isiso(f) ==> !Z g:Y->Z.isiso(g) ==> isiso(g o f)")
+
+(*∀X Y Z. X ≅ Y ∧ Y ≅ Z ⇒ X ≅ Z*)
+
+val iso_trans = proved_th $ 
+e0
+(rw[areiso_def] >> strip_tac >> 
+ exists_tac (rastt "(f':Y->Z) o (f:X-> Y)") >>
+ exists_tac (rastt "(g:Y->X) o (g':Z-> Y)") >>
+ by_tac (rapf "(f' o f) o g o g' = (f':Y->Z) o ((f:X->Y) o (g:Y->X)) o (g':Z->Y)")
+ >-- rw[o_assoc] >>
+ by_tac (rapf "(g o g') o f' o f = (g:Y->X) o ((g':Z->Y) o (f':Y->Z)) o (f:X->Y)")
+ >-- rw[o_assoc] >>
+ arw_tac[idL,idR])
+(rapg "areiso(X,Y) & areiso(Y,Z) ==> areiso(X,Z)")
+
+(*∀X Y A. X ≅ A ∧ Y ≅ A ⇒ X ≅ Y*)
+
+(*how to prevent symmetry things like P(a,b) <=> P(b,a)*)
+
+(*TODO: AQ match_mp_tac iso_trans*)
+val iso_to_same = proved_th $
+e0
+(strip_tac >> by_tac (rapf "areiso(A,Y)")
+ >-- (once_rw_tac[iso_symm] >> arw_tac[]) >>
+ suffices_tac (rapf "areiso(X, A) & areiso(A, Y)") >> 
+ rw[iso_trans] >> strip_tac >> arw_tac[])
+(rapg "areiso(X,A) & areiso(Y,A) ==> areiso(X,Y)")
+
+(*∀A X Y a b h1 h2. is_mono a ∧ is_mono b ∧ a∶ X → A ∧ b∶ Y → A ∧
+                  h1∶ X → Y ∧ h2∶ Y → X ∧
+                  b o h1 = a ∧ a o h2 = b ⇒
+         h1 o h2 = id Y ∧ h2 o h1 = id X*)
+
+fun try_done tac (G,fl,l) = 
+    case tac (G,fl,l) of 
+        ([],pf) => ([],pf)
+       | _ => ([(G,fl,l):goal],sing I)
+
+(*TODO: gen_all in to_zero_zero |> strip_all_and_imp  does not do the correct thing*)
+
+val to_zero_zero' = 
+    to_zero_zero |> strip_all_and_imp 
+                 |> allI ("f",mk_ar_sort (mk_ob "A") (mk_ob "B"))
+                 |> gen_all |> disch_all |> gen_all
+
+val arw = arw_tac
+
+val inc_inc_iso_as_subobj = proved_th $
+e0
+(strip_tac >> strip_tac >> strip_tac >> strip_tac >> strip_tac >> 
+ cases_on (rapf "areiso(X,0)") >> cases_on (rapf "areiso(Y,0)") >> 
+ repeat strip_tac
+ >> try_done (match_mp_tac from_iso_zero_eq >> arw_tac[]) 
+ >-- (drule to_zero_zero' >> first_x_assum (specl_then (List.map rastt ["Y","h2:Y->X"]) opposite_tac))
+ >-- (drule to_zero_zero' >> first_x_assum (specl_then (List.map rastt ["X","h1:X->Y"]) opposite_tac))
+ >> full_simp_tac[iso_zero_is_zero] >>
+ drule mono_non_zero_post_inv >> first_x_assum drule >> 
+ pop_assum strip_assume_tac 
+ >-- (suffices_tac (rapf "(g:A->Y) o (b:Y->A) o (h1:X->Y) o h2 = id(Y)")
+      >-- arw[GSYM o_assoc,idL] >>
+      by_tac (rapf "g o b o h1 o h2 = (g:A->Y) o (b o h1:X->Y) o h2:Y->X")
+      >-- rw[o_assoc] >> arw_tac[idL]) >>
+ pick_x_assum (rapf "ismono(b:Y->A)") (K all_tac) >>
+ drule mono_non_zero_post_inv >> first_x_assum drule >> 
+ pop_assum strip_assume_tac >>
+ suffices_tac (rapf "(g':A->X) o (a:X->A) o (h2:Y->X) o (h1:X->Y) = id(X)")
+ >-- arw[GSYM o_assoc,idL] >> 
+ by_tac 
+ (rapf "(g':A->X) o (a:X->A) o (h2:Y->X) o (h1:X->Y) = g' o (a o h2) o h1")
+ >-- rw[o_assoc] >> arw_tac[]
+ )
+(rapg "!X A a:X->A.ismono(a) ==>!Y b:Y->A. ismono(b) ==> !h1:X->Y h2:Y->X. b o h1 = a & a o h2 = b ==> h1 o h2 = id(Y) & h2 o h1 = id(X)")
+
+(*∀X Y A a b. is_mono a ∧ is_mono b ∧ a∶ X → A ∧ b∶ Y → A ∧
+            (∀x xb. x∶ one → A ∧ xb∶ one → X ∧ a o xb = x ⇒
+                    ∃xb'. xb'∶ one → Y ∧ b o xb' = x) ⇒
+            (∃h. h∶ X → Y ∧ b o h = a)*)
+
+val prop_2_half2 = proved_th $
+e0
+(repeat strip_tac >> cases_on (rapf "areiso(Y,0)")
+ >-- (by_tac (rapf "areiso(X,0)")
+      >-- (rw[iso_zero_is_zero] >> ccontra_tac >>
+           drule ax6 >> pop_assum strip_assume_tac >> 
+           drule iso_zero_no_mem >>
+           suffices_tac (rapf "?xb':1->Y.T")
+           >-- (disch_tac >> first_x_assum opposite_tac) >> 
+           first_x_assum (specl_then (List.map rastt ["(a:X->A) o (x:1->X)","x:1->X"]) assume_tac) >> pop_assum mp_tac >> rw[] >> strip_tac >> 
+           exists_tac' (rastt "xb':1->Y") >> rw[]) >>
+      drule from_iso_zero_eq  >> 
+      pick_x_assum (rapf "areiso(Y, 0)") (assume_tac o (rewr_rule[areiso_def]))>>
+      pick_x_assum (rapf "areiso(X, 0)") (assume_tac o (rewr_rule[areiso_def]))>>
+      pop_assum mp_tac >> pop_assum mp_tac >> repeat strip_tac >>
+      exists_tac' (rastt "(g:0->Y) o (f':X->0)") >>
+      first_x_assum (specl_then (List.map rastt ["A","(b:Y->A) o (g:0->Y) o (f':X->0)","a:X->A"]) assume_tac) >>
+      arw_tac[]) >> 
+ full_simp_tac[iso_zero_is_zero] >> drule mono_non_zero_post_inv >>
+ first_x_assum drule >> pop_assum strip_assume_tac >> 
+ exists_tac' (rastt "(g:A->Y) o (a:X->A)") >> 
+ match_mp_tac fun_ext >> strip_tac >> rw[o_assoc] >> 
+ first_x_assum (specl_then (List.map rastt ["(a:X->A) o (a':1->X)","a':1->X"]) assume_tac) >> pop_assum mp_tac >> rw[] >> strip_tac >> 
+ pop_assum (assume_tac o GSYM) >> arw[] >>
+ by_tac (rapf "b o g o b o xb' = (b:Y->A) o ((g:A->Y) o (b:Y->A)) o (xb':1->Y)")
+ >-- rw[o_assoc] >> arw[idL])
+(rapg "!X A a:X->A. ismono(a) ==> !Y b:Y->A. ismono(b) ==> (!x:1->A xb:1->X. a o xb = x ==> ?xb':1->Y. b o xb' = x) ==> ?h:X->Y. b o h = a")
+
+(*∀X Y A a b. a∶ X → A ∧ b∶ Y → A ∧ is_mono a ∧ is_mono b ∧
+            (∀y. y∶ one → Y ⇒ ∃x. x∶ one → X ∧ a o x = b o y) ∧
+            (∀x. x∶ one → X ⇒ ∃y. y∶ one → Y ∧ a o x = b o y) ⇒
+           ?h1 h2. b o h1 = a /\ a o h2 = b /\ h1∶X → Y ∧ h2∶Y → X ∧ h1 ∘ h2 = id Y ∧ h2 ∘ h1 = id X
+*)
+
+val prop_2_corollary_as_subobj = proved_th $
+e0
+(repeat strip_tac >> 
+ by_tac (rapf "?h1:X->Y. (b:Y->A) o h1 = a") 
+ >-- (match_mp_tac (irule_canon prop_2_half2) >> arw_tac[] >> 
+      repeat strip_tac >> 
+      first_x_assum (specl_then [rastt "xb:1->X"] assume_tac) >> 
+      pop_assum strip_assume_tac >> exists_tac' (rastt "y:1->Y") >>
+      full_simp_tac[]) >> 
+ by_tac (rapf "?h2:Y->X. (a:X->A) o h2 = b") 
+ >-- (match_mp_tac (irule_canon prop_2_half2) >> arw_tac[] >> 
+      repeat strip_tac >>
+      first_x_assum (specl_then [rastt "xb:1->Y"] assume_tac) >>
+      pop_assum strip_assume_tac >> exists_tac' (readt "x':1->X") >>
+      full_simp_tac[]) >>
+ pop_assum_list (map_every strip_assume_tac) >> 
+ exists_tac' (rastt "h1:X->Y") >> exists_tac' (rastt "h2:Y->X") >>
+ arw[] >> match_mp_tac (irule_canon inc_inc_iso_as_subobj) >>
+ exists_tac' (rastt "A") >> exists_tac' (rastt "a:X->A") >> exists_tac' (rastt "b:Y->A") >> arw[])
+(rapg "!X A a:X->A.ismono(a) ==> !Y b:Y->A. ismono(b) & (!y:1->Y. ?x:1->X.a o x = b o y) & (!x:1->X.?y:1->Y.a o x = b o y) ==> ?h1:X->Y h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)") 
+
+
+(*is_refl f0 f1 ⇔ dom f0 = dom f1 ∧ cod f0 = cod f1 ∧
+             ∃d. d∶ cod f1 → dom f1 ∧
+                 f0 o d = id (cod f1) ∧
+                 f1 o d = id (cod f1)*)
+
+val iso_zero_zero = assume (rapf "areiso(A,0)") 
+                           |> rewr_rule[iso_zero_is_zero,is0_def]
+                           |> disch_all |> gen_all
+
+(*∀e A B. is_epi e ∧ e∶ A → B ⇒ ∃s. s∶ B → A ∧ e o s = id B*)
+
+
+
+(*
+
+e0
+(repeat strip_tac >> cases_on (rapf "areiso(B,0)")
+ >-- (drule iso_zero_zero >> 
+      first_assum (specl_then [rastt "B"] strip_assume_tac) >> 
+      first_x_assum (specl_then [rastt "A"] strip_assume_tac) >>
+      exists_tac' (rastt "f0x:B->A") >> 
+      first_assum (specl_then [rastt "(e:A->B) o (f0x':B->A)"] assume_tac) >>
+      first_x_assum (specl_then [rastt "id(B)"] assume_tac) >>
+      pick_x_assum (rapf "!f0x' : B -> A. f0x' = f0x'") (K all_tac)
+  
+))
+(rapg "!A B e.isepi(e) ==> ?s0:B->A.e o s0 = id(B)")
+
+Exception-
+   HOL_ERR
+     {message = "predicate not satisfied", origin_function = "pluck",
+      origin_structure = "Lib"} raised
+
+WHY?!
+*)
+
+(*
+
+exists_tac' (rastt "f0x:B->A")  bug! does not complain here, but complain later in validation check!
+*)
+
+val epi_has_section = proved_th $
+e0
+(repeat strip_tac >> cases_on (rapf "areiso(B,0)")
+ >-- (drule iso_zero_zero >> 
+      first_assum (specl_then [rastt "B"] strip_assume_tac) >> 
+      first_x_assum (specl_then [rastt "A"] strip_assume_tac) >>
+      exists_tac' (rastt "f0x':B->A") >> 
+      first_assum (specl_then [rastt "(e:A->B) o (f0x':B->A)"] assume_tac) >>
+      first_x_assum (specl_then [rastt "id(B)"] assume_tac) >>
+      remove_asm_tac (rapf "!f0x0: B -> A. f0x0 = f0x'") >>
+      arw_tac[]) >>
+ match_mp_tac (irule_canon epi_pre_inv) >> full_simp_tac[iso_zero_is_zero])
+(rapg "!A B e.isepi(e) ==> ?s0:B->A.e o s0 = id(B)")
+
+(*∀f g h h0 A B X. f∶ A → B ∧ g∶ A → B ∧ h∶ X → A ∧ h0∶ X → eqo f g ∧
+           eqa f g o h0 = h ⇒
+           f o h = g o h*)
+
+val fac_through_eq = proved_th $
+e0
+(repeat strip_tac >> 
+ suffices_tac (rapf "f o e = (g:A->B) o (e:E->A)")
+ >-- (strip_tac >> rule_assum_tac (fn th => sym th handle _ => th)
+      >> arw[GSYM o_assoc]) >> 
+ drule eq_equality >> arw_tac[])
+(rapg "iseq(e:E->A,f:A->B,g) ==> e o h0 = h ==> f o h = g o h")                      
+
+
+(*∀f g h. f∶ A → B ∧ g∶ A → B ∧ h∶ X → A ⇒
+        ((∃h0. h0∶ X → eqo f g ∧ (eqa f g) o h0 = h) ⇔
+         f o h = g o h)*)
+val fac_through_eq' = fac_through_eq |> undisch |> gen_all |> disch_all|> gen_all
+
+val fac_through_eq_iff = proved_th $
+e0
+(strip_tac >> dimp_tac >> strip_tac 
+ >-- (drule fac_through_eq' >> first_x_assum drule >> arw[]) >> 
+exists_tac' (rastt "eqind(e:E->A,f:A->B,g,h:X->A)") >>
+drule eq_eqn >> first_x_assum drule >> arw[])
+(rapg "iseq(e:E->A,f:A->B,g) ==> ((?h0: X-> E.e o h0 = h) <=> f o h = g o h)")
+
+ 
 (*Maybe TODO or AQ: first_x_assum (specl_then [rastt "X1"] assume_tac) >>
       first_x_assum drule need, otherwise always look for the p1*)
 
