@@ -78,10 +78,10 @@ fun drule0 optfn  th (G,fl:form list,f) =
     let 
         val c = concl th
         val (b,vs) = strip_forall c
-        val (ant,con) = dest_imp b
+        val (ant',con) = dest_imp b
         fun mfn _ asm = 
             let 
-                val menv = match_form (fvfl (hyp th)) ant asm mempty
+                val menv = match_form (fvfl (ant th)) ant' asm mempty
                 val ith = inst_thm menv (spec_all th)
             in
                 SOME (mp ith (assume asm))
@@ -94,6 +94,12 @@ fun drule0 optfn  th (G,fl:form list,f) =
     end
 
 val drule = drule0 first_opt
+
+fun last_opt f l = first_opt f (rev l) 
+
+val rev_drule = drule0 last_opt
+
+
 (*val rev_drule = drule0 last_opt TODO:*)
 (*
 fun drule th (G,fl:form list,f) = 
@@ -365,6 +371,15 @@ fun conj_pair th =
 
 
 (*TODO: add the case for disj*)
+
+
+fun rv_subset_lv th = 
+    let val th0 = spec_all th 
+        val (l,r) = dest_dimp (concl th)
+        val (lv,rv) = (fvf l,fvf r)
+    in HOLset.isSubset (lv,rv)
+    end 
+
 fun rw_canon th = 
     let val th = spec_all th
         val f = concl th

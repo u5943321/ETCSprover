@@ -131,7 +131,7 @@ val ax2 = exp_ex
 val Nind0_def = read_axiom "!N0 one z0:one -> N0 s0:N0->N0. isN0(z0,s0) ==> is1(one) & !X x0:one -> X t:X -> X x:N0 -> X. x o z0 = x0 & x o s0 = t o x <=> x = Nind0(z0,s0,x0,t)";
 
 
-val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.x o z = x0 & x o s = t o x <=> x = Nind(x0,t)"
+val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.(x o z = x0 & x o s = t o x) <=> x = Nind(x0,t)"
 
 (*to be edited, switch the ordrr of s0 and z0*)
 val ax3 = constN_def
@@ -264,7 +264,7 @@ val exp_ispr = tp_def |> strip_all_and_imp |> conjE1 |> disch_all |> gen_all
 
 
 
-val ev_eq_eq = 
+val ev_eq_eq = proved_th $
 e0
 (repeat strip_tac >> 
  suffices_tac (rapf "f = tp (p1:efs->A,p2:efs->A2B,ev:efs->B,p1':AX->A,p2':AX->X,ev o pa(p1, p2, p1', f o p2')) & g = tp (p1,p2,ev,p1',p2',ev o pa(p1, p2, p1', f o p2'))")
@@ -1608,7 +1608,400 @@ drule eq_eqn >> first_x_assum drule >> arw[])
 (rapg "iseq(e:E->A,f:A->B,g) ==> ((?h0: X-> E.e o h0 = h) <=> f o h = g o h)")
 
  
-(*Maybe TODO or AQ: first_x_assum (specl_then [rastt "X1"] assume_tac) >>
+(*∀B f g. f∶ N → B ∧ g∶ one → B ⇒
+          (f o z = g  ⇔ ⟨id N,f⟩ o z = ⟨z,g⟩)*)
+
+(*?A B (p1 : NB -> A#)  (p2 : NB -> B). p2 o pa(pN, pB, id(N), f) o z =
+               p2 o pa(pN, pB, z, g) & ispr(p1, p2) &
+               p1 o pa(pN, pB, id(N), f) o z = p1 o pa(pN, pB, z, g)
+
+TODO: ppbug*)
+
+(*maybe TODO:
+ B , NB ,   
+   (f : N -> B), (g : 1 -> B), (pB : NB -> B), (pN : NB -> N)
+   1.ispr(pN, pB)
+   2.pa(pN, pB, id(N), f) o z = pa(pN, pB, z, g)
+   3.!X (f : X# -> N)  (g : X# -> B). pB o pa(pN, pB, f#, g#) = g#
+   4.f = pB o pa(pN, pB, id(N), f)
+   5.g = pB o pa(pN, pB, z, g)
+   ----------------------------------------------------------------------
+   pB o pa(pN, pB, z, g) = g
+
+arw does nothing
+*)
+
+val Thm1_case1_comm_condition_left = proved_th $
+e0
+(repeat strip_tac >> dimp_tac >> strip_tac
+ >-- (drule to_p_eq >> first_x_assum match_mp_tac >> 
+      drule p12_of_pa >> arw_tac[GSYM o_assoc,idL]) >>
+ drule p2_of_pa >>
+ first_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"])
+ (assume_tac o GSYM)) >>
+ first_assum (specl_then (List.map rastt ["1","z","g:1->B"])
+ (assume_tac o GSYM)) >> once_arw_tac[] >> rw_tac[o_assoc] >>
+ once_arw_tac[] >> first_assum (accept_tac o GSYM)
+ )
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B g:1->B.f o z = g <=> (pa(pN,pB,id(N),f) o z = pa(pN,pB,z,g))")
+
+
+(*∀B f h. f∶ N → B ∧ h∶ N×B → B ⇒
+        (h o ⟨id N,f⟩ = f o s ⇔ ⟨s o p1 N B, h⟩ o ⟨id N, f⟩ = ⟨id N, f⟩ o s)
+cannot use different choice of products for two N* B, because of the h.
+*)
+val once_arw = once_arw_tac
+
+val Thm1_case1_comm_condition_right = proved_th $
+e0
+(repeat strip_tac >> dimp_tac >> strip_tac
+ >-- (drule to_p_eq >> first_x_assum match_mp_tac >> 
+     drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR]) >>
+ drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB","s o pN:NB->N","h:NB->B"]) (assume_tac o GSYM)) >> 
+first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) (assume_tac o GSYM)) >> pop_assum mp_tac >> once_arw_tac[] >> rw_tac[o_assoc] >>
+strip_tac >> drule p2_of_pa >> once_arw[] >> rw[o_assoc])
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N),f) = f o s <=> pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s")
+
+
+
+val Thm1_case1_comm_condition_right' = proved_th $
+e0
+(repeat strip_tac >> dimp_tac >> strip_tac
+ >-- (rev_drule to_p_eq >> first_x_assum match_mp_tac >> 
+     rev_drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR] >>
+     drule p1_of_pa >> arw[idR]) >>
+ rev_drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB'","s o pN':NB'->N","h:NB'->B"]) (assume_tac o GSYM)) >> once_arw[] >> 
+ rw[o_assoc] >> once_arw[] >> once_arw[]>> 
+first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) assume_tac) >>
+rw[GSYM o_assoc] >> once_arw[] >> rw[])
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !NB' pN':NB'->N pB':NB'->B. ispr(pN',pB') ==> !f:N->B h:NB'->B. h o pa(pN',pB',id(N),f) = f o s <=> pa(pN,pB,s o pN',h) o pa(pN',pB',id(N),f) = pa(pN,pB,id(N),f) o s")
+
+
+(* "(f0 o z = g & f0 o s = h o <id(N),f0>) <=> (<id(N),f0> o z = <z,g> & <s o p1(N,B),h> o <id(N),f0> = <id(N),f0> o s)" *)
+
+(*(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B g:1->B.f o z = g <=> (pa(pN,pB,id(N),f) o z = pa(pN,pB,z,g))")
+
+rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N),f) = f o s <=> pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s"
+
+*)
+
+(*pa(pN, pB, id(N), f) o z
+             =
+             pa(pN, pB, z, g)
+             &
+             f o s
+             =
+             h o pa(pN, pB, id(N), f)
+             <=>
+             pa(pN, pB, id(N), f) o z
+             =
+             pa(pN, pB, z, g)
+             &
+             pa(pN, pB, (s o pN), h) o pa(pN, pB, id(N), f)
+             =
+             pa(pN, pB, id(N), f) o s
+
+TODO: rw does not do anything to this *)
+
+val Thm1_case1_comm_condition_right'' = 
+dimpI
+(Thm1_case1_comm_condition_right |> strip_all_and_imp |> dimpl2r 
+|> undisch |> prove_hyp (sym (assume (rapf "f o s = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)"))) |> disch (rapf "f o s = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)")) 
+(Thm1_case1_comm_condition_right |> strip_all_and_imp |> dimpr2l 
+|> undisch |> sym |> disch (rapf "pa(pN, pB, (s o pN), h:NB->B) o pa(pN, pB, id(N), f) = pa(pN:NB->N, pB:NB->B, id(N), f:N->B) o s"))|> gen_all |> disch_all
+|> gen_all
+
+
+
+val Thm1_case1_comm_condition = proved_th $
+e0
+(repeat strip_tac >> drule Thm1_case1_comm_condition_left >>
+ first_x_assum (specl_then (List.map rastt ["f:N->B","g:1->B"]) assume_tac) >>
+ arw[] >> rw_tac[] >> drule Thm1_case1_comm_condition_right'' >>
+ first_x_assum (specl_then (List.map rastt ["f:N->B","h:NB->B"]) assume_tac) >>
+ arw[])
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B g:1->B. f o z = g & f o s = h o pa(pN,pB,id(N),f) <=> pa(pN,pB,id(N),f) o z = pa(pN,pB,z,g) & pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s")
+
+
+(*∀B g h. g∶ one → B ∧ h∶ po N B → B ⇒
+        ∃!f. f∶ N → B ∧ f o z = g ∧ f o s = h o ⟨id N, f⟩*)
+
+val Neqn_zs = constN_def |> 
+specl (List.map rastt ["X","x0:1->X","t:X->X","Nind(x0:1->X,t:X->X)"])|> (C dimp_mp_r2l) (refl (rastt "Nind(x0:1->X,t:X->X)"))|> gen_all
+
+
+val Neqn_z = constN_def |> 
+specl (List.map rastt ["X","x0:1->X","t:X->X","Nind(x0:1->X,t:X->X)"])|> (C dimp_mp_r2l) (refl (rastt "Nind(x0:1->X,t:X->X)")) |> conjE1 |> gen_all
+
+val Neqn_s = constN_def |> 
+specl (List.map rastt ["X","x0:1->X","t:X->X","Nind(x0:1->X,t:X->X)"])|> (C dimp_mp_r2l) (refl (rastt "Nind(x0:1->X,t:X->X)")) |> conjE2 |> gen_all
+
+
+(*
+last x assume does nothing to 
+B , NB ,   
+   (f : N -> B),
+             (f' : N -> NB),
+             (g : 1 -> B),
+             (h : NB -> B),
+             (pB : NB -> B),
+             (pN : NB -> N)
+   1.Nind(pa(pN, pB, z, g), pa(pN, pB, s o pN, h)) = f'
+   2.pN o f' = id(N)
+   3.f' = pa(pN, pB, id(N), f)
+   4.f = pB o f'
+   5.ispr(pN, pB)
+   ----------------------------------------------------------------------
+   (pB o f') o z = g
+   : gstk
+*)
+
+val longf' = rastt "Nind(pa(pN:NB->N,pB:NB->B,z,g:1->B),pa(pN,pB,s o pN,h:NB->B))" 
+
+val longf = mk_fun "o" [rastt "pB:NB->B",longf']
+
+val Thm1_case_1 = proved_th $
+e0
+(repeat strip_tac >> 
+ abbrev_tac (rapf "Nind(pa(pN:NB->N,pB:NB->B,z,g:1->B),pa(pN,pB,s o pN,h:NB->B)) = f'") >> 
+ by_tac (rapf "(pN: NB->N) o (f':N->NB) = id(N)")
+ >-- (match_mp_tac (GSYM comm_with_s_id) >> pop_assum (assume_tac o GSYM) >>
+      assume_tac
+      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, s o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, z, g:1->B)"])) >>
+      pop_assum strip_assume_tac >> rw_tac[o_assoc] >> 
+      arw[] >> drule p1_of_pa >> arw[GSYM o_assoc]) >>
+ abbrev_tac (rapf "(pB:NB->B) o (f':N->NB) = f") >>
+ exists_tac' (rastt "f:N->B") >> 
+ by_tac (rapf "f' = pa(pN:NB->N,pB:NB->B,id(N),f:N->B)")
+ >-- (drule to_p_eq >> first_x_assum match_mp_tac >>
+      drule p12_of_pa >> arw[]) >>
+ by_tac (rapf "(f:N->B) o z = g & f o s = h o pa(pN:NB->N,pB:NB->B,id(N),f)")
+ >-- (suffices_tac (mk_conj (mk_eq (mk_fun "o" [longf,z]) (rastt "g:1->B")) 
+                 (mk_eq (mk_fun "o" [longf,s]) 
+                        (mk_fun "o" [rastt "h:NB->B",mk_fun "pa" ((List.map rastt ["pN:NB->N","pB:NB->B","id(N)"]) @ [longf])])))
+      >-- (once_arw[] >> once_arw[] >> disch_tac >> 
+          first_x_assum accept_tac) >>
+      assume_tac
+      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, s o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, z, g:1->B)"])) >>
+      pop_assum strip_assume_tac >> rw_tac[o_assoc] >>
+      once_arw[] >> drule p2_of_pa >> once_arw[] >>
+      rw_tac[GSYM o_assoc] >> once_arw[] >> rw[]) >> 
+ strip_tac >> dimp_tac >> disch_tac >>
+ drule Thm1_case1_comm_condition >> full_simp_tac[] >>
+ pop_assum (K all_tac) >> 
+ drule to_p_eq_one_side >> first_x_assum match_mp_tac >>
+ suffices_tac (mk_eq (rastt "pa(pN:NB->N, pB:NB->B, id(N), f0:N->B)") longf') 
+ >-- (once_arw[] >> rw[]) >> 
+ match_mp_tac (constN_def |> iffLR) >> once_arw[] >> rw[])
+(rapg "!NB pN:NB->N B pB:NB->B. ispr(pN,pB) ==> !g:1->B h:NB->B. ?f:N->B.!f0. (f0 o z = g & f0 o s = h o pa(pN,pB,id(N),f0)) <=> f0 = f")
+
+
+
+(*∀A B f g. g∶ A → B ∧ f∶ A×N → B ⇒
+          (tp f o z = tp (g o (p1 A one)) ⇔
+           f o ⟨p1 A one, z o (p2 A one)⟩ = g o (p1 A one))*)
+
+
+
+fun split_assum f th = 
+    if fmem f (ant th) then
+        case view_form f of (vConn("&",[f1,f2])) => 
+                  th |> disch f |> (C mp) (conjI (assume f1) (assume f2))
+                | _ =>  raise ERR ("split_assum.not a conjunction: ",[],[],[f])
+    else raise ERR ("split_assum.formula not in assumption list",[],[],[f])
+
+fun split_assum' th = 
+    let fun f _ f0 = if is_conj f0 then SOME f0 else NONE
+    in
+        case first_opt f (ant th) of
+            NONE => raise simple_fail "split_assum'.no conjunction"
+          | SOME cj0 => split_assum cj0 th
+    end
+
+
+val parallel_p_one_side_split = 
+ parallel_p_one_side |> strip_all_and_imp
+                     |> split_assum' |> split_assum' |> disch_all'' |> gen_all
+
+val f0 = rastt "(f:AN->B) o pa(pA:AN->A, pN:AN->N, pA':A1->A, z o (pone:A1->1))"
+val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o z o pone:A1->1)"
+
+fun existsl_tac l = map_every (exists_tac') l
+
+fun pexistsl_tac l = map_every (exists_tac') (List.map rastt l)
+
+fun pspecl_then l ttac = specl_then (List.map rastt l) ttac
+
+fun pspecl l th = specl (List.map rastt l) th
+
+val Thm1_comm_eq_left = proved_th $
+ e0
+(repeat strip_tac >> drule exp_ispr >>
+ by_tac (rapf "ispr(pA':A1->A, pone:A1->1) & ispr(pA:AN->A, pN:AN->N) & ispr(p1:efs->A, p2:efs->A2B)") >-- arw[] >>
+ drule parallel_p_one_side >> 
+ first_x_assum (specl_then (List.map rastt ["z","tp(p1:efs->A,p2:efs->A2B,ev:efs->B,pA:AN->A,pN:AN->N,f:AN->B)"]) assume_tac) >> 
+ dimp_tac >> strip_tac 
+ >-- (by_tac (mk_eq f0 f0') 
+      >-- (once_arw[]  >> 
+      drule ev_of_tp >> 
+      first_x_assum 
+       (specl_then ([rastt "AN"]) assume_tac) >> 
+      first_x_assum drule >>
+      first_x_assum 
+       (specl_then (List.map rastt ["f:AN->B"]) (assume_tac o GSYM)) >>
+      pop_assum (assume_tac o (fn th => EQ_fsym "o" [th,refl (rastt "pa(pA:AN->A, pN:AN->N, pA':A1->A, z o pone)")])) >>
+      once_arw[] >> rw[o_assoc]) >>
+      once_arw[] >> rw[GSYM o_assoc] >> once_arw[] >>
+      drule ev_of_tp >>
+      first_x_assum 
+       (specl_then ([rastt "A1"]) assume_tac) >>
+      first_x_assum drule >> 
+      first_x_assum 
+       (specl_then ([rastt "(g:A->B) o (pA':A1->A)"]) accept_tac)
+      (*turn ev o pa(p1, p2, pA', (tp(p1, p2, ev, pA, pN, f) o z) o pone)
+        into ev o pa(p1, p2, pA', tp(p1, p2, ev, pA', pone, (g o pA')) o pone)
+        by assumption then into non-tp*)) >>
+ match_mp_tac (irule_canon ev_eq_eq) >>
+ pexistsl_tac ["A","A1","B","efs","ev:efs->B","p1:efs->A",
+               "pA':A1->A","p2:efs->A2B","pone:A1->1"] >>
+ once_arw[] >> rw[] >>
+ drule ev_of_tp >> first_x_assum (pspecl_then ["A1"] assume_tac) >>
+ first_x_assum drule >> once_arw[] >>
+ rw[o_assoc] >> once_arw[] >> rw[GSYM o_assoc] >> 
+ drule ev_of_tp >> 
+ first_x_assum (specl_then ([rastt "AN"]) assume_tac) >> 
+ first_x_assum drule >>
+      first_x_assum 
+       (specl_then (List.map rastt ["f:AN->B"]) assume_tac) >>
+ once_arw[] >> first_x_assum accept_tac)
+(rapg "!A AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !A2B B efs p1:efs->A p2:efs->A2B ev:efs->B. isexp(p1,p2,ev) ==> !A1 pA':A1->A pone:A1->1. ispr(pA',pone) ==> !g:A->B f:AN->B.tp(p1,p2,ev,pA,pN,f) o z = tp(p1,p2,ev,pA',pone,g o pA') <=> f o pa(pA,pN,pA',z o pone) = g o pA'")
+
+
+
+
+fun sym_tac (G,fl,f) = 
+    case view_form f of
+        vPred("=",[t1,t2]) => 
+        ([(G,fl,mk_eq t2 t1)], sing sym)
+      | _ => raise ERR ("sym_tac.not an equation",[],[],[f])
+
+fun readfq [QUOTE s] = rapf s
+
+structure Parse = struct val Term=readfq end
+
+
+val Thm1_comm_eq_right_lemma_short = proved_th $
+ e0
+(repeat strip_tac >> sym_tac >> match_mp_tac (irule_canon is_tp) >> arw[] >>
+ (*split the pa(p1, p2, pA, (tp(p1, p2, ev, pA, pN, f) o s) o pN)*) 
+ drule exp_ispr >>
+ by_tac 
+ “ispr(pA, pN) & ispr(pA:AN->A, pN:AN->N) & ispr(p1:AA2B->A, p2:AA2B->A2B)” >> 
+ arw[] >> drule parallel_p_one_side >> 
+ first_x_assum (pspecl_then ["s","tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA:AN->A,pN:AN->N,f:AN->B)"] assume_tac) >>
+ arw[o_assoc] >> drule ev_of_tp >> first_x_assum rev_drule >>
+ arw[GSYM o_assoc])
+(rapg "!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. isexp(p1,p2,ev) ==> !AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !f:AN->B.tp(p1,p2,ev,pA,pN,f o pa(pA,pN,pA,s o pN)) = tp(p1,p2,ev,pA,pN,f) o s")
+
+fun form_goal f = new_goal (fvf f,[]:form list,f)
+
+(*(pick_x_assum “ispr(Ap:AP->P, aP:AP->A)” mp_tac) if the input not in the asumption list, then HOL error instead of pick x assum err TODO*)
+
+val Thm1_comm_eq_right_lemma_long = proved_th $ 
+e0 
+(repeat strip_tac >> pop_assum (assume_tac o sym) >> arw[] >>
+ sym_tac >> match_mp_tac (irule_canon is_tp) >> arw[] >>
+ pspecl_then ["A","AN","pA:AN->A","AP","Ap:AP->A","AA2B"] assume_tac parallel_p_one_side >>
+ drule exp_ispr >>
+ by_tac “ispr(pA:AN->A,pN:AN->N) & ispr(Ap:AP->A, aP:AP->P) & ispr(p1:AA2B->A, p2:AA2B->A2B)” >-- arw[] >>
+ first_x_assum drule >> 
+ arw[o_assoc] >> rw[GSYM o_assoc] >>
+ (*(ev o pa(p1, p2, Ap, tp(p1, p2, ev, Ap, aP, (h o l)) o aP)) into h o l*)
+ drule ev_of_tp >> first_x_assum (pspecl_then ["AP"] assume_tac) >>
+ first_x_assum drule >> arw[] >> rw[o_assoc] >>
+ suffices_tac “l o
+               pa(Ap:AP->A, aP:AP->P, pA:AN->A,
+                pa(Na2b:P->N, nA2B:P->A2B, id(N), tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, f)) o pN) = 
+         pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B)” 
+ >-- (strip_tac >> arw[]) >>
+ by_tac “ispr(pAN:ANB->AN,pB:ANB->B) & ispr(pA:AN->A,pN:AN->N)”
+ >-- arw[] >> 
+ drule (iterated_p_eq_applied|> gen_all) >>
+ first_x_assum match_mp_tac >>
+ by_tac “pAN o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B) = id(AN)”
+ >-- (match_mp_tac p1_of_pa >> arw[]) >>
+ by_tac “pB o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f) = f:AN->B”
+ >-- (match_mp_tac p2_of_pa >> arw[]) >>
+ arw[] >>
+ by_tac 
+  “(pAN:ANB->AN) o (l:AP->ANB) = 
+   pa(pA:AN->A, pN:AN->N, Ap:AP->A, (Na2b:P->N) o aP) &
+    pB o l = ev o pa(p1:AA2B->A, p2:AA2B->A2B, Ap, (nA2B:P->A2B) o (aP:AP->P)) ”
+ >-- (pick_assum “pa(pAN:ANB->AN, pB:ANB->B, pa(pA:AN->A, pN:AN->N, Ap:AP->A, (Na2b:P->N) o aP), (ev:AA2B->B) o pa(p1:AA2B->A, p2:AA2B->A2B, Ap:AP->A, (nA2B:P->A2B) o (aP:AP->P))) = l” (assume_tac o GSYM) >>
+      once_arw[] >> match_mp_tac p12_of_pa >> first_x_assum accept_tac) >>
+ by_tac “(pA:AN->A) o (pAN:ANB->AN) o (l:AP->ANB) = Ap & 
+         (pN:AN->N) o pAN o l = (Na2b:P->N) o aP”
+ >-- (once_arw[] >> match_mp_tac p12_of_pa >> first_x_assum accept_tac) >>
+ rw[GSYM o_assoc,idR] >> 
+ by_tac “(pA o pAN) o l = (pA:AN->A) o pAN o (l:AP->ANB) &
+         (pN o pAN) o l = (pN:AN->N) o pAN o l”
+ >-- rw[o_assoc] >> 
+ once_arw[] >> once_arw[] >> rw[o_assoc] >>
+ repeat strip_tac (* 3 *)
+ >-- (match_mp_tac p1_of_pa >> first_x_assum accept_tac) 
+ >-- (pick_x_assum “ispr(Ap:AP->A, aP:AP->P)” mp_tac >>
+      strip_tac >> drule p2_of_pa >> once_arw[] >>
+      pick_x_assum “ispr(Na2b:P->N, nA2B:P->A2B)” mp_tac >>
+      strip_tac >> drule p1_of_pa >> rw[GSYM o_assoc] >>
+      once_arw[] >> rw[idL]) >>
+ suffices_tac “pa(p1:AA2B->A, p2:AA2B->A2B, Ap:AP->A, ((nA2B:P->A2B) o (aP:AP->P))) o
+               pa(Ap, aP, pA:AN->A,
+                pa(Na2b:P->N, nA2B, id(N), tp(p1, p2, ev:AA2B->B, pA:AN->A, pN:AN->N, f:AN->B)) o pN) = 
+               pa(p1,p2,pA,tp(p1, p2, ev, pA, pN, f) o pN)”
+ >-- (strip_tac >> once_arw[] >> drule ev_of_tp >>
+      pick_x_assum “ispr(pA:AN->A,pN:AN->N)” assume_tac >>
+      first_x_assum drule >> once_arw[] >> rw[]) >>
+ match_mp_tac (irule_canon to_p_eq) >> 
+ pexistsl_tac ["A","A2B","p1 : AA2B ->A","p2 : AA2B -> A2B"] >>
+ drule p12_of_pa >> once_arw[] >> rw[GSYM o_assoc] >> once_arw[] >>
+ pick_x_assum “ispr(Ap:AP->A, aP:AP->P)” assume_tac >>
+ drule p12_of_pa >> rw[o_assoc] >> once_arw[] >>
+ rw[GSYM o_assoc] >> 
+ pick_x_assum “ispr(Na2b:P->N, nA2B:P->A2B)” assume_tac >>
+ drule p2_of_pa >> once_arw[] >> rw[]
+ )
+(form_goal
+ “!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. 
+      isexp(p1,p2,ev) ==> 
+      !AN pA:AN->A pN:AN->N.
+          ispr(pA,pN) ==> 
+          !ANB pAN:ANB->AN pB:ANB-> B. 
+            ispr(pAN,pB) ==>
+            !NB Nb:NB->N nB:NB->B.
+               ispr(Nb,nB) ==>
+ !f:AN->B h:ANB->B abr.
+  abr = tp(p1,p2,ev,pA,pN,h o pa(pAN,pB,id(AN),f)) ==>
+ !P Na2b:P->N nA2B:P->A2B.
+                   ispr(Na2b,nA2B) ==>
+ !AP Ap:AP->A aP:AP->P.
+                         ispr(Ap,aP) ==>
+!l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
+          abr = tp(p1,p2,ev,Ap,aP,h o l) o
+        pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f))”)
+
+
+(*?C P PQ Q (pC : ANB -> C#)  (pP : PQ -> P)  (pPQ : ANB -> PQ)
+               (pQ : PQ -> Q). pC o l o
+                 pa(Ap, aP, pA,
+                  pa(Na2b, nA2B, id(N), tp(p1, p2, ev, pA, pN, f)) o pN) =
+               pC o pa(pAN, pB, id(AN), f) & ispr(pPQ, pC) & ispr(pP, pQ) &
+               pP o pPQ o l o
+                 pa(Ap, aP, pA,
+                  pa(Na2b, nA2B, id(N), tp(p1
+
+TODO: huge ppbug!*)
+
+(*f TODO or AQ: first_x_assum (specl_then [rastt "X1"] assume_tac) >>
       first_x_assum drule need, otherwise always look for the p1*)
 
 (*AQ: example:

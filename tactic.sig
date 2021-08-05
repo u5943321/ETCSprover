@@ -31,6 +31,7 @@ val pop_assum: thm_tactic -> tactic
 val mp_tac: thm_tactic
 val rw_tac: logic.thm list -> tactic
 val drule: thm_tactic
+val rev_drule: thm_tactic
 val arw_tac: logic.thm list -> tactic
 val once_arw_tac: logic.thm list -> tactic
 val fconv_tac: fconv -> tactic
