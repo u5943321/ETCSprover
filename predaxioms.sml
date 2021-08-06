@@ -216,7 +216,7 @@ fun mp_canon th =
     end
 
 
-val tp_eq =
+val tp_eq = proved_th $
 e0
 (strip_tac >> drule ev_of_tp >> first_x_assum drule >> 
  first_assum (specl_then [rastt "f:AX->B"] assume_tac) >>
@@ -1988,6 +1988,176 @@ e0
 !l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
           abr = tp(p1,p2,ev,Ap,aP,h o l) o
         pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f))”)
+
+
+val Thm1_comm_eq_right_lemma_long' = 
+ Thm1_comm_eq_right_lemma_long |> spec_all |> undisch 
+ |> spec_all |> undisch |> spec_all |> undisch|> spec_all |> undisch |> 
+ pspecl ["f:AN->B","h:ANB->B",
+         "tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, (h:ANB->B) o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B))"] |>
+ undisch |> prove_hyp (refl (rastt "tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, (h:ANB->B) o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B))"))
+ |> spec_all |> undisch|> spec_all |> undisch
+))
+(form_goal
+ “!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. 
+      isexp(p1,p2,ev) ==> 
+      !AN pA:AN->A pN:AN->N.
+          ispr(pA,pN) ==> 
+          !ANB pAN:ANB->AN pB:ANB-> B. 
+            ispr(pAN,pB) ==>
+            !NB Nb:NB->N nB:NB->B.
+               ispr(Nb,nB) ==>
+ !P Na2b:P->N nA2B:P->A2B.
+                   ispr(Na2b,nA2B) ==>
+ !AP Ap:AP->A aP:AP->P.
+                         ispr(Ap,aP) ==>
+!l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
+!f:AN->B h:ANB->B. tp(p1,p2,ev,pA,pN,h o pa(pAN,pB,id(AN),f)) = tp(p1,p2,ev,Ap,aP,h o l) o
+        pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f))”)
+
+
+val Thm1_comm_eq_right = proved_th $
+e0
+(repeat strip_tac >> assume_tac Thm1_comm_eq_right_lemma_long' >>
+ first_x_assum drule >> 
+ pop_assum mp_tac >> pop_assum (K all_tac) >> 
+ strip_tac >>
+ assume_tac (Thm1_comm_eq_right_lemma_short |> strip_all_and_imp) >> 
+ dimp_tac >> strip_tac (* 2 *)
+ >-- (full_simp_tac[]) >>
+ match_mp_tac (gen_all tp_eq) >>
+ pexistsl_tac ["A","A2B","pA:AN->A","N","pN:AN->N","AA2B","ev:AA2B->B",
+               "p1:AA2B->A","p2:AA2B->A2B"] >>
+ arw[])
+(form_goal 
+“!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. 
+      isexp(p1,p2,ev) ==> 
+      !AN pA:AN->A pN:AN->N.
+          ispr(pA,pN) ==> 
+          !ANB pAN:ANB->AN pB:ANB-> B. 
+            ispr(pAN,pB) ==>
+            !NB Nb:NB->N nB:NB->B.
+               ispr(Nb,nB) ==>
+ !P Na2b:P->N nA2B:P->A2B.
+                   ispr(Na2b,nA2B) ==>
+ !AP Ap:AP->A aP:AP->P.
+                         ispr(Ap,aP) ==>
+!l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
+ !f:AN->B h:ANB->B.
+ h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,s o pN) <=>
+ tp(p1,p2,ev,Ap,aP,h o l) o pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f)) = 
+ tp(p1,p2,ev,pA,pN,f) o s”
+)
+
+
+val Thm1_comm_eq_left' = 
+ Thm1_comm_eq_left |> spec_all |> undisch 
+ |> pspecl ["A2B","B","AA2B"]|> strip_all_and_imp |> GSYM
+
+fun disch_first th = disch (List.hd (ant th)) th
+fun disch_last th = disch (List.hd (rev $ ant th)) th
+
+fun disch_nth n th = disch (List.nth (rev $ ant th,n)) th
+
+val Thm1_comm_eq_condition = proved_th $
+e0
+(repeat strip_tac >> assume_tac Thm1_comm_eq_left' >>
+ assume_tac
+  (Thm1_comm_eq_right |> strip_all_and_imp |> disch_last 
+             |> allI ("l",mk_ar_sort (mk_ob "AP") (mk_ob "ANB"))) >>
+ once_arw[] >> dimp_tac >> strip_tac >> once_arw[] >> rw[] 
+ >-- (repeat strip_tac >> first_x_assum drule >> full_simp_tac[]) >>
+ last_x_assum (pspecl_then ["pa(pAN:ANB->AN,pB:ANB->B,pa(pA:AN->A,pN:AN->N,Ap:AP->A,(Na2b:P->N) o (aP:AP->P)),(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,Ap,nA2B o aP))"] assume_tac) >> full_simp_tac[] >>
+ assume_tac (refl (rastt "pa(pAN:ANB->AN,pB:ANB->B,pa(pA:AN->A,pN:AN->N,Ap:AP->A,(Na2b:P->N) o (aP:AP->P)),(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,Ap,nA2B o aP))")) >>
+ first_x_assum drule >> first_x_assum accept_tac
+)
+(form_goal 
+“!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. 
+      isexp(p1,p2,ev) ==> 
+      !AN pA:AN->A pN:AN->N.
+          ispr(pA,pN) ==> 
+          !ANB pAN:ANB->AN pB:ANB-> B. 
+            ispr(pAN,pB) ==>
+            !NB Nb:NB->N nB:NB->B.
+               ispr(Nb,nB) ==>
+ !P Na2b:P->N nA2B:P->A2B.
+                   ispr(Na2b,nA2B) ==>
+ !AP Ap:AP->A aP:AP->P.
+                         ispr(Ap,aP) ==>
+!A1 pA':A1 -> A  pone : A1 -> 1. ispr(pA', pone) ==> 
+ !f:AN->B g:A->B h:ANB->B.
+   f o pa(pA, pN, pA', z o pone) = g o pA' & 
+   h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,s o pN) <=>
+(tp(p1, p2, ev, pA, pN, f) o z =
+tp(p1, p2, ev, pA', pone, g o pA') &
+(!l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
+ tp(p1,p2,ev,Ap,aP,h o l) o pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f)) = 
+ tp(p1,p2,ev,pA,pN,f) o s))”)
+
+fun pick_nth_assum n ttac = fn (ct,asl, w) => ttac (assume (List.nth(rev asl,Int.-(n,1)))) (ct,asl, w)
+
+fun undisch_then f (ttac:thm_tactic): tactic = fn (ct,asl, w) =>
+      let val (_, A) = Lib.pluck ((curry eq_form) f) asl in ttac (assume f) (ct,A, w) end
+
+local
+    fun f ttac th = undisch_then (concl th) ttac
+in
+fun pick_xnth_assum n = (pick_nth_assum n) o f
+end
+
+
+val Thm1 = proved_th $
+ e0
+(repeat strip_tac >> 
+ x_choosel_then ["A2B","AA2B","p1","p2","ev"] assume_tac (spec_all exp_ex) >>
+ drule Thm1_comm_eq_condition >> first_x_assum rev_drule >> 
+ first_x_assum (pspecl_then ["ANB","pAN:ANB->AN","pB:ANB->B"] assume_tac) >>
+ first_x_assum drule >>
+ x_choosel_then ["NB","Nb","nB"] assume_tac (pr_ex |> pspecl ["N","B"]) >>
+ first_x_assum drule >>
+ x_choosel_then ["P","Na2b","nA2B"] assume_tac (pr_ex |> pspecl ["N","A2B"]) >>
+ first_x_assum drule >>
+ x_choosel_then ["AP","Ap","aP"] assume_tac (pr_ex |> pspecl ["A","P"]) >>
+ first_x_assum drule >> 
+ first_x_assum drule >> once_arw[] >> pop_assum (K all_tac) >>
+ drule Thm1_case_1 >>
+ abbrev_tac “pa(pAN:ANB->AN,pB:ANB->B,pa(pA:AN->A,pN:AN->N,Ap:AP->A,(Na2b:P->N) o (aP:AP->P)),(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,Ap,nA2B o aP)) = l” >>
+ pop_assum (assume_tac o GSYM) >>
+ x_choose_then "fb" assume_tac 
+ (Thm1_case_1 |> pspecl ["P","Na2b:P->N","A2B","nA2B:P->A2B"]
+  |> undisch |> pspecl ["tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA':A1->A,pone:A1->1,(g:A->B) o pA')","tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,Ap:AP->A,aP:AP->P,(h:ANB->B) o (l:AP->ANB))"]) >> 
+ pexistsl_tac ["(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,pA:AN->A,(fb:N->A2B) o (pN:AN->N))"] >>
+ abbrev_tac “(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,pA:AN->A,(fb:N->A2B) o (pN:AN->N)) = f” >>
+ by_tac “tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA:AN->A,pN:AN->N,f:AN->B) = fb”
+ >-- (sym_tac >> match_mp_tac (irule_canon is_tp) >> once_arw[] >> rw[]) >>
+ strip_tac >> dimp_tac >> strip_tac (* 2 *)
+ >-- (once_arw[] >> match_mp_tac (gen_all tp_eq) >>
+      pexistsl_tac ["A","A2B","pA:AN->A","N","pN:AN->N",
+                    "AA2B","ev:AA2B->B","p1:AA2B->A","p2:AA2B->A2B"] >>
+      once_arw[] >> rw[] >> first_x_assum drule  >>
+      pick_xnth_assum 10 (assume_tac o GSYM) >>
+      once_arw[] >> strip_tac >-- first_x_assum accept_tac
+      >-- first_x_assum (accept_tac o GSYM)) >>
+ suffices_tac
+ “tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, f':AN->B) o z = tp(p1, p2, ev, pA':A1->A, pone:A1->1, (g:A->B) o pA') & 
+  tp(p1, p2, ev, pA, pN, f') o s = 
+  tp(p1, p2, ev, Ap:AP->A, aP:AP->P, ((h:ANB->B) o (l:AP->ANB))) o pa(Na2b, nA2B, id(N), tp(p1, p2, ev, pA, pN, f'))” 
+ >-- (strip_tac >> once_arw[] >> rw[] >> repeat strip_tac >>
+     by_tac “l' = l:AP->ANB” >-- (once_arw[] >> rw[]) >>
+     pick_xnth_assum 15 mp_tac >> pop_assum mp_tac >> 
+     pop_assum_list (map_every (K all_tac)) >>
+     repeat strip_tac >> rev_full_simp_tac[]) >>
+ once_arw[] >> sym_tac >> match_mp_tac (irule_canon is_tp) >>
+ once_arw[] >> once_arw[] >> rw[])
+(form_goal
+ “!A AN pA:AN->A pN:AN->N.
+  ispr(pA,pN) ==> 
+  !ANB B pAN:ANB->AN pB:ANB-> B. 
+  ispr(pAN,pB) ==>
+  !A1 pA':A1 -> A pone:A1 -> 1. ispr(pA', pone) ==> 
+  !g:A->B h:ANB->B.
+  ?f:AN->B. !f'. (f' o pa(pA,pN,pA',z o pone) = g o pA' &
+            h o pa(pAN,pB,id(AN),f') = f' o pa(pA,pN,pA,s o pN)) <=> f' = f”)
 
 
 (*?C P PQ Q (pC : ANB -> C#)  (pP : PQ -> P)  (pPQ : ANB -> PQ)
