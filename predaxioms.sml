@@ -2159,7 +2159,132 @@ val Thm1 = proved_th $
   ?f:AN->B. !f'. (f' o pa(pA,pN,pA',z o pone) = g o pA' &
             h o pa(pAN,pB,id(AN),f') = f' o pa(pA,pN,pA,s o pN)) <=> f' = f”)
 
+(*∃p. p∶ N → N ∧ p o z = z ∧ p o s = id N*)
 
+val pred_exists = proved_th $
+e0
+(x_choosel_then ["NN","p1","p2"] assume_tac (pr_ex |> pspecl ["N","N"]) >>
+ drule Thm1_case_1 >> 
+ first_x_assum (pspecl_then ["z","p1:NN->N"] assume_tac) >>
+ first_x_assum (x_choose_then "p" assume_tac) >> 
+ pexistsl_tac ["p:N->N"] >>
+ first_x_assum (pspecl_then ["p:N->N"] assume_tac) >>
+ drule p1_of_pa >> full_simp_tac[])
+(form_goal “?p:N->N. p o z = z & p o s = id(N)”)
+
+(*∀n. n∶ one → N ⇒ (s o n) ≠ z*)
+
+(*TODO, may AQ, ~!X (e1 : X# -> X#)  (e1 : X# -> X#). ~~e1# = e1#: thm elim the double neg*)
+
+val distinct_endo_exists' = 
+ distinct_endo_exists |>
+ rewr_rule[exists_forall ("X",mk_ob_sort),
+ exists_forall ("e1",mk_ar_sort (mk_ob "X") (mk_ob "X"))] |> neg_neg_elim
+ |> eqF_intro |> dimpl2r
+
+
+val Thm2_1 = proved_th $
+e0
+(strip_tac >> ccontra_tac >> match_mp_tac distinct_endo_exists' >>
+ repeat strip_tac >> rw[] >> 
+ strip_assume_tac pred_exists >>
+ by_tac “s o z = z”
+ >-- (by_tac “p o s o n = (p:N->N) o z” 
+      >-- arw[] >>
+      pop_assum mp_tac >> rw[GSYM o_assoc]>> arw[idL] >> 
+      strip_tac >> full_simp_tac[]) >>
+ suffices_tac “e1 = id(X) & e1'= id(X)”
+ >-- (strip_tac >> arw[]) >> strip_tac >> match_mp_tac fun_ext >>
+ strip_tac >> rw[idL]
+ >-- (strip_assume_tac 
+     (Neqn_zs |> pspecl ["X","e1:X->X","a:1->X"] |> GSYM) >>
+     once_arw[] >> rw[GSYM o_assoc] >>
+     suffices_tac “(Nind(a, e1) o s)  o z = Nind(a:1->X, e1:X->X) o z”
+     >-- (strip_tac >> pick_xnth_assum 5 mp_tac >> rev_full_simp_tac[]) >>
+     rw[o_assoc] >> once_arw[] >> rw[]
+     ) >>
+strip_assume_tac 
+ (Neqn_zs |> pspecl ["X","e1':X->X","a:1->X"] |> GSYM) >>
+     once_arw[] >> rw[GSYM o_assoc] >>
+     suffices_tac “(Nind(a, e1') o s)  o z = Nind(a:1->X, e1':X->X) o z”
+     >-- (strip_tac >> pick_xnth_assum 5 mp_tac >> rev_full_simp_tac[]) >>
+     rw[o_assoc] >> once_arw[] >> rw[]
+ )
+(form_goal “!n:1->N. ~ s o n = z”)
+
+(*is_mono s*)
+
+val Thm2_2 = proved_th $
+e0
+(match_mp_tac post_inv_mono >> strip_assume_tac pred_exists >>
+ pexistsl_tac ["p:N->N"] >> arw[])
+(form_goal “ismono(s)”)
+
+(*∀A a s' z'. a∶ A → N ∧ is_mono a ∧ s'∶ A → A ∧ z'∶ one → A ∧
+            a o s' = s o a ∧ a o z' = z ⇒ A ≅ N*)
+
+val rpt = repeat  
+
+val Thm2_3_alt = proved_th $ 
+e0
+(rpt strip_tac >> 
+ strip_assume_tac (Neqn_zs |> pspecl ["A","s':A->A","z':1->A"]) >>
+ rw[areiso_isiso] >> pexistsl_tac ["a:A->N"] >> 
+ match_mp_tac mono_epi_is_iso >> arw[] >> 
+ match_mp_tac pre_inv_epi >> pexistsl_tac ["Nind(z':1->A,s':A->A)"] >>
+ sym_tac >>
+ match_mp_tac comm_with_s_id >> arw[o_assoc] >> rw[GSYM o_assoc] >>
+ once_arw[] >> rw[])
+(form_goal 
+“!A a:A->N. ismono(a) ==> 
+  !s':A->A z':1->A. (a o s' = s o a & a o z' = z ==> areiso(A,N))”)
+
+(*∀A a. a∶ A → N ∧ is_mono a ∧ (∀n. is_mem n a N ⇒ is_mem (s ∘ n) a N) ⇒
+        ∃t. t∶ A → A ∧ a o t = s o a*)
+
+val ind_fac = proved_th $
+ e0
+(rpt strip_tac >> 
+ strip_assume_tac (pb_exists |> pspecl ["A","N","s o a:A->N","A","a:A->N"]) >>
+ drule pb_equality >>
+ suffices_tac “isiso(p:P->A)”
+ >-- (rw[isiso_def] >> strip_tac >> pexistsl_tac ["(q:P->A) o (f':A->P)"] >>
+      pick_xnth_assum 4 (assume_tac o GSYM) >> arw[GSYM o_assoc] >>
+      arw[o_assoc,idR]) >>
+ match_mp_tac mono_epi_is_iso >> strip_tac
+ >-- (drule pb_mono_mono >> first_x_assum drule >> first_x_assum accept_tac) >>
+ match_mp_tac surj_is_epi >> strip_tac >> 
+ by_tac “ismem(s o (a:A->N) o (b:1->A),a)”
+ >-- (first_x_assum match_mp_tac >> arw[ismem_def] >>
+      pexistsl_tac ["b:1->A"] >> rw[]) >>
+ full_simp_tac[ismem_def] >> pop_assum (assume_tac o GSYM) >> 
+ rev_drule (ispb_def_alt' |> iffLR) >> 
+ pop_assum strip_assume_tac >> full_simp_tac[GSYM o_assoc] >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ pexistsl_tac ["a':1->P"] >> arw[])
+(form_goal “!A a:A->N. ismono(a) ==> (!n:1->N. ismem(n,a) ==> ismem(s o n,a)) ==>
+ ?t:A->A. a o t = s o a”)
+
+(*Theorem Thm2_3:        
+∀A a. is_subset a N ∧ (∀n. is_mem n a N ⇒ is_mem (s o n) a N) ∧
+    is_mem z a A ⇒ dom a ≅ N
+Proof
+rw[] >> irule Thm2_3_alt >> fs[is_subset_def] >>
+‘a∶ dom a → N’ by metis_tac[hom_def] >>
+qabbrev_tac ‘A = dom a’ >>
+drule ind_factorization >> fs[is_mem_def] >> metis_tac[]
+QED*)
+
+val Thm2_3 = proved_th $
+e0
+(repeat strip_tac >> match_mp_tac (irule_canon Thm2_3_alt) >> 
+ drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
+ full_simp_tac[ismem_def] >> 
+ pexistsl_tac ["a:A->N","t:A->A","x0:1->A"] >> arw[])
+(form_goal “!A a:A->N. (ismono(a) & (!n:1->N. ismem(n,a) ==> ismem(s o n,a)) & ismem(z,a)) ==>
+           areiso(A,N)”)
+
+(*MaybeTODO: machinary of prove isN from areiso(A,0)*)
 (*?C P PQ Q (pC : ANB -> C#)  (pP : PQ -> P)  (pPQ : ANB -> PQ)
                (pQ : PQ -> Q). pC o l o
                  pa(Ap, aP, pA,

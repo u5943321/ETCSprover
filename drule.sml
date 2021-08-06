@@ -838,13 +838,13 @@ fun elim_double_neg th =
 fun exists_forall (n,s) = 
     let 
         val f0 = mk_fvar "f0"
-        val af0 = mk_forall n s f0
+        val af0 = mk_forall n s (mk_neg f0)
         val ef0 = mk_exists n s f0
         val d1 = (C negI)
                      (existsE (n,s) (assume ef0)
                  (negE (assume f0) 
                    ((C allE) (assume af0) (mk_var n s))))
-                 (mk_forall n s f0) |>
+                 af0 |>
                  disch ef0
         val d2 = elim_double_neg
                      ((C negI)
