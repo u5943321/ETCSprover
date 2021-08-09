@@ -4,7 +4,7 @@ open goalstack
 
 val current_goal = ref (NONE:gstk option)
 
-fun g0 f = current_goal:= SOME (rpg f)
+fun g0 f = current_goal:= SOME (form_goal (readfq f))
 
 
 fun PPgstk' gstk =  let val s = ppgstk gstk
@@ -29,7 +29,7 @@ fun e00 tac  = case !current_goal of
 val e = pgoal e00
 
 
-
+(*
 exception NO_PROOFS;
 
 open History
@@ -58,6 +58,7 @@ fun backup' () =
 
 
 val b = backup';
+*)
 
 
 

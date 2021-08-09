@@ -1,7 +1,3 @@
-structure q :> q = 
-struct
-open pterm tactic
-
 fun q_ttac ttac str: tactic =
     fn (ct,asl,w) => ttac (pwct ct str) (ct,asl,w)
 
@@ -50,4 +46,3 @@ fun uex_def f =
     in mk_thm(fvf thf) [] thf
     end
 
-end
