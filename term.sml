@@ -301,7 +301,7 @@ fun pvariantt vd t =
     case t of 
         Var(n,s) => 
         if mem n (List.map fst (HOLset.listItems vd))
-        then Var (n ^ "'",s)
+        then pvariantt vd (Var(n ^ "'",s))
         else Var (n, s)
       | Fun(f,s,l) => Fun(f,s,List.map (pvariantt vd) l)
       | _ => t
