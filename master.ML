@@ -29,7 +29,7 @@ open token;
 use "pterm_dtype.sml";
 open pterm_dtype;
 
-(*
+
 use "pterm.sig";
 use "pterm.sml";
 open pterm;
@@ -56,4 +56,4 @@ open tactic;
 use "goalstack.sig";
 use "goalstack.sml";
 open goalstack;
-*)
+

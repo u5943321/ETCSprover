@@ -338,11 +338,14 @@ val i1_ne_i2 = proved_th $
 e0
 (repeat strip_tac >> ccontra_tac >> 
  x_choosel_then ["X","x1","x2"] assume_tac ax8 >> 
- by_tac (rapf "copa(i1:1->oneone,i2:1->oneone,x1:1->X,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2") >-- (drule i12_of_copa >> arw_tac[]) >>
+ qby_tac "copa(i1,i2,x1,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2"
+ (*by_tac (rapf "copa(i1:1->oneone,i2:1->oneone,x1:1->X,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2")*) >-- (drule i12_of_copa >> arw_tac[]) >>
  pop_assum (assume_tac o GSYM) >> 
- rev_full_simp_tac[] >> suffices_tac (rapf "x1:1->X = x2") 
+ rev_full_simp_tac[] >> (*suffices_tac (rapf "x1:1->X = x2") *)
+ qsuff_tac "x1 = x2"
  >-- (arw_tac[]) >>
- pick_x_assum (rapf "~x1:1->X = x2") (K all_tac) >> once_arw_tac[] >> rw_tac[] >>
+ qpick_x_assum "~x1 = x2" (K all_tac)
+ (*pick_x_assum (rapf "~x1:1->X = x2") (K all_tac)*) >> once_arw_tac[] >> rw_tac[] >>
  rw_tac[])
 (rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~i1 = i2")
 
@@ -3154,6 +3157,38 @@ e0
 
 
 
+val Thm5 = proved_th $ 
+e0
+(rpt strip_tac >> drule Thm5_constructions >>
+ qspecl_then ["A","1"] (x_choosel_then ["A1","pA","pone"] assume_tac) 
+ pr_ex >>
+ first_x_assum drule >>
+ qspecl_then ["1","1"] (x_choosel_then ["two","i1","i2"] assume_tac) copr_ex >>
+ first_x_assum drule >> 
+ qspecl_then ["A","two"] (x_choosel_then ["A2","AA2","p1","p2","ev"] assume_tac) exp_ex >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qspecl_then ["X","two"] (x_choosel_then ["X2","XX2","p1'","p2'","ev'"] assume_tac) exp_ex >>
+ first_x_assum drule >>
+ qspecl_then ["A","X2"] (x_choosel_then ["AX2","Ax2","aX2"] assume_tac) pr_ex >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qspecl_then ["X2","A2","a2","j0 o to1(X2, 1)"] (x_choosel_then ["L","u"] assume_tac) eq_ex >>
+ first_x_assum drule >>
+ qspecl_then ["X","L"] (x_choosel_then ["XL","pX","pL"] assume_tac) pr_ex >>
+ first_x_assum drule >> 
+ pop_assum strip_assume_tac >>
+ qspecl_then ["XL","two","ub","i2 o to1(XL, 1)"] (x_choosel_then ["E","k"] assume_tac) eq_ex >>
+ first_x_assum drule >>
+ pop_assum (x_choosel_then ["A'","a'","q"] assume_tac) >>
+ pexistsl_tac ["A'","a':A'->X"] >> arw[] >> rpt strip_tac >>
+ assume_tac (Thm5_iso |> strip_all_and_imp) >>
+ first_x_assum accept_tac)
+(form_goal 
+“!A X a:A->X.ismono(a) ==> 
+ ?A' a':A'->X. ismono(a') &
+        !AA' iA:A->AA' iA':A'->AA'. iscopr(iA,iA') ==> isiso(copa(iA,iA',a,a'))”)
+
 
 
 fun fl_diff fl1 fl2 = 
@@ -3164,13 +3199,6 @@ fun fl_diff fl1 fl2 =
       | ([],_) => []
 
 
-(rapg "!X Z f:X->Z Y g:Y->Z. ?P p:P->X q:P->Y. f o p = g o q & ")
-
-rapf "!p1AN:AN->A p2AN:AN->N. "
-∀g h A B. g∶ A → B ∧ h∶ (po (po A N) B) → B ⇒
-          ∃!f. f∶ po A N → B ∧
-               f o ⟨p1 A one, z o (p2 A one)⟩ = g o (p1 A one) ∧
-               h o ⟨id (po A N), f⟩ = f o ⟨p1 A N, s o (p2 A N)⟩
 
 (*fun strip_all_and_imp th = 
     if is_forall (concl th) then 
