@@ -1100,4 +1100,85 @@ fun rapf f = pretty_form (fst (read_ast_f f))
 
 val rastt = fst o read_ast_t
 
+
+(*parse with context*)
+
+fun csort_of a ct = 
+    case HOLset.find (fn ns => fst ns = a) ct  of 
+        SOME ns => snd ns
+      | _ => raise simple_fail ("no variable with name: " ^ a ^ "in the current context")
+
+
+fun cast2t ct ast = 
+    case ast of 
+        aId(a) =>
+        if is_const a then rastt a
+        else mk_var a (csort_of a ct)
+      | aApp(str,astl) => 
+        if is_fun str then 
+             mk_fun str (List.map (cast2t ct) astl)
+        else raise simple_fail("not a function symbol: " ^ str) 
+      | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) =>
+        let val dom = cast2t ct ast
+            val cod = cast2t ct ast
+        in mk_var n (mk_ar_sort dom cod)
+        end (*assume sort annotation only happens for bound variables, in that case, change the ct when moving into quantifiers*)
+      | aInfix(ast1,str,ast2) => 
+        if mem str ["*","+","^","o"] then
+            let val t1 = cast2t ct ast1
+                val t2 = cast2t ct ast2
+            in
+                mk_fun str [t1,t2]
+            end
+        else raise simple_fail"not an infix operator"
+      | aBinder(str,ns,b) => 
+        raise simple_fail "quantified formula parsed as a term!"
+
+
+fun cast2f ct ast = 
+    case ast of 
+        aId(a) => 
+        if a = "T" then mk_pred "T" [] else 
+        if a = "F" then mk_pred "F" [] else
+        raise simple_fail("variable:" ^ a ^ " is parsed as a predicate")
+      | aApp("~",[ast]) => 
+        mk_neg (cast2f ct ast)
+      | aApp(str,astl) => 
+        if is_pred str then 
+           mk_pred str (List.map (cast2t ct) astl)
+        else raise simple_fail("not a predicate symbol: "^ str)
+      | aInfix(ast1,str,ast2) => 
+        if mem str ["&","|","<=>","==>"] then
+            let
+                val f1 = cast2f ct ast1
+                val f2 = cast2f ct ast2
+            in
+                mk_conn str [f1,f2]
+            end else 
+        if mem str ["="] then
+            let
+                val t1 = cast2t ct ast1
+                val t2 = cast2t ct ast2
+            in
+                mk_eq t1 t2
+            end else
+        raise simple_fail ("not an infix operator: " ^ "str")
+      | aBinder(str,ns,b) => 
+        if str = "!" orelse str = "?" then
+            let val (n,s) = dest_var (cast2t ct ns)
+                val nc = HOLset.add(ct,(n,s))
+            in mk_quant str n s (cast2f nc b)
+            end               
+        else raise simple_fail"not a quantifier"
+
+
+fun read_ast_pf a = ast2pf (parse_ast_end (parse_ast (lex a))) empty
+
+fun read_ast_pt a = ast2pt (parse_ast_end (parse_ast (lex a))) empty
+
+fun pwct ct tstr = cast2t ct (parse_ast_end (parse_ast (lex tstr)))
+
+fun pwcf ct fstr = cast2f ct (parse_ast_end (parse_ast (lex fstr)))
+
+
 end

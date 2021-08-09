@@ -25,4 +25,8 @@ val readt: string -> term.term
 val rpf: string -> form.form
 val rapf: string -> form.form
 val rastt: string -> term.term
+
+val pwct: (string * sort) set -> string -> term
+val pwcf: (string * sort) set -> string -> form
+
 end
