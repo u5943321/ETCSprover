@@ -210,11 +210,18 @@ fun dest_exists f =
         Quant("?",n,s,b) => ((n,s),b)
       | _ => raise ERR ("not an existantial: ",[],[],[f])
 
+
 fun dest_forall f = 
     case f of 
         Quant("!",n,s,b) => ((n,s),b)
       | _ => raise ERR ("not a universal",[],[],[f])
 
+(*
+fun dest_forall f = 
+    case f of 
+        Quant("!",n,s,b) => ((n,s),subst_bound (mk_var n s) b)
+      | _ => raise ERR ("not a universal",[],[],[f])
+*)
 
 fun eq_form fp = 
     case fp of 

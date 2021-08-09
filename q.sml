@@ -46,3 +46,35 @@ fun uex_def f =
     in mk_thm(fvf thf) [] thf
     end
 
+(*function symbol from unique existence under some precondition, if no precondition then the condition is just T*)
+
+(*a problem is that if already have a:A->B as input, then do not need A and B as input as well, for instance, the def of pr.
+
+any comment with the style? 
+*)
+
+fun filter_cont ct = 
+    let val ctl = HOLset.listItems ct
+        val sctl = List.map snd ctl
+        val obl = List.map fvs sctl
+        val rptob = (*List.foldr (fn (e,s) => HOLset.add(s,e)) essps sctl*)
+            mk_sss obl
+    in HOLset.difference(ct,rptob)
+    end
+
+fun uex2fsym fsym th = 
+    let val th' = spec_all th
+        val (ct,asl) = (cont th',ant th')
+        val (hyp,conc) = dest_imp (concl th')
+       (* val _ = HOLset.isSubset(fvf conc,fvf hyp)
+                orelse raise ERR ("uex2fsym.conclusion has extra free variable",[],[],[hyp,conc]) *)
+        val inputvars = HOLset.listItems $ filter_cont (cont th') (*need filter it*)
+        val ((n,s),b) = dest_exists conc
+        val _ = new_fun fsym (s,inputvars)
+        val fterm = mk_fun fsym (List.map var inputvars)
+        val b' = subst_bound fterm b
+    in mk_thm ct asl (mk_imp hyp b')
+    end
+
+(*uex2fsym "none" ax5; test pass*)
+        
