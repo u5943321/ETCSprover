@@ -3485,6 +3485,34 @@ e0
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !f:1->two g:1->two. (f = i2 <=> g = i2) ==> f = g”)
 
+
+val fac_char = proved_th $
+e0
+(rpt strip_tac >> drule char_def >> first_x_assum drule >>
+irule fun_ext >> strip_tac >> rw[o_assoc] >>
+once_rw[one_to_one_id] >> rw[idR] >> 
+pop_assum (assume_tac o iffLR) >> first_x_assum irule >>
+qexistsl_tac ["f o a"] >> rw[GSYM o_assoc] >> once_arw[] >> rw[])
+(form_goal 
+“!A X m.ismono(m:A->X)==>!P p:P->X f:P->A. m o f = p ==>
+!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+char(i1,i2,m) o p = i2 o to1(P,1)”)
+
+val fac_char_via_any_map = proved_th $
+  e0
+(rpt strip_tac >> drule epi_has_section >> 
+ drule char_def >> first_x_assum drule >> 
+ first_x_assum (qspecl_then ["b"] assume_tac) >>
+ rfs[] >> qexistsl_tac ["g o x0"] >>
+ qby_tac ‘(m o e) o g o x0 = m o (e o g) o x0’
+ >-- rw[o_assoc] >> arw[idL])
+(form_goal 
+“!A M e:A->M. isepi(e) ==> !B m:M->B.ismono(m) ==>
+ !f:A->B. f = m o e ==> 
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !b:1->B.char(i1,i2,m) o b = i2 ==>
+ ?a:1->A. f o a = b”)
+
 (*
 val char_exists' = 
 
