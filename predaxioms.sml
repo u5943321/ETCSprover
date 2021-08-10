@@ -199,7 +199,7 @@ val coeq_eqn = coeqind_def |> strip_all_and_imp
  
 
 
-(*TODO: a rule that repeat disch and gen until cannot *)
+
 
 
 fun arw_rule thl th = rewr_rule ((List.map assume $ ant th) @ thl) th
@@ -338,13 +338,13 @@ val i1_ne_i2 = proved_th $
 e0
 (repeat strip_tac >> ccontra_tac >> 
  x_choosel_then ["X","x1","x2"] assume_tac ax8 >> 
- qby_tac "copa(i1,i2,x1,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2"
+ qby_tac ‘copa(i1,i2,x1,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2’
  (*by_tac (rapf "copa(i1:1->oneone,i2:1->oneone,x1:1->X,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2")*) >-- (drule i12_of_copa >> arw_tac[]) >>
  pop_assum (assume_tac o GSYM) >> 
  rev_full_simp_tac[] >> (*suffices_tac (rapf "x1:1->X = x2") *)
- qsuff_tac "x1 = x2"
+ qsuff_tac ‘x1 = x2’
  >-- (arw_tac[]) >>
- qpick_x_assum "~x1 = x2" (K all_tac)
+ qpick_x_assum ‘~x1 = x2’ (K all_tac)
  (*pick_x_assum (rapf "~x1:1->X = x2") (K all_tac)*) >> once_arw_tac[] >> rw_tac[] >>
  rw_tac[])
 (rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~i1 = i2")
@@ -354,7 +354,7 @@ e0
                              i2 A B ∘ x0' = x))
 *)
 
-(* TODO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |>irule_canon
+(* TODO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon
 # Exception- ERR ("the given variable occurs unexpectedly", [], [], []) raised
 
 
@@ -1016,21 +1016,6 @@ e0
 (*∀f A B. is_epi f ∧ f∶ A → B ∧ ¬(B≅ zero) ⇒ ¬(A ≅ zero)*)
 
 
-(*TODO:rw with one_to_one_id from            (x : 1 -> B)
-   1.isepi(f)
-   2.~is0(B)
-   3.is0(A)
-   4.iscopr(i1, i2)
-   5.is1(1)
-   6.!(t1x' : B -> 1). t1x'# = t1x
-   7.T
-   8.i1 o t1x = i2 o t1x
-   ----------------------------------------------------------------------
-   t1x o x = id(1)
-   : gstk
-causes loop
-
-*)
 
 val no_epi_from_zero = proved_th $
 e0
@@ -1114,17 +1099,6 @@ e0
 
 (*∀A B f. is_epi f /\ f∶ A → B ==> (∀b. b∶ one → B ⇒ ∃b0. b0∶ one → A ∧ f o b0 = b)*)
 
-
-(*TODO: the below cannot go into negation, let rw go into negation
- A , B ,   
-   (b : 1 -> B), (f : A -> B)
-   1.isepi(f)
-   2.~areiso(B, 0)
-   ----------------------------------------------------------------------
-   ~areiso(B, 0)
-
-arw does nothing on this
-*)
 
 val no_epi_from_iso_zero = contrapos (no_epi_from_zero |> spec_all |> undisch) |> neg_neg_elim |> rewr_rule [GSYM iso_zero_is_zero] |> contrapos|> disch_all |> gen_all
 
@@ -1264,20 +1238,6 @@ first_x_assum opposite_tac)
 (*∀X Y f x. f∶ X→ Y ∧ x∶ one→ X ⇒
           ev X Y o ⟨x, tp (f o p1 X one)⟩ = f o x*)
 
-fun sing f [x] = f x
-  | sing f _ = raise simple_fail "sing" 
-
-fun exists_tac' t (G,fl,f) = 
-    case view_form f of 
-        vQ("?",n,s,b) =>
-        if eq_sort(sort_of t,s) then 
-            let val nv = pvariantt (fvf b) (var(n,s))
-            in
-            ([(G,fl,subst_bound t b)], 
-             sing (existsI (dest_var nv) t (subst_bound nv b)))
-            end
-        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
-      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
 (*AQ: example of name clash issue again*)
 
@@ -1317,7 +1277,7 @@ or jusr write a rev_drule FREEZE_THEN
 (*is_mono a ∧ a∶ A → X ∧ x∶ one → X ∧
  ¬(∃x0. x0∶ one → A ∧ a o x0 = x) ⇒ is_mono (copa a x)*)
 
-(*TODO: a drule such that if !x.~ P(x) in assumption, then know p(a) is false*)
+(*TODO: a drule such that if !x.~ P(x) in assumption, then know p(a) is false,isnt it rw_canon?*)
 
 fun neg_disch t th =
    if eq_form(concl th,FALSE) then negI t th 
@@ -1536,6 +1496,16 @@ e0
 (rapg "!X A a:X->A.ismono(a) ==> !Y b:Y->A. ismono(b) & (!y:1->Y. ?x:1->X.a o x = b o y) & (!x:1->X.?y:1->Y.a o x = b o y) ==> ?h1:X->Y h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)") 
 
 
+
+val prop_2_corollary = proved_th $
+e0
+(repeat strip_tac >> rw[areiso_def] >> rev_drule prop_2_corollary_as_subobj >>
+first_x_assum (qspecl_then ["Y","b"] assume_tac) >> rev_full_simp_tac[] >>
+qexistsl_tac ["h1","h2"] >> arw[]
+ )
+(rapg "!X A a:X->A.ismono(a) ==> !Y b:Y->A. ismono(b) & (!y:1->Y. ?x:1->X.a o x = b o y) & (!x:1->X.?y:1->Y.a o x = b o y) ==> areiso(X,Y)") 
+
+
 (*is_refl f0 f1 ⇔ dom f0 = dom f1 ∧ cod f0 = cod f1 ∧
              ∃d. d∶ cod f1 → dom f1 ∧
                  f0 o d = id (cod f1) ∧
@@ -1648,19 +1618,6 @@ drule coeq_eqn >> first_x_assum drule >> arw[])
 
 TODO: ppbug*)
 
-(*maybe TODO:
- B , NB ,   
-   (f : N -> B), (g : 1 -> B), (pB : NB -> B), (pN : NB -> N)
-   1.ispr(pN, pB)
-   2.pa(pN, pB, id(N), f) o z = pa(pN, pB, z, g)
-   3.!X (f : X# -> N)  (g : X# -> B). pB o pa(pN, pB, f#, g#) = g#
-   4.f = pB o pa(pN, pB, id(N), f)
-   5.g = pB o pa(pN, pB, z, g)
-   ----------------------------------------------------------------------
-   pB o pa(pN, pB, z, g) = g
-
-arw does nothing
-*)
 
 val Thm1_case1_comm_condition_left = proved_th $
 e0
@@ -1857,7 +1814,7 @@ val parallel_p_one_side_split =
 val f0 = rastt "(f:AN->B) o pa(pA:AN->A, pN:AN->N, pA':A1->A, z o (pone:A1->1))"
 val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o z o pone:A1->1)"
 
-fun existsl_tac l = map_every (exists_tac') l
+
 
 fun pexistsl_tac l = map_every (exists_tac') (List.map rastt l)
 
@@ -2605,9 +2562,6 @@ e0
 (form_goal “!A B f:A->B. ?X m:X->B e:A->X. isepi(e) & ismono(m) & f = m o e”)
 
 
-(*f TODO or AQ: first_x_assum (specl_then [rastt "X1"] assume_tac) >>
-      first_x_assum drule need, otherwise always look for the p1*)
-
 val irule = match_mp_tac o irule_canon
 
 val isepi_surj = is_epi_surj
@@ -2695,8 +2649,49 @@ suffices_tac
  !two i1:1->two i2:1->two.iscopr(i1,i2) ==>
  ?phi:X->two. phi o x = i2 & phi o a = i1 o to1(A,1)”)
 
-(*AQ: example:
+(*AQ list*)
+(*
+AQ0:set backup stuff! Do we need GOALSTACK and GOALTREE? I only have goalstack but not goaltree.sml.
+
+
+AQ1: example:
 (rapg "!X x:1->X Y f:X->Y ev X2Y efs p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==> ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x")
+
+if after strip, have some free variables whose dom/cod is bound, then raise error. in type checking in parsing.
+
+
+rapg "!a.ismono(a) & ismono(a)"
+
+should I introduce a constaint so it never happens?
+
+AQ2: parser: how to use fixity of "~" aApp ~? with the ast approach, infix and ~ are treated by app and ainfix, always need (~(...) & P(a))
+
+AQ3: the occurence of B(0) in error message has nothing to do with the dest_all stuff, so even if I edit dest of quant it will happen, but edit dest to replace variables may need renaming, and so cause pain in definition of the rules and tactics.
+
+AQ4. pick_assum / pick_xnth_assum okay (like it anyway...)? would like qpat assum, how basically does it work? (have not make attempt to look at its code though, any key thing to know about it? guess it is parsing & matching, but how far does the parsing go/ how to parse the partial formulas like a = _, another special parser other than pwc?)  how would we allow qpick assum? cannot think of a higher order function for it.
+
+first_x_assume with (fn => which can match the given formula which is obtaibed by parsing in cont, or use _ )
+
+AQ5. possible to use quotation for both usual parser and pwc, seems like HOL only has one parser, and the usual parse has the ct empty. but the current parser very different from the old one, nothing to do with unification. show the treatment of bounded variables.
+
+AQ6. pp bug, missing many #, and ugly printted context, anything obvious for improvement?
+
+AQ7. talked about "do not allow more free variables on RHS", but if the variables are in the context and it is once arw then it is okay, say once arw using GSYM p12_of_pa. discussed before for things like “?x:A->B <=>T” maybe give the conv access to the cont. should the restriction on rw be "no free var outside the cont" in conv, instead of no more fv on RHS? or how else should we once rw with GSYM p12_of_pa?
+
+
+g:A->B
+ ispr(p1#, p2#)
+
+P(f)
+------
+f (f# = p1# o pa(p1#, p2#, f#, g#) |> )= f' 
+
+
+
+AQ8. show the uex stuff, do not have ?! and just use ? to test now, any obvious improvement?
+
+AQ9. Jim replyed and prefers having equality on objects.
+
 *)
 
 (*TODO: parser bug rapg "!i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x:1->AB. (?x0:1->A. i1 o x0 = x) | (?x0:1->B. i2 o x0 = x)" need () around  (?x0:1->B. i2 o x0 = x)*)
@@ -3189,7 +3184,316 @@ e0
  ?A' a':A'->X. ismono(a') &
         !AA' iA:A->AA' iA':A'->AA'. iscopr(iA,iA') ==> isiso(copa(iA,iA',a,a'))”)
 
+val _ = new_pred "istrans" [("f0",mk_ar_sort (mk_ob "R") (mk_ob "A")),
+                          ("f1",mk_ar_sort (mk_ob "R") (mk_ob "A"))]
 
+(*
+∀f0 f1 R A. f0∶ R → A ∧ f1∶ R → A ⇒
+         (is_trans f0 f1 ⇔
+         ∀X h0 h1.
+             h0∶X → R ∧ h1∶X → R ∧ f1 ∘ h0 = f0 ∘ h1 ⇒
+             ∃u. u∶X → R ∧ f0 ∘ u = f0 ∘ h0 ∧ f1 ∘ u = f1 ∘ h1)
+*)
+
+val istrans_def = read_axiom "!R A f0:R->A f1:R->A.istrans(f0,f1) <=> !X h0:X->R h1:X->R. f1 o h0 = f0 o h1 ==> ?u:X->R. f0 o u = f0 o h0 & f1 o u = f1 o h1"
+
+(*∀f0 f1 R A. f0∶ R → A ∧ f1∶ R → A ⇒
+         (is_refl f0 f1 ⇔
+         ∃d. d∶ A → R ∧ f0 ∘ d = id A ∧ f1 ∘ d = id A)*)
+
+val _ = new_pred "isrefl" [("f0",mk_ar_sort (mk_ob "R") (mk_ob "A")),
+                          ("f1",mk_ar_sort (mk_ob "R") (mk_ob "A"))]
+
+val isrefl_def = 
+read_axiom "!R A f0:R->A f1. isrefl(f0,f1) <=> ?d:A->R. f0 o d = id(A) & f1 o d = id(A)"
+
+(*is_symm f0 f1 ⇔ dom f0 = dom f1 ∧ cod f0 = cod f1 ∧
+             ∃t. t∶ dom f1 → dom f1 ∧
+                 f0 o t = f1 ∧
+                 f1 o t = f0*)
+
+val _ = new_pred "issymm" [("f0",mk_ar_sort (mk_ob "R") (mk_ob "A")),
+                          ("f1",mk_ar_sort (mk_ob "R") (mk_ob "A"))]
+
+val issymm_def = 
+read_axiom "!R A f0:R->A f1. issymm(f0,f1) <=> ?t:R->R. f0 o t = f1 & f1 o t = f0"
+
+(*
+
+Theorem Thm6_first_sentence:
+∀f0 f1 R A. f0∶ R → A ∧ f1∶ R → A ∧
+            is_refl f0 f1 ∧ is_symm f0 f1 ∧ is_trans f0 f1 ∧
+            is_mono ⟨f0, f1⟩ ∧
+            (∀a0 a1. a0∶ one → A ∧ a1∶ one → A ∧
+                     (coeqa f0 f1) o a0 = (coeqa f0 f1) o a1 ⇒
+                     ∃r. r∶ one → R ∧ f0 o r = a0 ∧
+                         f1 o r = a1) ⇒
+            R ≅ eqo ((coeqa f0 f1) o p1 A A)
+                    ((coeqa f0 f1) o p2 A A)
+*)
+
+
+
+val Thm6_first_sentence = proved_th $
+ e0
+(rpt strip_tac >> irule prop_2_corollary >>
+ qexistsl_tac ["AA","pa(p1, p2, f0, f1)","e"] >>
+ drule eqa_is_mono >> arw[] >> rpt strip_tac (* 2 *)
+ >-- (qexists_tac "eqind(e,ce o p1,ce o p2,pa(p1, p2, f0, f1) o x)" >>
+      sym_tac >> drule eq_eqn >> first_x_assum irule >>
+      drule p12_of_pa  >>
+      qby_tac ‘(ce o p1) o pa(p1, p2, f0, f1) o x = 
+               ce o (p1 o pa(p1, p2, f0, f1)) o x & 
+               (ce o p2) o pa(p1, p2, f0, f1) o x = 
+               ce o (p2 o pa(p1, p2, f0, f1)) o x’
+      >-- rw[o_assoc] >> 
+      arw[] >> drule coeq_equality >> arw[GSYM o_assoc]) >>
+ first_x_assum (qspecl_then ["p1 o e o y","p2 o e o y"] assume_tac) >>
+ drule eq_equality >>
+ fs[GSYM o_assoc] >> qexists_tac "r" >> 
+ irule to_p_eq >> qexistsl_tac ["A","A","p1","p2"] >> 
+ drule p12_of_pa >> arw[GSYM o_assoc]
+)
+(form_goal “!R A f0:R->A f1. isrefl(f0,f1) & issymm(f0,f1) & istrans(f0,f1)==> !AA p1:AA->A p2:AA->A. ispr(p1,p2) ==> ismono(pa(p1,p2,f0,f1)) ==> 
+!cE ce:A->cE.iscoeq(ce,f0,f1) ==>
+(!a0:1->A a1:1->A. ce o a0 = ce o a1 ==> ?r:1->R. f0 o r = a0 & f1 o r = a1) ==> !E e:E->AA. iseq(e,ce o p1,ce o p2) ==> areiso(R,E)”)
+
+(*
+∀psi R r. psi∶ R → two ∧ r∶ one → R ⇒
+               (psi o r = i2 one one ⇔
+                ∃r'. r'∶ one → eqo (ev R two) (i2 one one o to1 (R × exp R two)) ∧
+                    eqa (ev R two) (i2 one one o to1 (R × exp R two)) o r' = ⟨r, tp (psi ∘ p1 R one)⟩) *)
+
+val mem_of_name_eqa = proved_th $
+e0
+(rpt strip_tac >> drule (fac_through_eq_iff |> undisch |> disch_all''
+                                            |> gen_all) >>
+ first_x_assum (qspecl_then ["1","pa(p1, p2, r, tp(p1, p2, ev, pR, pone, psi o pR))"] assume_tac) >> arw[] >>
+rw[o_assoc] >> once_arw[one_to_one_id] >> rw[idR] >>
+drule tp_elements_ev >> first_x_assum drule >>
+arw[])
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !R R1 pR:R1->R pone:R1->1.ispr(pR,pone) ==>
+ !efs p1:efs->R R2t p2:efs-> R2t ev:efs->two. isexp(p1,p2,ev) ==>
+ !psi:R->two r:1-> R. 
+  !E e:E->efs. iseq(e,ev,i2 o to1(efs,1)) ==>
+ (psi o r = i2 <=> ?r':1->E. e o r' = pa(p1,p2,r,tp(p1,p2,ev,pR,pone,psi o pR)))”)
+
+
+(*Theorem char_thm:
+∀a A X.
+    is_mono a ∧ a∶ A → X ⇒
+         char a∶ X → one + one ∧
+         ∀x.
+             x∶one → X ⇒
+             ((∃x0. x0∶one → A ∧ a ∘ x0 = x) ⇔ char a ∘ x = i2 one one)
+Proof
+strip_tac >> strip_tac >> strip_tac >> strip_tac >>
+fs[hom_def] >> metis_tac[char_def,hom_def]
+QED*)
+
+(*TODO: if in exists, feed "copa(i1,i2,i2:1->two o to1(A,1),i1:1->two o to1(A',1)) o f':X->AA'", is wrong ,but get wrong error message*)
+
+(*TODO, if input of f' o x is f o x, which is wrong , the error message is err find, not the q parsing*)
+
+val char_exists = proved_th $
+   e0
+(rpt strip_tac >> drule Thm5 >> pop_assum strip_assume_tac >>
+ qspecl_then ["A","A'"] 
+ (x_choosel_then ["AA'","iA","iA'"] assume_tac) copr_ex >>
+ first_x_assum drule >> fs[isiso_def] >>
+ exists_tac' (rastt "copa(iA:A->AA',iA':A'->AA',i2:1->two o to1(A,1),i1:1->two o to1(A',1)) o f':X->AA'") >> strip_tac >> dimp_tac >> strip_tac(* 2 *)
+ >-- (qby_tac 
+      ‘(copa(iA, iA', (i2 o to1(A, 1)), (i1 o to1(A', 1))) o f') o a o x0 =     copa(iA, iA', (i2 o to1(A, 1)), (i1 o to1(A', 1))) o (f' o a) o x0’ 
+     >-- rw[o_assoc] >>
+     qpick_x_assum ‘a o x0 = x’ (assume_tac o GSYM) >> arw[] >>
+     qby_tac ‘f' o a = iA’
+     >-- (qby_tac ‘f' o copa(iA, iA', a, a') o iA = id(AA') o iA’
+         >-- (rw[GSYM o_assoc] >> arw[]) >>
+         pop_assum mp_tac >> drule i1_of_copa >>
+         once_arw[] >> rw[idL]) >>
+     once_arw[] >> rw[GSYM o_assoc] >> drule i1_of_copa >> once_arw[] >>
+     rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) >>
+drule to_copa_fac >> 
+first_x_assum (qspecl_then ["f' o x"] strip_assume_tac) (* 2 *)
+>-- (qexists_tac "x0" >> drule i1_of_copa >>
+     first_x_assum (qspecl_then ["X","a","a'"] (assume_tac o GSYM)) >>
+     once_arw[] >>pop_assum (K all_tac) >> rw[o_assoc] >> arw[] >>
+     rw[GSYM o_assoc] >> once_arw[] >> rw[idL]) >>
+qsuff_tac ‘(copa(iA,iA',i2 o to1(A,1),i1 o to1(A',1)) o f') o x = 
+           i1 o to1(A',1) o x0’
+>-- (once_rw[one_to_one_id] >> rw[idR] >> once_arw[] >>
+     strip_tac >> pop_assum (assume_tac o GSYM) >> 
+     drule i1_ne_i2 >> first_x_assum opposite_tac) >>
+rw[o_assoc] >> pop_assum (assume_tac o GSYM) >> once_arw[] >>
+rw[GSYM o_assoc] >> drule i2_of_copa >> once_arw[] >> rw[]
+ )
+(form_goal 
+“!A X a:A->X. ismono(a) ==> !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ ?phi:X->two. (!x:1->X.(?x0:1->A.a o x0 = x) <=> phi o x = i2)”)
+
+val _ = new_fun "char" (mk_ar_sort (mk_ob "X") (mk_ob "two"),[("i1",mk_ar_sort one (mk_ob "two")),("i2",mk_ar_sort one (mk_ob "two")),("a",mk_ar_sort (mk_ob "A") (mk_ob "X"))])
+
+val compose_with_id_to1 = proved_th $
+e0
+(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","1","pA","pone"] >>
+arw[GSYM o_assoc] >> drule p12_of_pa >> once_arw[] >>
+rw[idL] >> once_rw[one_to_one_id] >> rw[])
+(form_goal
+“!A A1 pA:A1->A pone:A1->1. ispr(pA,pone) ==> 
+ !x:1->A. pa(pA,pone,id(A),to1(A,1)) o x = pa(pA,pone,x,id(1))”)
+
+val ev_compose_split = proved_th $
+e0
+(rpt strip_tac >> drule exp_ispr >>
+ qby_tac ‘ispr(Ab,aB) & ispr(Ax,aX) & ispr(p1,p2)’
+ >-- arw[] >>
+ drule parallel_p_one_side >> arw[])
+(form_goal 
+“!A B AB Ab:AB->A aB:AB->B. ispr(Ab,aB) ==>
+ !X AX Ax:AX->A aX:AX->X. ispr(Ax,aX) ==>
+ !Y A2Y efs p1:efs->A p2:efs->A2Y ev:efs -> Y. isexp(p1,p2,ev) ==>
+ !g: X-> A2Y f:B->X. ev o pa(p1,p2,Ab,g o f o aB) = 
+                    ev o pa(p1,p2,Ax,g o aX) o pa(Ax,aX,Ab,f o aB)”)
+
+
+
+val ev_compose_split' = proved_th $
+e0
+(rpt strip_tac >> assume_tac (ev_compose_split |> strip_all_and_imp) >>
+ first_x_assum accept_tac)
+(form_goal 
+“!Y A A2Y efs p1:efs->A p2:efs->A2Y ev:efs -> Y. isexp(p1,p2,ev) ==>
+ !B AB Ab:AB->A aB:AB->B. ispr(Ab,aB) ==>
+ !X AX Ax:AX->A aX:AX->X. ispr(Ax,aX) ==>
+ !g: X-> A2Y f:B->X. ev o pa(p1,p2,Ab,g o f o aB) = 
+                    ev o pa(p1,p2,Ax,g o aX) o pa(Ax,aX,Ab,f o aB)”)
+
+
+val two_steps_compose_combine = proved_th $
+e0
+(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","Y","Ay","aY"] >>
+ rw[GSYM o_assoc] >> drule p12_of_pa >> once_arw[] >>
+ rw[o_assoc] >> rev_drule p12_of_pa >> once_arw[] >> rw[idR])
+(form_goal 
+“!A X AX Ax:AX->A aX:AX->X.ispr(Ax,aX) ==>
+ !Y AY Ay:AY->A aY:AY->Y. ispr(Ay,aY) ==>
+ !f:X->A g:X->Y. pa(Ay,aY,Ax,g o aX) o pa(Ax,aX,f,id(X)) = pa(Ay,aY,f,g)”)
+
+(*do not understand why do not response if use qby*)
+
+val compose_partial_ev = proved_th $
+e0
+(rpt strip_tac >> 
+ by_tac (rapf "pa(pA,pone,id(A),to1(A,1)) o x = pa(pA:A1->A,pone:A1->1,x:1->A,id(1))") >-- (rev_drule compose_with_id_to1 >> once_arw[] >> rw[]) >>
+drule ev_compose_split' >> qpick_x_assum ‘ispr(pA, pone)’ assume_tac >>
+first_x_assum drule >> first_x_assum rev_drule >> once_arw[] >>
+first_x_assum 
+ (qspecl_then ["tp(p1, p2, ev, Ax2y, aX2Y, phi)","tp(p1', p2', ev', pX, pone', (psi o pX))"] assume_tac) >> once_rw[GSYM o_assoc] >>
+once_arw[] >> rw[GSYM o_assoc] >>
+drule ev_of_tp >> first_x_assum rev_drule >> once_arw[] >>
+rw[o_assoc] >>
+qsuff_tac 
+‘pa(Ax2y, aX2Y, x, tp(p1', p2', ev', pX, pone', psi o pX)) = 
+ pa(Ax2y, aX2Y, pA, (tp(p1', p2', ev', pX, pone', (psi o pX)) o
+ pone)) o pa(pA, pone, x, id(1))’ 
+>-- (strip_tac >> once_arw[] >> rw[]) >>
+irule to_p_eq >> rev_drule p12_of_pa >>
+qexistsl_tac ["A","X2Y","Ax2y","aX2Y"] >> once_arw[] >>
+rw[GSYM o_assoc] >> once_arw[] >> rw[o_assoc] >>
+drule p12_of_pa >> once_arw[] >> rw[idR])
+(form_goal 
+“!X Y X2Y efs' p1':efs'->X p2':efs'->X2Y ev':efs'->Y. isexp(p1',p2',ev') ==>
+ !A AX2Y Ax2y:AX2Y->A aX2Y:AX2Y->X2Y. ispr(Ax2y,aX2Y) ==>
+ !A1 pA:A1-> A pone:A1->1. ispr(pA,pone) ==>
+ !X1 pX:X1->X pone':X1->1. ispr(pX,pone') ==>
+ !A2Y efs p1:efs->A p2:efs->A2Y ev:efs->Y.isexp(p1,p2,ev) ==>
+ !x:1->A psi:X->Y phi:AX2Y->Y. 
+  phi o pa(Ax2y,aX2Y,x,tp(p1',p2',ev',pX,pone',psi o pX)) = 
+  ev o pa(p1,p2,pA,tp(p1,p2,ev,Ax2y,aX2Y,phi)  o tp(p1',p2',ev',pX,pone',psi o pX) o pone) o pa(pA,pone,id(A),to1(A,1)) o x”)
+
+val isrefl_equiv_to_itself  = proved_th $
+ e0
+(rpt strip_tac >> fs[isrefl_def] >> qexistsl_tac ["d o a"] >>
+ rw[GSYM o_assoc] >> arw[idL])
+(form_goal “isrefl(f0:R->A,f1) ==> !a:1->A. ?r:1->R. f0 o r = a & f1 o r = a”)
+
+val equiv_to_same_element = proved_th $
+e0
+(rpt strip_tac >> drule isrefl_equiv_to_itself >> 
+ first_x_assum (qspecl_then ["a1"] assume_tac) >>
+ first_x_assum (qspecl_then ["a1"] assume_tac) >> rfs[] >>
+ qexistsl_tac ["r'"] >> arw[])
+(form_goal 
+“isrefl(f0:R->A,f1) ==> 
+(!a':1->A.(?r:1->R.f0 o r = a1 & f1 o r = a') <=> (?r.f0 o r = a0 & f1 o r = a')) ==>
+?r:1->R. f0 o r = a0 & f1 o r = a1”)
+
+val symm_trans_rel_lemma = proved_th $
+     e0
+(rpt strip_tac >> dimp_tac >> rpt strip_tac >-- 
+ (fs[issymm_def] >> fs[istrans_def] >> 
+  first_x_assum (qspecl_then ["1","t o r'","r"] assume_tac) >>
+  qby_tac ‘f1 o t o r' = f0 o r’
+  >-- (rw[GSYM o_assoc] >> arw[]) >>
+  first_x_assum drule >> pop_assum strip_assume_tac >>
+  qexistsl_tac ["t o u"] >> rw[GSYM o_assoc] >> once_arw[] >>
+  once_arw[] >> rw[GSYM o_assoc] >> once_arw[] >> once_arw[] >>
+  rw[])  >> fs[istrans_def] >>
+ pick_xnth_assum 3 (assume_tac o GSYM) >> 
+ first_x_assum drule >> pop_assum strip_assume_tac >> 
+ qexistsl_tac ["u"] >> arw[])
+(form_goal 
+“issymm(f0:R->A,f1) & istrans(f0,f1) ==> 
+!a:1->A r:1->R. 
+((?r':1->R. f0 o r' = f0 o r & f1 o r' = a) <=> 
+ (?r'':1->R. f0 o r'' = f1 o r & f1 o r'' = a))”)
+
+val to_p_with_1 = proved_th $
+e0
+(rpt strip_tac >> qexistsl_tac ["pA o a"] >>
+drule p12_of_pa >> irule to_p_eq >>
+qexistsl_tac ["A","1","pA","pone"] >> arw[] >> once_rw[one_to_one_id] >>
+rw[])
+(form_goal
+“!A A1 pA:A1->A pone:A1->1. ispr(pA,pone) ==> 
+ !a:1->A1.?a0:1->A. a = pa(pA,pone,a0,id(1))”)
+
+(*WHY do we not have once fs in HOL?*)
+
+val one_to_two_cases = proved_th $
+ e0
+(rpt strip_tac >> drule to_copa_fac >> 
+ first_x_assum (qspecl_then ["f"] strip_assume_tac)
+ >-- (pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR] >>
+      strip_tac >> disj1_tac >> arw[]) >>
+ pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR] >>
+ strip_tac >> disj2_tac >> arw[])
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !f:1->two. f = i1 | f = i2”)
+
+val one_to_two_eq = proved_th $
+e0
+(rpt strip_tac >> cases_on (rapf "f = i2:1->two")
+ >-- fs[] >>
+ fs[] >> drule one_to_two_cases >>
+ first_assum (qspecl_then ["f"] strip_assume_tac) >>
+ first_x_assum (qspecl_then ["g"] strip_assume_tac) >> arw[])
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !f:1->two g:1->two. (f = i2 <=> g = i2) ==> f = g”)
+
+(*
+val char_exists' = 
+
+char_exists |> strip_all_and_imp |> conj_all_assum
+|> disch_all |> gen_all *)
+
+val char_def = read_axiom "!A X a:A->X. ismono(a) ==> !two i1:1->two i2:1->two. iscopr(i1,i2) ==> (!x:1->X.(?x0:1->A.a o x0 = x) <=> char(i1,i2,a) o x = i2)"
+
+(*irule_canon char_exists is wrong*)
 
 fun fl_diff fl1 fl2 = 
     case (fl1,fl2) of

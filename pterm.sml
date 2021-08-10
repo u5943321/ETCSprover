@@ -565,7 +565,7 @@ and parse_ast_atom tl =
         (Key"~"::tl1) =>
         let val (ast,tl2) = parse_ast tl1
         in (aApp("~",[ast]),tl2)
-        end
+        end (*parse_ast_atom here instead of parse_ast*)
      | Id(a)::Key"("::tl1 => 
        let 
            val (astl,tl2) = rparen ")" (parse_arepeat1 (",",parse_ast) tl1)
@@ -1179,6 +1179,12 @@ fun read_ast_pt a = ast2pt (parse_ast_end (parse_ast (lex a))) empty
 fun pwct ct tstr = cast2t ct (parse_ast_end (parse_ast (lex tstr)))
 
 fun pwcf ct fstr = cast2f ct (parse_ast_end (parse_ast (lex fstr)))
+
+
+
+(*fun pwcfq ct fq = pwcf ct (q2str fq)
+
+cast2f ct (parse_ast_end (parse_ast (lex $ q2str fq)))*)
 
 
 end

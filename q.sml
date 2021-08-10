@@ -1,13 +1,45 @@
 fun q_ttac ttac str: tactic =
     fn (ct,asl,w) => ttac (pwct ct str) (ct,asl,w)
 
+fun q_tltac tltac strl: tactic =
+    fn (ct,asl,w) => tltac (List.map (pwct ct) strl) (ct,asl,w)
+
+(*
 fun q_ftac ftac str: tactic =
     fn (ct,asl,w) => ftac (pwcf ct str) (ct,asl,w)
+*)
+
+fun q2str [QUOTE s] = s
+
+fun pwcfq ct fq = pwcf ct (q2str fq)
+
+fun q_ftac ftac q: tactic =
+    fn (ct,asl,w) => ftac (pwcfq ct q) (ct,asl,w)
 
 fun q_tltcl (tltcl:term list -> thm_tactic -> thm_tactic) strl thtac th :tactic = 
     fn (ct,asl,w) => tltcl (List.map (pwct ct) strl) thtac th (ct,asl,w)
 
-val qexists_tac = q_ttac exists_tac
+fun sing f [x] = f x
+  | sing f _ = raise simple_fail "sing" 
+
+fun exists_tac' t (G,fl,f) = 
+    case view_form f of 
+        vQ("?",n,s,b) =>
+        if eq_sort(sort_of t,s) then 
+            let val nv = pvariantt (fvf b) (var(n,s))
+            in
+            ([(G,fl,subst_bound t b)], 
+             sing (existsI (dest_var nv) t (subst_bound nv b)))
+            end
+        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
+      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
+
+
+val qexists_tac = q_ttac exists_tac'
+
+fun existsl_tac l = map_every (exists_tac') l
+
+val qexistsl_tac = q_tltac existsl_tac
 
 val qspecl_then = q_tltcl specl_then
 
@@ -24,10 +56,10 @@ can just do...
 *)
 
 fun qpick_assum fstr (thtac:thm_tactic): tactic = 
-    fn (ct,asl,w) => pick_assum (pwcf ct fstr) thtac (ct,asl,w) 
+    fn (ct,asl,w) => pick_assum (pwcfq ct fstr) thtac (ct,asl,w) 
 
 fun qpick_x_assum fstr (thtac:thm_tactic): tactic = 
-    fn (ct,asl,w) => pick_x_assum (pwcf ct fstr) thtac (ct,asl,w) 
+    fn (ct,asl,w) => pick_x_assum (pwcfq ct fstr) thtac (ct,asl,w) 
 
 fun uex_def f = 
     let val ((n,s),_) = dest_exists f
@@ -62,7 +94,9 @@ fun filter_cont ct =
     in HOLset.difference(ct,rptob)
     end
 
-fun uex2fsym fsym th = 
+(*val order_vars l1 user should be able to control the order of inputs*)
+
+fun uex2fsym fsym nl th = 
     let val th' = spec_all th
         val (ct,asl) = (cont th',ant th')
         val (hyp,conc) = dest_imp (concl th')

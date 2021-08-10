@@ -29,7 +29,7 @@ fun e00 tac  = case !current_goal of
 val e = pgoal e00
 
 
-(*
+
 exception NO_PROOFS;
 
 open History
@@ -42,7 +42,28 @@ fun initial_proofs() = PRFS[];
 fun current_proof (PRFS (p::_)) = p
   | current_proof (PRFS []) = raise NO_PROOFS;
 
+
+
+fun new_history_default obj = new_history{obj=obj, limit=15}
+(*
+fun new_goalstack g f = GOALSTACK(new_history_default (new_goal g f));
+
+
+fun set_goal g = new_goalstack g Lib.I;  (* historical *)
+
+*)
+
 fun backup (GOALSTACK s) = GOALSTACK(undo s)
+
+
+fun set_backup i (GOALSTACK s) = GOALSTACK(set_limit s i)
+
+fun restart (GOALSTACK s) = GOALSTACK (new_history_default (initialValue s))
+
+
+
+
+(*fun backup (GOALSTACK s) = GOALSTACK(undo s)*)
 
 fun hd_opr f (PRFS (p::t)) = PRFS(f p::t)
   | hd_opr f otherwise = raise NO_PROOFS;
@@ -56,13 +77,29 @@ fun backup' () =
    (the_proofs := hd_opr backup (proofs());
     top_proof());
 
-
 val b = backup';
-*)
 
 
+fun restore (GOALSTACK s) = GOALSTACK(History.restore s)
+
+fun restore' () =
+   (the_proofs := hd_opr restore (proofs());
+    top_proof());
+
+
+
+fun restart'() =
+   (the_proofs := hd_opr restart (proofs());
+    top_proof());
 
 end
 
-structure proofManagerLib = proofmanager
-open proofmanager 
+structure proofManagerLib = struct 
+open proofmanager
+
+
+fun restart() =
+   (the_proofs := hd_opr proofmanager.restart (proofs());
+    top_proof());
+
+end
