@@ -16,6 +16,8 @@ fun pwcfq ct fq = pwcf ct (q2str fq)
 fun q_ftac ftac q: tactic =
     fn (ct,asl,w) => ftac (pwcfq ct q) (ct,asl,w)
 
+val qabbrev_tac  = q_ftac abbrev_tac
+
 fun q_tltcl (tltcl:term list -> thm_tactic -> thm_tactic) strl thtac th :tactic = 
     fn (ct,asl,w) => tltcl (List.map (pwct ct) strl) thtac th (ct,asl,w)
 

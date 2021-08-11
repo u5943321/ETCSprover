@@ -3486,6 +3486,8 @@ e0
  !f:1->two g:1->two. (f = i2 <=> g = i2) ==> f = g”)
 
 
+val char_def = read_axiom "!A X a:A->X. ismono(a) ==> !two i1:1->two i2:1->two. iscopr(i1,i2) ==> (!x:1->X.(?x0:1->A.a o x0 = x) <=> char(i1,i2,a) o x = i2)"
+
 val fac_char = proved_th $
 e0
 (rpt strip_tac >> drule char_def >> first_x_assum drule >>
@@ -3519,10 +3521,133 @@ val char_exists' =
 char_exists |> strip_all_and_imp |> conj_all_assum
 |> disch_all |> gen_all *)
 
-val char_def = read_axiom "!A X a:A->X. ismono(a) ==> !two i1:1->two i2:1->two. iscopr(i1,i2) ==> (!x:1->X.(?x0:1->A.a o x0 = x) <=> char(i1,i2,a) o x = i2)"
+
 
 (*irule_canon char_exists is wrong*)
 
+(*
+∀h R A. h∶ R → A ⇒
+        ∃hb. hb∶ exp R (one + one) → exp A (one + one) ∧
+             (∀psi. psi∶ R → one + one ⇒
+                    ∀x. x∶ one → A ⇒
+                        (ev A (one + one) o ⟨p1 A one, hb o tp (psi o p1 R one) o p2 A one⟩ o ⟨id A, to1 A⟩ o x = i2 one one ⇔
+                         ∃r. r∶ one → R ∧
+                             psi o r = i2 one one ∧
+                             h o r = x))
+*)
+
+val Thm6_lemma_3 = proved_th $
+ e0
+(rpt strip_tac >> 
+abbrev_tac (rapf "i2:1->two o to1(RR2,1) = t") >>
+qspecl_then ["RR2","two","ev'","t"] assume_tac eq_ex >>
+pop_assum (x_choosel_then ["R'","Psi"] assume_tac) >>
+qspecl_then ["A","R2"] (x_choosel_then ["AR2","Ar2","aR2"] assume_tac) pr_ex >>
+abbrev_tac (rapf "pa(Ar2:AR2->A,aR2:AR2->R2,h:R->A o p1':RR2->R,p2':RR2->R2) = h2R") >>
+qspecl_then ["R'","AR2","h2R o Psi"] (x_choosel_then ["M","m","e"] assume_tac) mono_epi_fac >>
+abbrev_tac (rapf "char(i1:1->two,i2:1->two,m:M->AR2) = phi") >> 
+(*qby_tac ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’
+example of qby does not response.*)
+by_tac (rapf "!x:1->AR2. (?x0:1->M. m:M->AR2 o x0 = x) <=> phi:AR2->two o x = i2:1->two")
+>-- (pop_assum_list (map_every strip_assume_tac) >>
+     drule char_def >> first_x_assum drule >> 
+     last_x_assum (assume_tac o GSYM) >> once_arw[] >> rw[]) >>
+qexistsl_tac ["tp(p1,p2,ev,Ar2,aR2,phi)"] >> 
+strip_tac >> 
+by_tac (rapf "!r:1->R.(psi:R->two o r = i2:1->two <=> ?r':1->R'. Psi:R'->RR2 o r' = pa(p1':RR2->R,p2':RR2->R2,r,tp(p1', p2', ev':RR2->two, pR:R1->R, pone':R1->1, (psi o pR))))")
+>-- (strip_tac >> drule mem_of_name_eqa >> first_x_assum irule >>
+     arw[]) >>
+strip_tac >> dimp_tac >> strip_tac (* 2 *)>-- 
+(qby_tac ‘phi o pa(Ar2,aR2,x,tp(p1',p2',ev',pR,pone',psi o pR)) = 
+          ev o pa(p1,p2,pA,tp(p1,p2,ev,Ar2,aR2,phi) o tp (p1',p2',ev',pR,pone',psi o pR) o pone) o pa(pA,pone,id(A),to1(A,1)) o x’ 
+ >-- (irule compose_partial_ev >> arw[]) >>
+ (*qby_tac ‘phi o pa(Ar2,aR2,x,tp(p1',p2',ev',pR,pone',psi o pR)) = i2’*)
+ rfs[] >>
+ drule fac_char_via_any_map >> first_x_assum drule >>
+ first_x_assum drule >> first_x_assum drule >>
+ first_x_assum (qspecl_then ["pa(Ar2,aR2,x,tp(p1', p2', ev', pR, pone', psi o pR))"] assume_tac) >>
+ rfs[] >> (*already have ‘∃r'. r'∶one → R' ∧ (h2R ∘ ψ) ∘ r' = ⟨x,tp (psi ∘ p1 R one)⟩’ here the r' is called a*)
+ qexistsl_tac ["p1' o Psi o a"] >> strip_tac (* 2 *)
+ >-- (qexistsl_tac ["a"] >> irule to_p_eq >>
+      qexistsl_tac ["R","R2","p1'","p2'"] >> 
+      drule exp_ispr >> drule p12_of_pa >> once_arw[] >> rw[] >> 
+      qby_tac ‘p2' = aR2 o h2R’
+      >-- (qpick_x_assum ‘pa(Ar2, aR2, h o p1', p2') = h2R’ 
+           (assume_tac o GSYM) >> once_arw[] >> 
+           qpick_x_assum ‘ispr(Ar2, aR2)’ assume_tac >>
+           drule p2_of_pa >> once_arw[] >> rw[]) >>
+      once_arw[] >>
+      qby_tac ‘(aR2 o h2R) o Psi o a = aR2 o (h2R o Psi) o a’
+      >-- rw[o_assoc] >> arw[] >> 
+      qpick_x_assum ‘ispr(Ar2, aR2)’ assume_tac >>
+      drule p2_of_pa >> once_arw[] >> rw[]) >>
+ qby_tac ‘h o p1' = Ar2 o h2R’
+ >-- (qpick_x_assum ‘pa(Ar2, aR2, h o p1', p2') = h2R’ 
+      (assume_tac o GSYM) >> once_arw[] >> 
+      qpick_x_assum ‘ispr(Ar2, aR2)’ assume_tac >>
+      drule p1_of_pa >> once_arw[] >> rw[]) >>
+ rw[GSYM o_assoc] >> once_arw[] >> 
+ qby_tac ‘((Ar2 o h2R) o Psi) o a = Ar2 o (h2R o Psi) o a’
+ >-- rw[o_assoc] >> arw[] >>
+ qpick_x_assum ‘ispr(Ar2, aR2)’ assume_tac >>
+ drule p1_of_pa >> once_arw[] >> rw[]) >>
+qby_tac ‘phi o pa(Ar2,aR2,x,tp(p1',p2',ev',pR,pone',psi o pR)) = 
+          ev o pa(p1,p2,pA,tp(p1,p2,ev,Ar2,aR2,phi) o tp (p1',p2',ev',pR,pone',psi o pR) o pone) o pa(pA,pone,id(A),to1(A,1)) o x’ 
+>-- (irule compose_partial_ev >> arw[]) >> 
+pop_assum (assume_tac o GSYM) >> once_arw[] >>
+rfs[] >> pick_xnth_assum 15 (K all_tac) >> 
+qby_tac ‘(h2R o Psi) o r' = h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o pR))’ >-- (arw[o_assoc]) >>
+(*above step may do not need*)
+qby_tac ‘m o e o r' = h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o pR))’
+>-- (rw[GSYM o_assoc] >> 
+     qpick_x_assum ‘h2R o Psi = m o e’ (assume_tac o GSYM) >>
+     once_arw[] >> first_x_assum accept_tac) >>
+qby_tac ‘h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o pR)) = 
+pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR))’
+>-- (irule to_p_eq >> qexistsl_tac ["A","R2","Ar2","aR2"] >>
+     drule p12_of_pa >> once_arw[] >> 
+     qpick_x_assum 
+     ‘pa(Ar2, aR2, h o p1', p2') = h2R’ (assume_tac o GSYM) >>
+     once_arw[] >> rw[GSYM o_assoc] >> once_arw[] >> 
+     drule exp_ispr >> drule p12_of_pa >> once_arw[] >>
+     rw[o_assoc] >> once_arw[] >> first_x_assum accept_tac) >>
+qby_tac ‘phi o h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o pR)) =  i2’
+>-- (qpick_x_assum ‘char(i1, i2, m) = phi’ (assume_tac o GSYM) >>
+     once_arw[] >> drule fac_char >>
+     first_x_assum 
+     (qspecl_then ["1","pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR))"] assume_tac) >>
+     qby_tac ‘to1(1,1) = id(1)’ 
+     >-- (once_rw[one_to_one_id] >> rw[]) >> 
+     qsuff_tac ‘char(i1, i2, m) o pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR)) = i2 o to1(1, 1)’
+     >-- (once_arw[] >> rw[idR]) >>
+     qsuff_tac ‘m o e o r' =
+               pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR))’
+     >-- (strip_tac >> first_x_assum drule >> 
+         first_x_assum (qspecl_then ["two","i1","i2"] assume_tac) >>
+         first_x_assum drule >> first_x_assum accept_tac) >>
+     once_arw[] >> first_x_assum accept_tac) >>
+rfs[]
+)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+!A AA2 p1:AA2->A A2 p2:AA2->A2 ev: AA2 -> two. isexp(p1,p2,ev) ==>
+!A1 pA:A1->A pone:A1->1. ispr(pA,pone) ==>
+!R RR2 p1':RR2->R R2 p2':RR2 -> R2 ev':RR2->two. isexp(p1',p2',ev') ==>
+!R1 pR:R1->R pone':R1->1. ispr(pR,pone') ==>
+!h:R->A.?hb:R2->A2. 
+!psi:R-> two x:1->A.
+ (ev o pa(p1,p2,pA,hb o tp(p1',p2',ev',pR,pone',psi o pR) o pone) o pa(pA,pone,id(A),to1(A,1)) o x = i2 <=> ?r:1->R. psi o r = i2 & h o r = x)”)
+
+
+(*TODO: irule bug!
+qsuff_tac ‘m o e o r' =
+               pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR))’
+     >-- (strip_tac >> first_x_assum drule >> 
+         first_x_assum (qspecl_then ["two","i1","i2"] assume_tac) >>
+         first_x_assum drule >> first_x_assum accept_tac)
+
+exception find! and need qspecl, drule directly does not work, means that it does not find copr i1 i2 in assum
+*)
 fun fl_diff fl1 fl2 = 
     case (fl1,fl2) of
         (h1::t1,_) => 
