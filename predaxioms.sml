@@ -4075,6 +4075,126 @@ e0
  areiso(R,E)”)
 
 
+(*Theorem char_pb:
+∀A X a. is_mono a ∧ a∶ A → X ⇒
+        ∃h1 h2.
+          (pb1 (char a) (i2 one one)) ∘ h1 = a ∧
+          a ∘ h2 = pb1 (char a) (i2 one one) ∧
+          h1∶ A → pbo (char a) (i2 one one) ∧
+          h2∶ pbo (char a) (i2 one one) → A ∧
+          h1 ∘ h2 = id (pbo (char a) (i2 one one)) ∧
+          h2 ∘ h1 = id A*)
+
+val dom_1_mono = proved_th $
+e0
+(rpt strip_tac >> irule ismono_applied >> rpt strip_tac >>
+ qspecl_then ["X'","g","h"] accept_tac to1_unique)
+(form_goal “!X f:1->X. ismono(f)”)
+
+
+(*Theorem pb_fac_exists':
+∀X Y Z f g.
+         f∶X → Z ∧ g∶Y → Z ⇒
+         ∀A u v.
+             u∶A → X ∧ v∶A → Y ∧ f ∘ u = g ∘ v ⇒
+             ∃a. a∶A → pbo f g ∧ pb1 f g ∘ a = u ∧ pb2 f g ∘ a = v
+Proof
+rw[] >>
+‘pb1 f g∶pbo f g → X ∧ pb2 f g∶pbo f g → Y ∧
+         f ∘ pb1 f g = g ∘ pb2 f g ∧
+         ∀A u v.
+             u∶A → X ∧ v∶A → Y ∧ f ∘ u = g ∘ v ⇒
+             ∃!a. a∶A → pbo f g ∧ pb1 f g ∘ a = u ∧ pb2 f g ∘ a = v’
+  by (irule pb_thm >> metis_tac[]) >>
+fs[EXISTS_UNIQUE_ALT] >> metis_tac[]
+QED*)
+
+val pb_fac_exists' = proved_th $
+e0
+(rpt strip_tac >> fs[ispb_def] >> first_x_assum drule >> 
+ pop_assum strip_assume_tac >> qexistsl_tac ["a"] >> 
+ first_x_assum (qspecl_then ["a"] assume_tac) >> arw[])
+(form_goal “!X Z f:X->Z Y g:Y->Z Pb p:Pb->X q:Pb->Y.ispb(f:X->Z,g:Y->Z,p,q) ==> 
+ !A u v. f o u = g o v ==> ?a:A->Pb. p o a = u & q o a = v”)
+
+val char_pb = proved_th $
+e0
+(rpt strip_tac >> irule prop_2_corollary_as_subobj >> arw[]>>
+ drule pb_mono_mono >> 
+ qspecl_then ["two","i2"] assume_tac dom_1_mono >>
+ first_x_assum drule >> arw[] >>
+ rpt strip_tac (* 2 *) >-- 
+ (by_tac 
+   (rapf "?y:1->Pb. pb1:Pb->X o y = a:A->X o x:1->A & pb2:Pb->1 o y = id(1)") >--
+  (drule pb_fac_exists' >> (*TODO:irule bug,should use irule*)
+  first_x_assum (qspecl_then ["1","a o x","id(1)"] assume_tac) >>
+  rev_drule char_def >> first_x_assum drule >>
+  (*TODO: once have pull exists test here*)
+  first_x_assum (qspecl_then ["a o x"] assume_tac) >>
+  qsuff_tac ‘char(i1, i2, a) o a o x = i2’
+  >-- (strip_tac >> fs[idR] >> qexistsl_tac ["a'"] >> arw[]) >>
+  pop_assum (assume_tac o GSYM) >> arw[] >>
+  qexistsl_tac ["x"] >> rw[]) >>
+  pop_assum strip_assume_tac >> qexistsl_tac ["y"] >> arw[]) >>
+rev_drule char_def >> first_x_assum drule >>
+drule (ispb_def |> iffLR) >> pop_assum strip_assume_tac >> arw[] >>
+qby_tac ‘char(i1, i2, a) o pb1 o y = i2 o pb2 o y’
+>-- (rw[GSYM o_assoc] >> arw[]) >> 
+pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR])
+(form_goal
+“!A X a.ismono(a:A->X) ==> 
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !Pb pb1 pb2. ispb(char(i1,i2,a),i2,pb1,pb2) ==> 
+    ?h1 h2.pb1 o h1 = a & a o h2 = pb1 & h1 o h2 = id(Pb) & h2 o h1 = id(A)”)
+
+val char_square = proved_th $
+e0
+(rpt strip_tac >> irule fun_ext >> rpt strip_tac >> 
+ drule char_def >> first_x_assum drule >> 
+ first_x_assum (qspecl_then ["a o a'"] assume_tac) >> rw[o_assoc] >>
+ once_rw[one_to_one_id] >> rw[idR] >>
+ pop_assum (assume_tac o GSYM) >>
+ arw[] >> qexistsl_tac ["a'"] >> rw[])
+(form_goal
+“!two i1 i2.iscopr(i1:1->two,i2:1->two) ==>!A X a:A->X. ismono(a) ==> char(i1,i2,a) o a = i2 o to1(A,1)”)
+
+val pb_ex = pb_exists
+
+val char_is_pb = proved_th $
+e0
+(rpt strip_tac >> drule char_pb >> first_x_assum drule >>
+ (qspecl_then ["X","two","char(i1, i2, a)","1","i2"] assume_tac) pb_ex >>
+ pop_assum (x_choosel_then ["Pb","pb1","pb2"] assume_tac) >>
+ first_x_assum drule  >> pop_assum strip_assume_tac >> 
+ drule (ispb_def |> iffLR) >> pop_assum strip_assume_tac >>
+ first_x_assum (qspecl_then ["A","a","to1(A,1)"] assume_tac) >>
+ rw[ispb_def] >>
+ qby_tac ‘char(i1, i2, a) o a = i2 o to1(A, 1)’
+ >-- (qby_tac ‘char(i1, i2, a) o pb1 o h1 = i2 o pb2 o h1’
+      >-- (arw[GSYM o_assoc]) >> rfs[] >> 
+      qspecl_then ["A","pb2 o h1","to1(A,1)"] assume_tac to1_unique >>
+      arw[]) >>
+ arw[] >> rpt strip_tac >>
+ (*here the goal is ?(a' : A' -> A). !(a' : A' -> A). a o a'# = u & to1(A, 1) o a'# = v <=>
+                 a'# = a'# ... same name*) 
+ suffices_tac (rapf "?a':A'->A. a:A->X o a' = u")
+ >-- (strip_tac >> qexistsl_tac ["a'"] >> strip_tac >> dimp_tac >>
+      strip_tac (* 2 *)
+      >-- (irule ismono_property >> qexistsl_tac ["X","a"] >>
+           arw[]) >>
+      arw[] >> 
+      qspecl_then ["A'","to1(A, 1) o a'","v"] assume_tac to1_unique >>
+      arw[])  >>
+ drule (ispb_def |> iffLR) >> pop_assum strip_assume_tac >> 
+ last_x_assum drule >> pop_assum (K all_tac) (* drule this line is useless, just to kill the assumption*) >>
+ first_x_assum (qspecl_then ["A'","u","v"] assume_tac) >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ qexistsl_tac ["h2 o a'"] >> 
+ first_x_assum (qspecl_then ["a'"] assume_tac) >> fs[] >>
+ arw[GSYM o_assoc])
+(form_goal 
+“ismono(a:A->X) ==> iscopr(i1:1->two,i2) ==> ispb(char(i1,i2,a),i2,a,to1(A,1))”)
+
 fun fl_diff fl1 fl2 = 
     case (fl1,fl2) of
         (h1::t1,_) => 
