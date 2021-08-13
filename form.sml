@@ -67,6 +67,17 @@ fun abstract t =
           | abs i (fVar fm) = fVar fm 
     in abs 0 end;
 
+
+fun fvf f = 
+    case f of 
+        Pred(P,tl) => fvtl tl
+      | Conn(co,fl) => fvfl fl
+      | Quant(q,n,s,b) => HOLset.union (fvs s,fvf b)
+      | _ => essps
+and fvfl G = 
+    case G of [] => essps
+            | h :: t => HOLset.union (fvf h,fvfl t)
+
 (*
 
 fun string_of_form f = 
@@ -207,13 +218,19 @@ fun dest_pred f =
 
 fun dest_exists f = 
     case f of 
-        Quant("?",n,s,b) => ((n,s),b)
+        Quant("?",n,s,b) => 
+        let val ns' = dest_var (pvariantt (fvf f) (mk_var n s))
+        in (ns',subst_bound (var ns') b)
+        end
       | _ => raise ERR ("not an existantial: ",[],[],[f])
 
 
 fun dest_forall f = 
     case f of 
-        Quant("!",n,s,b) => ((n,s),b)
+        Quant("!",n,s,b) =>
+        let val ns' = dest_var (pvariantt (fvf f) (mk_var n s))
+        in (ns',subst_bound (var ns') b)
+        end
       | _ => raise ERR ("not a universal",[],[],[f])
 
 (*
@@ -248,6 +265,7 @@ fun ril i l =
               if eq_form(h,i) then t else h :: (ril i t)
 
 (*compare functions which help produces HOLsets.*)
+(*
 
 fun fvf f = 
     case f of 
@@ -258,6 +276,9 @@ fun fvf f =
 and fvfl G = 
     case G of [] => essps
             | h :: t => HOLset.union (fvf h,fvfl t)
+
+
+*)
 
 type fvd = (string,form)Binarymap.dict
 type menv = vd * fvd
@@ -389,15 +410,15 @@ and match_fl nss l1 l2 env =
 fun strip_forall f = 
     case f of 
         Quant("!",n,s,b) => 
-        let val (b1,l) = strip_forall (subst_bound (mk_var n s) b) in
-            (b1,(n,s) :: l) end
+        let val (b1,l) = strip_forall (subst_bound (pvariantt (fvf f) (mk_var n s)) b) in
+            (b1,dest_var (pvariantt (fvf f) (mk_var n s)) :: l) end
       | _ => (f,[])
 
 fun strip_exists f = 
     case f of 
         Quant("?",n,s,b) => 
-        let val (b1,l) = strip_exists (subst_bound (mk_var n s) b) in
-            (b1,(n,s) :: l) end
+        let val (b1,l) = strip_exists (subst_bound (pvariantt (fvf f) (mk_var n s)) b) in
+            (b1,dest_var (pvariantt (fvf f) (mk_var n s)) :: l) end
       | _ => (f,[])
 
 fun strip_quants f = 

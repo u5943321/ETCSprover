@@ -592,7 +592,7 @@ fun choose_tac cn a0:tactic =
            val _ = not (mem cn (List.map fst (HOLset.listItems ct))) 
                    orelse raise simple_fail "name to be choose is already used"
            val ((n,s),b) = dest_exists a0
-           val newasm = subst_bound (var(cn,s)) b
+           val newasm = substf ((n,s),var(cn,s)) b
        in ([(HOLset.add(ct,(cn,s)),newasm ::(ril a0 asl),w)],
            sing (existsE (cn,s) (assume a0)))
        end
@@ -768,7 +768,7 @@ fun x_choose_then n0 (ttac: thm_tactic) : thm_tactic =
          fn (ct,asl,w) =>
             let
                val th = add_cont (HOLset.add(essps,(n0,s)))
-                                 (foo xth (subst_bound (var (n0,s)) b))              
+                                 (foo xth (substf ((n,s),var (n0,s)) b))              
                val (gl,prf) = ttac th (ct,asl,w)
             in
                (gl, (existsE (n0,s) xth) o prf)
