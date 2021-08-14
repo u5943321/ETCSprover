@@ -23,7 +23,7 @@ fun q_tltcl (tltcl:term list -> thm_tactic -> thm_tactic) strl thtac th :tactic 
 
 fun sing f [x] = f x
   | sing f _ = raise simple_fail "sing" 
-
+(*
 fun exists_tac' t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
@@ -32,6 +32,19 @@ fun exists_tac' t (G,fl,f) =
             in
             ([(G,fl,subst_bound t b)], 
              sing (existsI (dest_var nv) t (subst_bound nv b)))
+            end
+        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
+      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
+*)
+
+fun exists_tac' t (G,fl,f) = 
+    case view_form f of 
+        vQ("?",n,s,b) =>
+        if eq_sort(sort_of t,s) then 
+            let val nv = (var(n,s))
+            in
+            ([(G,fl,substf ((n,s),t) b)], 
+             sing (existsI (dest_var nv) t (substf ((n,s),nv) b)))
             end
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
@@ -98,7 +111,7 @@ fun filter_cont ct =
 
 (*val order_vars l1 user should be able to control the order of inputs*)
 
-fun uex2fsym fsym nl th = 
+fun uex2fsym fsym th = 
     let val th' = spec_all th
         val (ct,asl) = (cont th',ant th')
         val (hyp,conc) = dest_imp (concl th')

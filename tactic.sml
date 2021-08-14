@@ -31,7 +31,7 @@ fun gen_tac (ct,asl,w) =
     case view_form w of
         vQ("!",n,s,b) =>
         let val t0 = pvariantt ct (mk_var n s)
-            val w' = subst_bound t0 b 
+            val w' = substf ((n,s),t0) b 
             val ct' = HOLset.union(ct,fvt t0) 
         in
             ([(ct',asl,w')], sing (allI (dest_var t0)))
@@ -253,8 +253,8 @@ fun exists_tac t (G,fl,f) =
     case view_form f of 
         vQ("?",n,s,b) =>
         if eq_sort(sort_of t,s) then 
-            ([(G,fl,subst_bound t b)], 
-             sing (existsI (n,s) t (subst_bound (var(n,s)) b)))
+            ([(G,fl,substf ((n,s),t) b)], 
+             sing (existsI (n,s) t (substf ((n,s),var(n,s)) b)))
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
@@ -275,7 +275,7 @@ val it = vQ ("?", "x", X -> Y, Pred ("ismono", [B(0)])): form_view
 *)
 
 
-
+(*
 fun exists_tac' t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
@@ -284,6 +284,19 @@ fun exists_tac' t (G,fl,f) =
             in
             ([(G,fl,subst_bound t b)], 
              sing (existsI (dest_var nv) t (subst_bound nv b)))
+            end
+        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
+      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
+*)
+
+fun exists_tac' t (G,fl,f) = 
+    case view_form f of 
+        vQ("?",n,s,b) =>
+        if eq_sort(sort_of t,s) then 
+            let val nv = (var(n,s))
+            in
+            ([(G,fl,substf ((n,s),t) b)], 
+             sing (existsI (dest_var nv) t (substf ((n,s),nv) b)))
             end
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])

@@ -787,7 +787,7 @@ e0
  suffices_tac (rapf "(f:X->Z) o (p:P->X) o (h:X'->P) = (g:Y->Z) o q o h")
  >-- (strip_tac >> first_x_assum drule >> first_x_assum match_mp_tac >> arw_tac[]) >>
  drule pb_equality >> arw_tac[GSYM o_assoc]
- (*drule ismono_property >> *) )
+ (*drule ismono_property >> *))
 (rapg "ispb(f:X->Z,g:Y->Z,p:P->X,q:P->Y) ==> ismono(g) ==> ismono(p)")
 
 (*∀A B f. f∶ A → B ∧ ¬(A ≅ zero) ⇒ ∃g. g∶B → A ∧ f ∘ g ∘ f = f*)

@@ -11,6 +11,7 @@ Pred of string * term list
 | Quant of string * string * sort * form
 | fVar of string;   
 
+(*
 datatype form_view =
     vConn of string * form list
   | vQ of string * string * sort * form
@@ -23,7 +24,7 @@ fun view_form f =
       | Quant qi => vQ qi
       | Pred pi => vPred pi
       | fVar f => vfVar f
-
+*)
 
 exception ERR of string * sort list * term list * form list
 
@@ -529,5 +530,32 @@ fun mk_pred p tl =
         end
 
 fun mk_eq t1 t2 = mk_pred "=" [t1,t2]
+
+
+datatype form_view =
+    vConn of string * form list
+  | vQ of string * string * sort * form
+  | vPred of string * term list
+  | vfVar of string
+
+
+fun dest_forall f = 
+    case f of 
+        Quant("!",n,s,b) =>
+        let val ns' = dest_var (pvariantt (fvf f) (mk_var n s))
+        in (ns',subst_bound (var ns') b)
+        end
+      | _ => raise ERR ("not a universal",[],[],[f])
+
+fun view_form f =
+    case f of
+        Conn sfs => vConn sfs
+      | Quant(q,n,s,b) => 
+        let val (n',s') = dest_var (pvariantt (fvf f) (mk_var n s))
+        in vQ(q,n',s',subst_bound (var (n',s')) b)
+        end
+      | Pred pi => vPred pi
+      | fVar f => vfVar f
+
 
 end
