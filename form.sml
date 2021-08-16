@@ -557,5 +557,6 @@ fun view_form f =
       | Pred pi => vPred pi
       | fVar f => vfVar f
 
+fun dest_forall0 f = case f of Quant Qi => Qi
 
 end

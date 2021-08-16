@@ -111,19 +111,86 @@ fun filter_cont ct =
 
 (*val order_vars l1 user should be able to control the order of inputs*)
 
-fun uex2fsym fsym th = 
+fun ex2fsym fsym strl th = 
     let val th' = spec_all th
         val (ct,asl) = (cont th',ant th')
         val (hyp,conc) = dest_imp (concl th')
-       (* val _ = HOLset.isSubset(fvf conc,fvf hyp)
-                orelse raise ERR ("uex2fsym.conclusion has extra free variable",[],[],[hyp,conc]) *)
-        val inputvars = HOLset.listItems $ filter_cont (cont th') (*need filter it*)
+        val inputvars0 = filter_cont (cont th') 
+        val inputvars = List.foldr (fn (s,e) => HOLset.add(e,s)) essps 
+                                   (List.map (dest_var o (pwct ct)) strl)
+        val _ = HOLset.isSubset(inputvars0,inputvars) orelse 
+                raise simple_fail "there are necessary input variables missing"
+        val inputvl = List.map (pwct ct) strl
         val ((n,s),b) = dest_exists conc
-        val _ = new_fun fsym (s,inputvars)
-        val fterm = mk_fun fsym (List.map var inputvars)
-        val b' = subst_bound fterm b
+        val _ = new_fun fsym (s,List.map dest_var inputvl)
+        val fterm = mk_fun fsym inputvl
+        val b' = substf ((n,s),fterm) b
     in mk_thm ct asl (mk_imp hyp b')
     end
 
+(*
+
+val char_exists' = char_exists |> strip_all_and_imp |> conj_all_assum
+                               |> disch_all'' |> gen_all
+
+val by1 = (rapf "(f:X->Z) o pX o e = (g:Y->Z) o pY o (e:E->XY)")
+
+val by2 = (rapf "!c:A->XY. (pX:XY->X) o c = u:A->X & (pY:XY->Y) o c = v:A->Y <=> c = pa(pX,pY,u,v)") 
+
+val by3 = (rapf "((f:X->Z) o pX) o pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y) = (g o pY) o pa(pX, pY, u, v)")
+
+val by4 = (rapf "pX o e o eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y)) = u & pY o e o eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y)) = v")
+
+val sf1 = (rapf "e o a1 = (e:E->XY) o (a2:A->E)") 
+
+val sf2 = (rapf "(e:E->XY) o a1 = pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y) & e o a2 = pa(pX, pY, u, v)")
+
+val slowtest = proved_th $
+e0
+(rw_tac[ispb_def_alt] >> repeat strip_tac  >> 
+ (specl_then (List.map rastt ["X","Y"])
+             (x_choosel_then ["XY","pX","pY"] assume_tac)) pr_ex >>
+ (specl_then (List.map rastt ["XY","Z","(f:X->Z)o (pX:XY->X)","(g:Y->Z)o (pY:XY->Y)"])
+             (x_choosel_then ["E","e"] assume_tac)) eq_ex >>
+ exists_tac (rastt "E") >>  exists_tac (rastt "(pX:XY->X) o (e:E->XY)") >>
+ exists_tac (rastt "(pY:XY->Y) o (e:E->XY)") >>
+ by_tac by1
+ >-- (drule eq_equality >> arw_tac[GSYM o_assoc]) >>
+ arw_tac[] >> repeat strip_tac >> rw_tac[o_assoc] >> 
+ by_tac by2
+ >-- (drule pa_def >> strip_tac >> arw_tac[] >> dimp_tac >> rw_tac[]) >>
+ drule eqind_def' >> 
+ by_tac by3
+ >-- (rw_tac[o_assoc] >> drule p12_of_pa >> arw_tac[]) >>
+ first_x_assum (specl_then (List.map rastt ["A","pa(pX:XY->X, pY:XY->Y, u:A->X, v)"]) assume_tac) >> first_x_assum drule >> 
+ exists_tac long_induced_map >> 
+ by_tac by4
+ >-- (pop_assum (assume_tac o (fn th => th |> allE long_induced_map |> (C dimp_mp_r2l) (refl long_induced_map))) >> arw_tac[]) >> repeat strip_tac (* 3 *)
+ >-- arw_tac[]
+ >-- arw_tac[] >>
+ suffices_tac sf1
+ >-- (suffices_tac (rapf "ismono(e:E->XY)") 
+      >-- (strip_tac >> drule ismono_property >> 
+           strip_tac >> first_x_assum drule >> arw_tac[]) >>
+      drule eqa_is_mono >> arw_tac[]) >>
+ suffices_tac sf2
+ >-- (strip_tac >> arw_tac[]) >>
+ strip_tac (* 2 *)
+ >> (first_x_assum (match_mp_tac o iffLR) >> arw_tac[])
+ )
+(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q. ispb(f,g,p,q)")
+
+(*AQ list
+
+1.AQ match_mp_tac iso_trans does the wrong thing
+2. gen_all should look at the context instead of just the variables in the concl
+*)
+
+ to_zero_zero |> strip_all_and_imp |> disch_all |> allI ("f",mk_ar_sort (mk_ob "A") (mk_ob "B")) |> gen_all
+
 (*uex2fsym "none" ax5; test pass*)
         
+*)
+
+
+

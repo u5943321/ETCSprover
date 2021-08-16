@@ -113,6 +113,6 @@ val inst_form: menv -> form -> form
 val is_wfmenv: menv -> bool
 val ok_dpdc: menv -> (string * sort) * term -> bool
 
-
+val dest_forall0: form -> string * string * sort * form
 end
 
