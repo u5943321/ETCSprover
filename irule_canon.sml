@@ -59,6 +59,89 @@ fun foldthis ((n,s),(t,th)) =
         (ext, existsE (n,s) (assume ext) th)
       end
 
+
+
+(*added below*)
+
+(*
+open SymGraph
+
+fun depends_t (n,s) t = 
+    case view_term t of 
+        vVar(n1,s1) => 
+        n = n1 andalso eq_sort(s,s1)
+        orelse depends_s (n,s) s1
+      | vFun(f,s1,l) => depends_s (n,s) s1 
+                       orelse List.exists (depends_t (n,s)) l 
+      | _ => false
+and depends_s (n,s) sort = 
+    case view_sort sort of
+        va(d,c) => depends_t (n,s) d orelse depends_t (n,s) c
+      | _ => false
+
+fun edges_from_fvs1 (n:string,s:sort) l = 
+    case l of [] => []
+            | h :: t => 
+              if depends_t (n,s) ((uncurry mk_var) h) then 
+                  ((n,s),h) :: edges_from_fvs1 (n,s) t
+              else edges_from_fvs1 (n,s) t
+
+fun edges_from_fvs0 nss = 
+    let val l = HOLset.listItems nss
+    in List.foldr 
+           (fn (ns,l0) => (edges_from_fvs1 ns l) @ l0) [] l 
+    end
+
+
+
+fun edges_from_fvs nss = 
+    List.filter (fn ((n1,s1),(n2,s2)) => n1 <> n2 orelse not $ eq_sort(s1,s2)) (edges_from_fvs0 nss)
+
+
+fun order_of_fvs f = 
+    let val nss = fvf f
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+fun order_of nss = 
+    let 
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+fun abstl l th = 
+    case l of 
+        [] => th
+      | (n,s) :: t => allI (n,s) (abstl t th)
+
+fun find_var l n = 
+    case l of 
+        [] => raise simple_fail"variable name not found"
+      | h :: t => 
+        if fst h = n then h 
+        else find_var t n
+
+fun genl vsl th = 
+    let
+        val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vsl)
+        val vl = List.map (find_var vsl) ovs
+    in 
+        abstl vl th
+    end
+
+fun choosel vs t th = 
+    let val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vs)
+        val vl = List.map (find_var vs) ovs
+    in List.foldr foldthis (t,th) vl
+    end
+
+*)
+
 fun choosel vs t th = List.foldr foldthis (t,th) vs
 
 
@@ -137,3 +220,114 @@ fun irule_canon th =
         end
   end
 
+open SymGraph
+
+fun depends_t (n,s) t = 
+    case view_term t of 
+        vVar(n1,s1) => 
+        n = n1 andalso eq_sort(s,s1)
+        orelse depends_s (n,s) s1
+      | vFun(f,s1,l) => depends_s (n,s) s1 
+                       orelse List.exists (depends_t (n,s)) l 
+      | _ => false
+and depends_s (n,s) sort = 
+    case view_sort sort of
+        va(d,c) => depends_t (n,s) d orelse depends_t (n,s) c
+      | _ => false
+
+fun edges_from_fvs1 (n:string,s:sort) l = 
+    case l of [] => []
+            | h :: t => 
+              if depends_t (n,s) ((uncurry mk_var) h) then 
+                  ((n,s),h) :: edges_from_fvs1 (n,s) t
+              else edges_from_fvs1 (n,s) t
+
+fun edges_from_fvs0 nss = 
+    let val l = HOLset.listItems nss
+    in List.foldr 
+           (fn (ns,l0) => (edges_from_fvs1 ns l) @ l0) [] l 
+    end
+
+
+
+fun edges_from_fvs nss = 
+    List.filter (fn ((n1,s1),(n2,s2)) => n1 <> n2 orelse not $ eq_sort(s1,s2)) (edges_from_fvs0 nss)
+
+
+fun order_of_fvs f = 
+    let val nss = fvf f
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+fun order_of nss = 
+    let 
+        val g0 = HOLset.foldr (fn ((n,s),g) => new_node (n,s) g) empty nss
+        val g = List.foldr (fn (((n1,_),(n2,_)),g) => 
+                               add_edge (n1,n2) g) g0 (edges_from_fvs nss)
+    in topological_order g
+    end
+
+fun abstl l th = 
+    case l of 
+        [] => th
+      | (n,s) :: t => allI (n,s) (abstl t th)
+
+fun find_var l n = 
+    case l of 
+        [] => raise simple_fail"variable name not found"
+      | h :: t => 
+        if fst h = n then h 
+        else find_var t n
+
+fun genl vsl th = 
+    let
+        val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vsl)
+        val vl = List.map (find_var vsl) ovs
+    in 
+        abstl vl th
+    end
+
+fun choosel' vs t th = 
+    let val ovs = order_of ((foldr (uncurry (C (curry HOLset.add)))) essps vs)
+        val vl = List.map (find_var vs) ovs
+    in List.foldr foldthis (t,th) vl
+    end
+
+
+
+fun recurse' acc groups th =
+      case groups of
+          [] => (acc, th)
+        | (fvset, ts) :: rest =>
+          let
+            val (th1,c) = conjl ts th
+            val (ext, th2) = choosel' (HOLset.listItems fvset) c th1
+          in
+            recurse' (ext::acc) rest th2
+          end
+
+fun reconstitute' groups th = recurse' [] groups th
+
+
+
+fun ir_canon th =
+  let
+    val th1 = norm (gen_all th)
+    val origl = ant th
+    val gfvs = fvfl (concl th1 :: origl) 
+    val newhyps = form_list_diff (ant th1)  origl
+    val grouped = group_hyps gfvs newhyps
+    val (cs, th2) = reconstitute' grouped th1
+  in
+    case cs of
+        [] => gen_all th2
+      | _ =>
+        let
+          val (th3,c) = conjl cs th2
+        in
+          disch c th3 |> gen_all
+        end
+  end

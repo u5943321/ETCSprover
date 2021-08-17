@@ -354,7 +354,7 @@ e0
                              i2 A B ∘ x0' = x))
 *)
 
-(* TODO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon
+(* TODO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon solved
 # Exception- ERR ("the given variable occurs unexpectedly", [], [], []) raised
 
 
@@ -376,7 +376,7 @@ first_x_assum (specl_then (List.map rastt ["oneone","(one1:1->oneone) o (to1(A,1
                                            "(one2:1->oneone) o (to1(B,1))"]) assume_tac) >>
 repeat strip_tac >>
 suffices_tac (rapf "(one1:1->oneone) o (to1(A,1)) o (x0:1->A) = (one2:1->oneone) o (to1(B,1)) o (x0':1->B)") 
->-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TODO: do not understand why cannot use rw to1_unique to solve this by*)
+>-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TODO: do not understand why cannot use rw to1_unique to solve this by solved*)
       assume_tac (specl (List.map rastt ["1","id(1)","to1(A, 1) o (x0:1->A)"]) to1_unique) >>  assume_tac (specl (List.map rastt ["1","id(1)","to1(B, 1) o (x0':1->B)"]) to1_unique)>>
   arw_tac[] >> rw_tac[idR]) >>
 suffices_tac (rapf "copa(i1:A->AB, i2:B->AB, ((one1:1->oneone) o to1(A, 1)), ((one2:1->oneone) o to1(B, 1))) o i1 o (x0:1->A) = copa(i1, i2, (one1 o to1(A, 1)), (one2 o to1(B, 1))) o i2 o x0'") 
@@ -619,13 +619,13 @@ cannot be solved by rw_tac
 
 loops
 
-understand why it is finished by strip_tac
+understand why it is finished by strip_tac solved
 *)
 
 val coeq_of_equal = proved_th $ 
 e0
 (rw_tac[iscoeq_def] >> repeat strip_tac >> exists_tac (rastt "x:B->X") >> 
- strip_tac >> rw_tac[idR] >> dimp_tac >> strip_tac)
+ strip_tac >> rw_tac[idR])
 (rapg "iscoeq(id(B),f:A->B,f:A->B)")
 
 (*∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_mono (eqa f g)*)
@@ -713,7 +713,7 @@ e0
  >-- (drule eq_equality >> arw_tac[GSYM o_assoc]) >>
  arw_tac[] >> repeat strip_tac >> rw_tac[o_assoc] >> 
  by_tac (rapf "!c:A->XY. (pX:XY->X) o c = u:A->X & (pY:XY->Y) o c = v:A->Y <=> c = pa(pX,pY,u,v)") 
- >-- (drule pa_def >> strip_tac >> arw_tac[] >> dimp_tac >> rw_tac[]) >>
+ >-- (drule pa_def >> strip_tac >> arw_tac[] (*>> dimp_tac >> rw_tac[]*)) >>
  drule eqind_def' >> 
  by_tac (rapf "((f:X->Z) o pX) o pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y) = (g o pY) o pa(pX, pY, u, v)")
  >-- (rw_tac[o_assoc] >> drule p12_of_pa >> arw_tac[]) >>
@@ -948,7 +948,7 @@ e0
  >-- arw_tac[idR] >> arw_tac[GSYM o_assoc])
 (rapg "!X A i:X->A. isiso(i) ==> !B f:A->B g. f o i = g o i ==> f = g")
 
-(*TODO: !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables, is that bad?*)
+(*TODO: !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables, is that bad?- yes, should edit parser*)
 
 (*∀A B f g. A≅ zero ∧ f∶ A → B ∧ g∶ A → B ⇒ f = g*)
 
@@ -3870,7 +3870,7 @@ e0
       (assume_tac o GSYM) >>
       once_arw[] >> drule sg_def >> first_x_assum rev_drule >>
       first_x_assum rev_drule >> rw[o_assoc] >> once_arw[] >>
-      strip_tac >> dimp_tac >> rw[]) >>
+      strip_tac (*>> dimp_tac *)>> rw[]) >>
  dimp_tac >> strip_tac >--
  (qexistsl_tac ["r"] >> rfs[]) >>
  qexistsl_tac ["r"] >> pop_assum mp_tac >> pop_assum mp_tac >>
@@ -3983,8 +3983,7 @@ e0
 (rpt strip_tac >>
  assume_tac (Thm6_page29_means_just_that |> strip_all_and_imp |> allI ("a'",mk_ar_sort one (mk_ob "A"))) >>
  irule equiv_to_same_element >>
- pop_assum (assume_tac o GSYM) >> once_arw[] >> strip_tac >> rw[] >>
- dimp_tac >> rw[])
+ pop_assum (assume_tac o GSYM) >> once_arw[] >> strip_tac >> rw[])
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !A AA2 p1:AA2->A A2 p2:AA2->A2 ev: AA2 -> two. isexp(p1,p2,ev) ==>

@@ -405,6 +405,31 @@ fun rw_canon th =
     end 
 
 
+fun rw_fcanon th = 
+    let val th = spec_all th
+        val f = concl th
+    in 
+        if is_dimp f then [th] else
+        if is_conj f then (op@ o (rw_fcanon ## rw_fcanon) o conj_pair) th else
+        if is_neg f then [eqF_intro th]  else
+        [eqT_intro th]
+    end 
+
+
+fun rw_tcanon th = 
+    let val th = spec_all th
+        val f = concl th
+    in 
+        if is_eq f then [th] else
+        if is_conj f then (op@ o (rw_tcanon ## rw_tcanon) o conj_pair) th else
+        []
+    end 
+
+(*val th0 = mk_thm essps [] (rapf "!a b c. a = b & !a. b = a & !d. d = g");
+
+tested rw_tcanon.
+*)
+
 (*
 fun gen_rw_tac fc thl = 
     let 
@@ -442,11 +467,16 @@ fun rewr_no_refl_fconv th f =
     end
 
 
+(*TODO: 
 
+val thl = (flatten (mapfilter rw_canon thl)))
+
+have rwtcon & rwfcanon
+*)
 fun once_rw_tac thl = 
     let 
-        val conv = first_conv (mapfilter rewr_no_refl_conv (flatten (mapfilter rw_canon thl)))
-        val fconv = first_fconv (mapfilter rewr_no_refl_fconv (flatten (mapfilter rw_canon thl)))
+        val conv = first_conv (mapfilter rewr_no_refl_conv (flatten (mapfilter rw_tcanon thl)))
+        val fconv = first_fconv (mapfilter rewr_no_refl_fconv (flatten (mapfilter rw_fcanon thl)))
     in fconv_tac (basic_once_fconv conv fconv) 
     end
 
@@ -534,8 +564,8 @@ fun rewr_no_loop_fconv th f =
 
 fun rw_tac thl:tactic = 
     let 
-        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_canon thl)))
-        val fconv = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_canon thl)))
+        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
+        val fconv = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_fcanon thl)))
     in fconv_tac (basic_fconv conv fconv) 
     end
 

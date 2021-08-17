@@ -1212,7 +1212,7 @@ e0
 
 (*how to prevent symmetry things like P(a,b) <=> P(b,a)*)
 
-(*TODO: AQ match_mp_tac iso_trans*)
+(*TODO: AQ match_mp_tac iso_trans--solved, ir_canon does this*)
 val iso_to_same = proved_th $
 e0
 (strip_tac >> by_tac (rapf "areiso(A,Y)")
@@ -1231,7 +1231,7 @@ fun try_done tac (G,fl,l) =
         ([],pf) => ([],pf)
        | _ => ([(G,fl,l):goal],sing I)
 
-(*TODO: gen_all in to_zero_zero |> strip_all_and_imp  does not do the correct thing*)
+(*TODO: gen_all in to_zero_zero |> strip_all_and_imp  does not do the correct thing -- solved, fixed the soundness issue.*)
 
 val to_zero_zero' = 
     to_zero_zero |> strip_all_and_imp 

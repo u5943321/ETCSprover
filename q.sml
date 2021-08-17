@@ -183,7 +183,18 @@ e0
 (*AQ list
 
 1.AQ match_mp_tac iso_trans does the wrong thing
-2. gen_all should look at the context instead of just the variables in the concl
+2. gen_all should look at the context instead of just the variables in the concl? maybe should collect the variables which does not appear in any assumption. and gen them as early as possible.
+3.can only think of 
+ !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables
+4.qdy qsuff does not response
+
+5.to1unique to rw then Exception- ERR ("extra variable involved", [1 -> 1], [f], []) raised
+>  because the only way to use eqn is to match lhs and rw it into RHS, it does not match an equation a = b to an eqn c = d.
+
+after parsing, add a function which collects the set of free variables, and complain if there is something whose domain is bounded, is there any better way?
+
+Worry that if do this in the procedure of making formula then it will be slow.
+
 *)
 
  to_zero_zero |> strip_all_and_imp |> disch_all |> allI ("f",mk_ar_sort (mk_ob "A") (mk_ob "B")) |> gen_all
