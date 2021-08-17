@@ -993,4 +993,97 @@ fun contrapos impth =
       end
       handle e => raise wrap_err "contrapos." e
 
+(*?x:ob.P(x)
+
+(∃x. P x) ⇒ Q
+
+assume P x, want Q.
+
+if have P
+
+*)
+
+fun pe_cl1 (n,s) = 
+    let (*val (n,s) = ("A",mk_ob_sort)*)
+        val P = mk_fvar "f0"
+        val ef = mk_exists n s P
+        val Q = mk_fvar "f1"
+        val lhs = mk_imp ef Q 
+        val Px2Q = mk_imp P Q
+        val rhs = mk_forall n s Px2Q
+        val l2r = assume P
+                 |> add_cont (HOLset.add(essps,(n,s)))
+                 |> existsI (n,s) (var(n,s)) P 
+                 |> mp (assume lhs) 
+                 |> disch P |> allI (n,s) 
+                 |> disch lhs
+        val r2l = assume rhs |> allE (var(n,s)) 
+                         |> C mp $ assume P
+                         |> existsE (n,s) (assume ef) 
+                         |> disch ef |> disch rhs
+    in dimpI l2r r2l
+    end
+
+val pe_ob_cl1 = pe_cl1 ("A",mk_ob_sort)
+
+val pe_ar_cl1 = pe_cl1 ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
+
+(*(∃x. P x) ∧ Q ⇔ ∃x. P x ∧ Q*)
+
+fun pe_cl2 (n,s) = 
+    let
+        val P = mk_fvar "f0"
+        val Q = mk_fvar "f1"
+        val eP = mk_exists n s P
+        val lhs = mk_conj eP Q
+        val PxQ = mk_conj P Q
+        val rhs = mk_exists n s PxQ
+        val l2r = assume P
+                 |> existsE (n,s) (assume eP)
+                 |> C conjI (assume Q) 
+                 |> conj_assum eP Q
+                 |> existsI (n,s) (var(n,s)) PxQ
+                 |> disch lhs
+        val r2l = assume P 
+                 |> existsI (n,s) (var(n,s)) P
+                 |> C conjI (assume Q)
+                 |> conj_assum P Q
+                 |> existsE (n,s) (assume rhs)
+                 |> disch rhs
+    in dimpI l2r r2l
+    end
+
+val pe_ob_cl2 = pe_cl2 ("A",mk_ob_sort)
+
+val pe_ar_cl2 = pe_cl2 ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
+
+
+fun pe_cl3 (n,s) = 
+    let
+        val P = mk_fvar "f0"
+        val Q = mk_fvar "f1"
+        val eP = mk_exists n s P
+        val lhs = mk_conj Q eP
+        val QxP = mk_conj Q P
+        val rhs = mk_exists n s QxP
+        val l2r = assume P
+                 |> existsE (n,s) (assume eP)
+                 |> conjI (assume Q) 
+                 |> conj_assum Q eP
+                 |> existsI (n,s) (var(n,s)) QxP
+                 |> disch lhs
+        val r2l = assume P 
+                 |> existsI (n,s) (var(n,s)) P
+                 |> conjI (assume Q)
+                 |> conj_assum Q P
+                 |> existsE (n,s) (assume rhs)
+                 |> disch rhs
+    in dimpI l2r r2l
+    end
+
+val pe_ob_cl3 = pe_cl3 ("A",mk_ob_sort)
+
+val pe_ar_cl3 = pe_cl3 ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
+
+
 end

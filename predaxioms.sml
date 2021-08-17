@@ -354,7 +354,7 @@ e0
                              i2 A B ∘ x0' = x))
 *)
 
-(* TODO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon solved
+(* TO-DO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon solved
 # Exception- ERR ("the given variable occurs unexpectedly", [], [], []) raised
 
 
@@ -376,7 +376,7 @@ first_x_assum (specl_then (List.map rastt ["oneone","(one1:1->oneone) o (to1(A,1
                                            "(one2:1->oneone) o (to1(B,1))"]) assume_tac) >>
 repeat strip_tac >>
 suffices_tac (rapf "(one1:1->oneone) o (to1(A,1)) o (x0:1->A) = (one2:1->oneone) o (to1(B,1)) o (x0':1->B)") 
->-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TODO: do not understand why cannot use rw to1_unique to solve this by solved*)
+>-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TO-DO: do not understand why cannot use rw to1_unique to solve this by solved*)
       assume_tac (specl (List.map rastt ["1","id(1)","to1(A, 1) o (x0:1->A)"]) to1_unique) >>  assume_tac (specl (List.map rastt ["1","id(1)","to1(B, 1) o (x0':1->B)"]) to1_unique)>>
   arw_tac[] >> rw_tac[idR]) >>
 suffices_tac (rapf "copa(i1:A->AB, i2:B->AB, ((one1:1->oneone) o to1(A, 1)), ((one2:1->oneone) o to1(B, 1))) o i1 o (x0:1->A) = copa(i1, i2, (one1 o to1(A, 1)), (one2 o to1(B, 1))) o i2 o x0'") 
@@ -605,7 +605,7 @@ val coeq_equality = coeqind_def |> strip_all_and_imp |> conjE1 |> disch_all |> g
 (*f A B. f∶ A → B ==> ?ki. ki∶ coeqo f f → B /\ ki o (coeqa f f) = id B*)
 val iscoeq_def = read_axiom "!A B f:A->B g:A->B cE ce:B->cE. iscoeq(ce,f,g) <=> ce o f = ce o g & !X x:B->X. x o f = x o g ==> (?x0:cE ->X. !x0'. x0' o ce = x <=> x0' = x0)"
 
-(*TODO:
+(*TO-DO:
 
 A , B , X ,   
    (f : A -> B), (x : B -> X), (x0' : B -> X)
@@ -672,7 +672,7 @@ val eqind_def' = eqind_def |> strip_all_and_imp |> conjE2 |> disch_all |> gen_al
 
 
 (* TODO: drule bug:
-first_x_assum (specl_then (List.map rastt ["A","pa(pX:XY->X, pY:XY->Y, u:A->X, v)"]) assume_tac) >> first_x_assum drule
+first_x_assum (specl_then (List.map rastt ["A","pa(pX:XY->X, pY:XY->Y, u:A->X, v)"]) assume_tac) >> first_x_assum drule--cannot find it...
 
 *)
 
@@ -698,7 +698,7 @@ e0
 
 val long_induced_map = rastt "eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y))"
 
-(*TODO: match_mp_bug  e o a1 = e o a2 ==> a1 = a2 ismono_property h is double bind to a1 and a2 because ismono_property is not in correct order!!!!!*)
+(*TO-DO: match_mp_bug  e o a1 = e o a2 ==> a1 = a2 ismono_property h is double bind to a1 and a2 because ismono_property is not in correct order!!!!!*)
 
 val pb_exists = proved_th $ (*val (ct,asl,w) = cg $*)
 e0
@@ -1055,7 +1055,7 @@ e0
    2.~x1 = x2
    ----------------------------------------------------------------------
    ~x1 = x2 
-TODO: arw do not use eqn as predicates, so arw does nothing onthis
+TO-DO: arw do not use eqn as predicates, so arw does nothing onthis
 *)
 
 val from0_unique = proved_th $
@@ -1381,7 +1381,7 @@ e0
 
 (*how to prevent symmetry things like P(a,b) <=> P(b,a)*)
 
-(*TODO: AQ match_mp_tac iso_trans*)
+(*TO-DO: AQ match_mp_tac iso_trans solved*)
 val iso_to_same = proved_th $
 e0
 (strip_tac >> by_tac (rapf "areiso(A,Y)")
@@ -1400,7 +1400,7 @@ fun try_done tac (G,fl,l) =
         ([],pf) => ([],pf)
        | _ => ([(G,fl,l):goal],sing I)
 
-(*TODO: gen_all in to_zero_zero |> strip_all_and_imp  does not do the correct thing*)
+(*TO-DO: gen_all in to_zero_zero |> strip_all_and_imp  does not do the correct thing solved*)
 
 val to_zero_zero' = 
     to_zero_zero |> strip_all_and_imp 
@@ -1689,7 +1689,7 @@ rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N
              =
              pa(pN, pB, id(N), f) o s
 
-TODO: rw does not do anything to this *)
+TO-DO: rw does not do anything to this *)
 
 val Thm1_case1_comm_condition_right'' = 
 dimpI
@@ -2619,8 +2619,8 @@ once_rw[one_to_one_id] >> rw[idR]
   (?U a:U->X.ismono(a) & 
    (!x:1->X.ismem(x,a) <=> ?j:1->J. ev o pa(p1,p2,x,ss o j) = i2))”)
 
-(*TODO: pull exists
-?A. (?(f : 1 -> A#). T) & areiso(A#, 0)
+(*TO-DO: pull exists
+?A. (?(f : 1 -> A#). T) & areiso(A#, 0) now have
 *)
 
 val Thm5_lemma_1 = proved_th $
@@ -2899,11 +2899,11 @@ pop_assum (assume_tac o GSYM) >> once_arw[] >> rw[o_assoc]
  !A' a':A'->X q:E->A'.isepi(q) & ismono(a') & pX o k = a' o q ==>
         !AA' iA:A->AA' iA':A'->AA'. iscopr(iA,iA') ==> isepi(copa(iA,iA',a,a'))”)
 
-(*TODO: AQ: should I edit the once arw so it rw a refl into T? to avoid once_arw[] >> rw[] 
+(*TO-DO: AQ: should I edit the once arw so it rw a refl into T? to avoid once_arw[] >> rw[] 
 
 but sometimes once_arw gives t = t & x = x but arw gives something weird*)
 
-(*TODO: rpt strip can create variables whose name clashes with existing variables*)
+(*TO-DO: rpt strip can create variables whose name clashes with existing variables belive it is done by editing strip.*)
 
 val Thm5_mono = proved_th $ 
 e0
@@ -3977,7 +3977,7 @@ e0
           (?r:1->R. f0 o r = a1 & f1 o r = a')”)
 
 
-(*TODO: let rw be able to solve f <=>f*)
+(*TO-DO: let rw be able to solve f <=>f*)
 val compose_with_g_eq_equiv = proved_th $
 e0
 (rpt strip_tac >>
@@ -4125,10 +4125,10 @@ e0
  rpt strip_tac (* 2 *) >-- 
  (by_tac 
    (rapf "?y:1->Pb. pb1:Pb->X o y = a:A->X o x:1->A & pb2:Pb->1 o y = id(1)") >--
-  (drule pb_fac_exists' >> (*TODO:irule bug,should use irule*)
+  (drule pb_fac_exists' >> (*TO-DO:irule bug,should use irule works*)
   first_x_assum (qspecl_then ["1","a o x","id(1)"] assume_tac) >>
   rev_drule char_def >> first_x_assum drule >>
-  (*TODO: once have pull exists test here*)
+  (*TO-DO: once have pull exists test here test pass*)
   first_x_assum (qspecl_then ["a o x"] assume_tac) >>
   qsuff_tac ‘char(i1, i2, a) o a o x = i2’
   >-- (strip_tac >> fs[idR] >> qexistsl_tac ["a'"] >> arw[]) >>
