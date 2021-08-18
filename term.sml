@@ -588,4 +588,13 @@ fun PPterm printdepth _ t = let val s = ppterm (!show_types) (LR (NONE,NONE)) t
                          in pretty
                          end
 *)
+
+fun is_bound t = 
+    case t of Bound i => true 
+            | _ => false
+
+fun ill_formed_fv (n,s) = 
+    case s of ob => false
+            | ar(d,c) => is_bound d orelse is_bound c
+
 end

@@ -68,9 +68,23 @@ fun define_fun f =
 
 (*ETCS axioms*)
 
+fun check_wffv fvs = 
+    case fvs of 
+        [] => true
+      | h :: t => if ill_formed_fv h then
+                      raise ERR ("ill-formed free variable",[snd h],[var h],[])
+                  else check_wffv t
+
+fun rapf' str = 
+    let val f = rapf str 
+        val fvs = HOLset.listItems (fvf f)
+        val _ = check_wffv fvs 
+    in f
+    end
+
 fun read_axiom thstr = 
     let
-        val f = rapf thstr
+        val f = rapf' thstr
         val _ = HOLset.equal(fvf f,essps) orelse
                 raise simple_fail"formula has free variables"
     in
@@ -948,7 +962,7 @@ e0
  >-- arw_tac[idR] >> arw_tac[GSYM o_assoc])
 (rapg "!X A i:X->A. isiso(i) ==> !B f:A->B g. f o i = g o i ==> f = g")
 
-(*TODO: !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables, is that bad?- yes, should edit parser*)
+(*TO-DO: !B f:A->B g. f o i = g o i ==> f = g if g is not quantified, there will be a free variable g whose sort is bounded variables, is that bad?- yes, should edit parser*)
 
 (*∀A B f g. A≅ zero ∧ f∶ A → B ∧ g∶ A → B ⇒ f = g*)
 
@@ -1277,7 +1291,7 @@ or jusr write a rev_drule FREEZE_THEN
 (*is_mono a ∧ a∶ A → X ∧ x∶ one → X ∧
  ¬(∃x0. x0∶ one → A ∧ a o x0 = x) ⇒ is_mono (copa a x)*)
 
-(*TODO: a drule such that if !x.~ P(x) in assumption, then know p(a) is false,isnt it rw_canon?*)
+(*TO-DO: a drule such that if !x.~ P(x) in assumption, then know p(a) is false,isnt it rw_canon? can do this sort of thing*)
 
 fun neg_disch t th =
    if eq_form(concl th,FALSE) then negI t th 
@@ -1616,7 +1630,7 @@ drule coeq_eqn >> first_x_assum drule >> arw[])
                p2 o pa(pN, pB, z, g) & ispr(p1, p2) &
                p1 o pa(pN, pB, id(N), f) o z = p1 o pa(pN, pB, z, g)
 
-TODO: ppbug*)
+TO-DO: ppbug*)
 
 
 val Thm1_case1_comm_condition_left = proved_th $
@@ -1895,6 +1909,7 @@ fun form_goal f = new_goal (fvf f,[]:form list,f)
 
 (*(pick_x_assum “ispr(Ap:AP->P, aP:AP->A)” mp_tac) if the input not in the asumption list, then HOL error instead of pick x assum err TODO*)
 
+
 val Thm1_comm_eq_right_lemma_long = proved_th $ 
 e0 
 (repeat strip_tac >> pop_assum (assume_tac o sym) >> arw[] >>
@@ -2162,7 +2177,11 @@ e0
 
 (*∀n. n∶ one → N ⇒ (s o n) ≠ z*)
 
-(*TODO, may AQ, ~!X (e1 : X# -> X#)  (e1 : X# -> X#). ~~e1# = e1#: thm elim the double neg*)
+(*TO-DO, may AQ, ~!X (e1 : X# -> X#)  (e1 : X# -> X#). ~~e1# = e1#: thm elim the double neg
+
+rapf' "~!X e1 : X -> X  e2 : X -> X. ~~e1 = e2" basic_fconv can do it
+
+*)
 
 val distinct_endo_exists' = 
  distinct_endo_exists |>
@@ -2282,7 +2301,7 @@ e0
                  pa(Ap, aP, pA,
                   pa(Na2b, nA2B, id(N), tp(p1
 
-TODO: huge ppbug!*)
+TO-DO: huge ppbug!*)
 
 val coeq_of_equal_post_inv = proved_th $
 e0

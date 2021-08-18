@@ -140,6 +140,7 @@ val pvd: vd -> ((string * sort) * term) list
 val inst_sort: vd -> sort -> sort
 val inst_term: vd -> term -> term
 
+val ill_formed_fv: string * sort -> bool
 (*val PPterm: 'a -> 'b -> term -> PolyML.pretty*)
 end
 

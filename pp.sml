@@ -94,14 +94,14 @@ fun pr_tlist g tl =
 fun strip_forall' f = 
     case view_form f of 
         vQ("!",n,s,b) => 
-        let val (b1,l) = strip_forall' (subst_bound (mk_var (n^"#") s) b) in
+        let val (b1,l) = strip_forall' (substf ((n,s),mk_var (n^"#") s) b) in
             (b1,(n,s) :: l) end
       | _ => (f,[])
 
 fun strip_exists' f = 
     case view_form f of 
         vQ("?",n,s,b) => 
-        let val (b1,l) = strip_exists (subst_bound (mk_var (n^"#") s) b) in
+        let val (b1,l) = strip_exists (substf ((n,s),mk_var (n^"#") s) b) in
             (b1,(n,s) :: l) end
       | _ => (f,[])
 

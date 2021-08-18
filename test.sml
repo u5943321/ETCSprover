@@ -54,6 +54,7 @@ val Thm1 = proved_th $ val (ct,asl,w) = cg $
 
 
 
+
 val Thm1 = proved_th $ 
  e0
 (repeat strip_tac >> 
@@ -131,6 +132,13 @@ val it =
 
 *)
 
+e0
+(rpt strip_tac  >> last_x_assum mp_tac >> rw[ispb_def] >> arw[] >>
+ strip_tac )
+(form_goal “!X Z f:X->Z Y g:Y->Z Pb p:Pb->X q:Pb->Y.ispb(f:X->Z,g:Y->Z,p,q) ==> 
+ !A u v. f o u = g o v ==> ?a:A->Pb. p o a = u & q o a = v”)
+
+
 val pb_fac_exists' = proved_th $ 
 e0
 (rpt strip_tac  >> last_x_assum mp_tac >> rw[ispb_def] >> arw[] >> 
@@ -148,3 +156,121 @@ basic_fconv
 e0
 (strip_tac >> once_arw[])
 (form_goal “a = b ==>!a. a = c”)
+
+val th0 =assume “x:C->B = y”
+(“!x:C->B.x = pa(p1,p2,f,g)” |> once_depth_fconv (rewr_conv th0) all_fconv)
+
+val zero_no_mem = proved_th $
+e0
+(ccontra_tac >> pop_assum strip_assume_tac >> 
+ strip_assume_tac ax8 >> suffices_tac (rapf "x1:1->X = x2") 
+ >-- arw_tac[] )
+(rapg "~?f:1->0.T")
+
+val iso_to_same = proved_th $
+e0
+(strip_tac >> by_tac (rapf "areiso(A,Y)")
+ >-- (once_rw_tac[iso_symm] >> arw_tac[]) >>
+ match_mp_tac (ir_canon iso_trans))
+(rapg "areiso(X,A) & areiso(Y,A) ==> areiso(X,Y)")
+
+val prop_5_lemma = proved_th $
+e0
+(repeat strip_tac >> x_choosel_then ["oneone","one1","one2"] assume_tac  (specl (List.map rastt ["1","1"]) copr_ex) >> ccontra_tac >>
+match_mp_tac (i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> undisch|> conj_all_assum |> disch_all|> gen_all) >>
+exists_tac (rastt "oneone") >> exists_tac (rastt "one1:1->oneone") >>
+exists_tac (rastt "one2:1->oneone") >> 
+arw_tac[] >> pop_assum mp_tac >> pop_assum mp_tac >> drule i12_of_copa >>
+first_x_assum (specl_then (List.map rastt ["oneone","(one1:1->oneone) o (to1(A,1))",
+                                           "(one2:1->oneone) o (to1(B,1))"]) assume_tac) >>
+repeat strip_tac >>
+suffices_tac (rapf "(one1:1->oneone) o (to1(A,1)) o (x0:1->A) = (one2:1->oneone) o (to1(B,1)) o (x0':1->B)")
+>-- (by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") 
+    >-- once_rw_tac[to1_unique])
+ (*
+>-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TODO: do not understand why cannot use rw to1_unique to solve this by*)
+      assume_tac (specl (List.map rastt ["1","id(1)","to1(A, 1) o (x0:1->A)"]) to1_unique) >>  assume_tac (specl (List.map rastt ["1","id(1)","to1(B, 1) o (x0':1->B)"]) to1_unique)>>
+  arw_tac[] >> rw_tac[idR]) >>
+suffices_tac (rapf "copa(i1:A->AB, i2:B->AB, ((one1:1->oneone) o to1(A, 1)), ((one2:1->oneone) o to1(B, 1))) o i1 o (x0:1->A) = copa(i1, i2, (one1 o to1(A, 1)), (one2 o to1(B, 1))) o i2 o x0'") 
+>-- (rw_tac[GSYM o_assoc] >> arw_tac[]) >>
+arw_tac[] *)
+)
+(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x0:1->A x0':1->B.~i1 o x0 = i2 o x0'")
+
+e0
+(rw_tac[iscoeq_def] >> repeat strip_tac >> exists_tac (rastt "x:B->X") >> 
+ strip_tac >> rw[idR])
+(rapg "iscoeq(id(B),f:A->B,f:A->B)")
+
+val to1_unique0 = specl [rastt "X",rastt "f:X->1"] eq_to1 |> GSYM 
+                       |> trans (specl [rastt "X",rastt "g:X->1"] eq_to1) 
+                       |> allI ("f",mk_ar_sort (mk_ob "X") one)
+                       |> gen_all
+
+
+
+val ispb_def_alt = proved_th $
+e0
+(repeat strip_tac >> rw_tac[ispb_def] >> dimp_tac >> strip_tac >> arw_tac[] >>
+ repeat strip_tac >> first_x_assum drule >> 
+ first_x_assum (x_choose_then "a" assume_tac) >> exists_tac (rastt "a:A->P") >>
+ repeat strip_tac (* 4 *)
+ >-- (pop_assum (assume_tac o (fn th => th |> allE (rastt "a:A->P") 
+                                          |> (C dimp_mp_r2l) (refl (rastt "a:A->P")))) >>
+      arw_tac[])
+ >-- (pop_assum (assume_tac o (fn th => th |> allE (rastt "a:A->P") 
+                                          |> (C dimp_mp_r2l) (refl (rastt "a:A->P")))) >>
+      arw_tac[])
+ >-- (suffices_tac (rapf "a1 = a & a2 = a:A->P") 
+      >-- (strip_tac >> arw_tac[]) >> 
+      strip_tac >> first_x_assum (match_mp_tac o iffLR) >> arw_tac[]) >>
+ dimp_tac >> strip_tac >> arw_tac[] >> pop_assum_list (map_every strip_assume_tac) )
+(rapg "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y. ispb(f, g, p, q) <=> f o p = g o q & !A u : A -> X v : A -> Y. f o u = g o v ==> ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2")
+
+
+
+
+f:A->B
+A,B
+------
+P(A)
+
+
+f:A->B
+B
+------
+!A.P(A)
+
+val f0 = rapf "!a. a = b"
+
+val thm0 = assume (rapf "a = b")
+
+fun forall_fconv fc' f' = 
+    case view_form f' of
+        (vQ("!",n,s,b)) => 
+        forall_iff (n,s) $ fc' (subst_bound (mk_var n s) b)
+      | _ => raise ERR ("forall_fconv.not an all",[],[],[f'])
+
+
+e0
+(rpt strip_tac >> irule prop_2_corollary_as_subobj >> arw[]>>
+ drule pb_mono_mono >> 
+ qspecl_then ["two","i2"] assume_tac dom_1_mono >>
+ first_x_assum drule >> arw[] >>
+ rpt strip_tac (* 2 *) >-- 
+ (by_tac 
+   (rapf "?y:1->Pb. pb1:Pb->X o y = a:A->X o x:1->A & pb2:Pb->1 o y = id(1)") >--
+  (irule pb_fac_exists' ) 
+  ) )
+(form_goal
+“!A X a.ismono(a:A->X) ==> 
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !Pb pb1 pb2. ispb(char(i1,i2,a),i2,pb1,pb2) ==> 
+    ?h1 h2.pb1 o h1 = a & a o h2 = pb1 & h1 o h2 = id(Pb) & h2 o h1 = id(A)”)
+
+
+e0
+(strip_tac >> arw[])
+(form_goal “(!A B a:A->B.~ismono(a)) ==> ismono(b:A->B)”)
+
+rapf' "~!X e1 : X -> X  e2 : X -> X. ~~e1 = e2"
