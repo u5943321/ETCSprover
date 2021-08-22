@@ -4454,16 +4454,6 @@ e0
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
 !f:two->two. f = copa(i1,i2,i1,i1) | f = copa(i1,i2,i1,i2) | f = copa(i1,i2,i2,i2) | f = copa(i1,i2,i2,i1)”)
 
-(*
-
-val imp_ex = proved_th $ 
-e0
-(cheat)
-(form_goal 
-“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
-?S inc:S->two. ismono(inc) & 
-!f:1->two. (?f0:1->S.f = inc o f0 <=> ~(f = copa(i1,i2,i1,i2)))”)
-*)
 
 val lt_def0 = proved_th $
 e0
@@ -4583,6 +4573,134 @@ first_x_assum irule >> drule lt_succ_le >> fs[])
  (!n:1->N. 
   (!n0:1->N. 
     char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
+
+val Uq_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !X eps ps p1:eps->X p2:eps ->ps ev:eps->two.isexp(p1,p2,ev) ==>
+ ?Uq:ps -> two. 
+ !Y XY Xy:XY->X xY:XY->Y. ispr(Xy,xY) ==>
+ !pxy:XY->two y:1->Y. 
+ (Uq o tp(p1,p2,ev,Xy,xY,pxy) o y = i2  <=> 
+  !x:1->X. pxy o pa(Xy,xY,x,y) = i2)”)
+
+
+(*
+val imp_ex = proved_th $ 
+e0
+(cheat)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+?S inc:S->two. ismono(inc) & 
+!f:1->two. (?f0:1->S.f = inc o f0 <=> ~(f = copa(i1,i2,i1,i2)))”)
+*)
+
+val imp_ex = proved_th $
+e0
+(cheat)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
+ ?imp:TT->two. 
+ !p1:1->two p2:1->two. imp o pa(Tt,tT,p1,p2) = i2 <=>
+ (p1 = i2 ==> p2 = i2)”)
+
+
+(*BUG: TODO: should not allow this to happen:
+
+
+ mk_forall "x" (mk_ar_sort one N) $ mk_eq
+ (rastt 
+ "pa(Tt:TT->two, tT:TT->two, char(i1:1->two, i2:1->two, le), (char(i1, i2, p0:P->N) o Nn)) o pa(Nn, nN, x, n:1->N)")
+ (rastt 
+ "pa(Tt:TT->two,tT:TT->two, char(i1:1->two, i2:1->two, le) o pa(Nn, nN, x:1->N, n:1->N),p0 o n)")
+second p0 is of different type of the first one, it is two->N
+
+*)
+
+val Q_ex = proved_th $
+e0
+(rpt strip_tac >> drule Uq_ex >> 
+ qspecl_then ["N","two"] (x_choosel_then ["N2","NN2","p1","p2","ev"] assume_tac) exp_ex >>
+ first_x_assum drule >> 
+ pop_assum (x_choosel_then ["Un"] assume_tac) >>
+ drule imp_ex >> 
+ qspecl_then ["two","two"] (x_choosel_then ["TT","Tt","tT"] assume_tac) pr_ex >> first_x_assum drule >>
+ pop_assum strip_assume_tac >> 
+ abbrev_tac “imp:TT->two o pa(Tt,tT,char(i1,i2,le),char(i1:1->two,i2:1->two,p0:P->N) o Nn) = lep0” >>
+ abbrev_tac “Un:N2->two o tp(p1:NN2->N,p2:NN2->N2,ev:NN2->two,Nn,nN,lep0:NN->two) = cq” >>
+ qspecl_then ["N","two","cq","1","i2"] (x_choosel_then ["Q","q","Qto1"] assume_tac) pb_ex >>
+ qexistsl_tac ["Q","q"] >>
+ by_tac “ismono(q:Q->N)”
+ >-- (drule pb_mono_mono >> first_x_assum irule >>
+     qspecl_then ["two","i2"] accept_tac dom_1_mono) >>
+ arw[] >> strip_tac >>
+ by_tac “(?nb:1->Q. n:1->N = q o nb) <=> cq:N->two o n = i2”
+ >-- cheat >>
+ arw[] >> 
+ assume_tac nN_def >> first_x_assum drule >>
+ qpick_x_assum ‘Un o tp(p1, p2, ev, Nn, nN, lep0) = cq’
+ (assume_tac o GSYM) >>
+ once_arw[] >> rw[o_assoc] >> arw[] >>
+ qpick_x_assum 
+ ‘imp o pa(Tt, tT, char(i1, i2, le), char(i1, i2, p0) o Nn) = lep0’ (assume_tac o GSYM) >>
+ once_arw[] >> rw[o_assoc] >>
+ by_tac
+“!x.pa(Tt:TT->two, tT:TT->two, char(i1:1->two, i2:1->two, le), (char(i1, i2, p0:P->N) o Nn)) o pa(Nn, nN, x, n:1->N)= pa(Tt:TT->two,tT:TT->two, char(i1:1->two, i2:1->two, le) o pa(Nn, nN, x:1->N, n:1->N),char(i1,i2,p0) o x)”
+ >-- (strip_tac >> rev_drule to_p_eq >>
+      first_x_assum irule >> rev_drule p12_of_pa >>
+      arw[GSYM o_assoc] >> rw[o_assoc] >>
+      drule p1_of_pa >> arw[])>> 
+ by_tac 
+ “(!x : 1 -> N. imp o
+                  pa(Tt:TT->two, tT:TT->two, char(i1:1->two, i2:1->two, le), (char(i1, i2, p0:P->N) o Nn)) o
+                  pa(Nn, nN, x, n) = i2) <=> 
+  (!x : 1 -> N. imp o
+                  pa(Tt, tT, char(i1, i2, le) o pa(Nn, nN, x, n),
+                  char(i1, i2, p0) o x) = i2)” >-- 
+ (dimp_tac >> rpt strip_tac (* 2 *) >--
+ (first_x_assum (qspecl_then ["x"] assume_tac) >>
+  first_x_assum (qspecl_then ["x"] assume_tac) >> 
+  fs[]) >>
+ first_x_assum (qspecl_then ["x"] assume_tac) >>
+ first_x_assum (qspecl_then ["x"] (assume_tac o GSYM)) >> 
+ fs[]) >>
+ once_arw[] >> dimp_tac (* 2 *) >--
+ (strip_tac >> strip_tac >>
+  first_x_assum (qspecl_then ["n0"] assume_tac) >>
+  first_x_assum (qspecl_then ["char(i1, i2, le) o pa(Nn, nN, n0, n)","char(i1, i2, p0) o n0"] assume_tac) >>
+ pop_assum (assume_tac o iffLR) >> 
+ first_x_assum drule >> strip_tac >> first_x_assum drule >>
+ first_x_assum accept_tac
+ (*TODO: okay, but why does irule fail?!!!*)) >>
+ rpt strip_tac >>  
+ first_x_assum (irule o iffRL) >> arw[])
+(form_goal 
+“!P p0:P->N. ismono(p0) ==>
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ ?Q q:Q->N. 
+  ismono(q) & !n:1->N. (?nb:1->Q. n = q o nb) <=> 
+            (!n0:1->N. char(i1,i2,le) o pa(Nn,nN,n0,n) = i2
+==> char(i1,i2,p0) o n0 = i2)”)
+
+val strong_ind = proved_th $
+e0
+(rpt strip_tac >> drule strong_ind_lemma >>
+ first_x_assum drule >>
+ drule Q_ex >>
+ first_x_assum drule >> 
+ pop_assum (x_choosel_then ["Q","q"] assume_tac) >>
+ first_x_assum drule >> first_x_assum drule >>
+ first_x_assum accept_tac)
+(form_goal 
+“!P p0:P->N. ismono(p0) ==>
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ (!n:1->N. 
+  (!n0:1->N. 
+    char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
+
 
 fun fl_diff fl1 fl2 = 
     case (fl1,fl2) of
