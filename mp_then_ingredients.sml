@@ -1,10 +1,5 @@
 
 
-
-fun is_imp f = 
-    case f of (Conn("==>",[_,_])) => true
-             |_ => false
-
 fun strip_all_and_imp th = 
     if is_forall (concl th) then 
         strip_all_and_imp (spec_all th)
