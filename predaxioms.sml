@@ -4666,15 +4666,121 @@ e0
 !f:1->two. (?f0:1->S.f = inc o f0 <=> ~(f = copa(i1,i2,i1,i2)))”)
 *)
 
+
+(*TODO: wrong error message:
+ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))
+
+if forget the pa, then 
+
+ Exception-
+   HOL_ERR
+     {message = "different length lists", origin_function = "zip",
+      origin_structure = "Lib"} raised
+
+*)
+
+val ax7'= 
+ ax7 |> strip_all_and_imp |> gen_all |>
+ split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
+
+
+val inc_ismono = proved_th $
+e0
+cheat
+(form_goal 
+“!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+ ismono(iA) & ismono(iB)”)
+
+val iso_copr_copr = proved_th $
+e0
+cheat
+(form_goal “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+ !X f:A->X g:B->X. isiso(copa(iA,iB,f,g)) ==> iscopr(f,g)”)
+
+val copr_disjoint = proved_th $
+e0
+cheat
+(form_goal “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+!x:1->AB. (~(?x0:1->A. x = iA o x0)) <=> (?x0:1->B. x = iB o x0)”)
+
+val i1_xor_i2 = proved_th $
+e0
+cheat
+(form_goal 
+ “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+  !x:1->two. x = i1 <=> ~x = i2”)
+
+(*TODO: should eliminate the x0:
+
+~(?(x0 : 1 -> 1). pa(Tt, tT, p1, p2) = pa(Tt, tT, i2, i1))*)
+
 val imp_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> 
+ by_tac “ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))”
+ >-- (qspecl_then ["TT","pa(Tt, tT, i2, i1)"] accept_tac
+      dom_1_mono) >>
+ drule Thm5 >> 
+ pop_assum (x_choosel_then ["M","imp0"] strip_assume_tac) >>
+ drule char_def >> first_x_assum drule >>
+ qexists_tac "char(i1,i2,imp0)" >> rpt strip_tac >>
+ pop_assum (assume_tac o GSYM) >> arw[] >>
+ qspecl_then ["1","M"] (x_choosel_then ["W","ione","iM"] assume_tac) copr_ex >>
+ first_x_assum drule >>
+ (*by_tac “iscopr(pa(Tt, tT, i2, i1),imp0)” >>*)
+ fs[ismem_def] >> 
+ drule inc_ismono >> fs[] >>
+ drule iso_copr_copr >> first_x_assum drule >>
+ drule copr_disjoint >> 
+ first_x_assum 
+ (qspecl_then ["pa(Tt, tT, p1, p2)"] (assume_tac o GSYM)) >>
+ once_arw[] >>
+ (*should not be done by hand*)
+ by_tac
+ “(?x0 : 1 -> M. imp0:M->TT o x0 = pa(Tt:TT->two, tT:TT->two, p1:1->two, p2:1->two)) <=> 
+ (?x0 : 1 -> M. pa(Tt, tT, p1, p2) = imp0 o x0)”
+ >-- cheat >>
+ arw[] >> once_rw[one_to_one_id] >> rw[idR] >>
+ suffices_tac
+ “(~pa(Tt, tT, p1, p2) = pa(Tt:TT->two, tT, i2, i1:1->two)) <=> 
+  (p1 = i2 ==> p2:1->two = i2:1->two)”
+ >-- (strip_tac >> dimp_tac>> strip_tac >--
+      (by_tac “~ pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i2:1->two, i1:1->two)” 
+       >-- (ccontra_tac >>
+           suffices_tac “?x0:1->1. pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i2:1->two, i1:1->two)”
+           >-- (disch_tac >> first_x_assum opposite_tac) >>
+           qexists_tac "id(1)" >> first_x_assum accept_tac)>>
+       fs[]
+       ) >> 
+       ccontra_tac >> pop_assum strip_assume_tac >>
+       fs[]) >>
+ suffices_tac
+ “pa(Tt:TT->two, tT, p1, p2) = pa(Tt, tT, i2, i1) <=>
+ p1 = i2:1->two & p2 = i1:1->two” >--
+ (strip_tac >> once_arw[] >> drule i1_xor_i2 >> dimp_tac >>
+  strip_tac (* 2 *)
+  >-- (strip_tac >> ccontra_tac >>
+      first_x_assum (qspecl_then ["p2"] assume_tac) >>
+      fs[]) >>
+  cases_on “p1 = i2:1->two” (* 2 *)
+  >-- (first_x_assum drule >> ccontra_tac >>
+       drule i1_ne_i2 >> fs[]) >>
+  ccontra_tac >> fs[]) >>
+ dimp_tac >> strip_tac (* 2 *) >-- 
+(by_tac 
+ “Tt o pa(Tt:TT->two, tT:TT->two, p1:1->two, p2:1->two) = Tt o pa(Tt, tT, i2, i1) & 
+  tT o pa(Tt:TT->two, tT:TT->two, p1:1->two, p2:1->two) = tT o pa(Tt, tT, i2, i1)”
+ >-- arw[] >>
+ pop_assum mp_tac >> drule p12_of_pa >> arw[]) >>
+ arw[]
+ )
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
  ?imp:TT->two. 
  !p1:1->two p2:1->two. imp o pa(Tt,tT,p1,p2) = i2 <=>
  (p1 = i2 ==> p2 = i2)”)
+
 
 
 (*BUG: TODO: should not allow this to happen:
