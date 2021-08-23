@@ -4686,7 +4686,20 @@ val ax7'=
 
 val inc_ismono = proved_th $
 e0
-cheat
+(rpt strip_tac (* 2 *) >--
+ (irule ismono_applied >> rpt strip_tac >>
+ irule fun_ext >> strip_tac >>
+ qby_tac ‘copa(iA,iB,id(A),g o a o to1(B,1)) o iA o g = copa(iA,iB,id(A),g o a o to1(B,1)) o iA o h’
+ >-- arw[] >> pop_assum mp_tac >>
+ drule i1_of_copa >> rw[GSYM o_assoc] >>
+ arw[idL] >> strip_tac >> arw[]) >>
+ irule ismono_applied >> rpt strip_tac >>
+ irule fun_ext >> strip_tac >>
+ qby_tac ‘copa(iA,iB,g o a o to1(A,1),id(B)) o iB o g =
+          copa(iA,iB,g o a o to1(A,1),id(B)) o iB o h’
+ >-- arw[] >> pop_assum mp_tac >>
+ drule i2_of_copa >> rw[GSYM o_assoc] >>
+ arw[idL] >> strip_tac >> arw[])
 (form_goal 
 “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
  ismono(iA) & ismono(iB)”)
