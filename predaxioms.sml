@@ -4660,18 +4660,52 @@ e0
  “!nn:1->NN.(?nnb:1->NE. ne o nnb = nn) <=> ~
  Nn o nn = nN o nn”)
 
-val sub_z = proved_th $
+(*n1 <= n2 <=> n1 - n2 = 0
+TODO: maybe an iff version of ispb_def
+*)
+
+val sub_z_iff_le = proved_th $
 e0
-()
+(rpt strip_tac >> 
+ assume_tac le_def >> pop_assum strip_assume_tac >>
+ drule $ iffLR ispb_def >> 
+ pop_assum strip_assume_tac >>
+ first_x_assum (qspecl_then ["1","pa(Nn,nN,n1,n2)","id(1)"] assume_tac) >> fs[idR] >> dimp_tac >> strip_tac (* 2 *)
+ >-- (arw[GSYM o_assoc] >> rw[o_assoc] >>
+      once_rw[one_to_one_id] >> rw[idR]) >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ qexists_tac "a" >>
+ first_x_assum (qspecl_then ["a"] assume_tac) >> fs[])
 (form_goal 
-“!n1:1->N n2:1->N.”)
+“!n1:1->N n2:1->N.
+ (?le0:1->LE. pa(Nn,nN,n1,n2) = le o le0) <=>
+ sub o pa(Nn,nN,n1,n2) = z”)
+
+val sub_zero_id = proved_th $
+e0
+(strip_tac >> assume_tac sub_def >>
+ pop_assum strip_assume_tac >> 
+ by_tac “sub o pa(Nn, nN, id(N), z o to1(N, 1)) o n:1->N = id(N) o n” >-- (rw[GSYM o_assoc] >> arw[]) >>
+ fs[idL] >> 
+ by_tac “pa(Nn, nN, id(N), z o to1(N, 1)) o n:1->N = pa(Nn, nN, n, z)” >-- 
+ (assume_tac nN_def >> drule to_p_eq >> 
+  first_x_assum irule >> 
+  drule p12_of_pa >> arw[GSYM o_assoc] >>
+  rw[o_assoc] >> once_rw[one_to_one_id] >>
+  rw[idL,idR]) >>
+ fs[])
+(form_goal 
+“!n:1->N. sub o pa(Nn,nN,n,z) = n”)
 
 val le_z = proved_th $
 e0
-(rpt strip_tac >> assume_tac le_def >>
- pop_assum strip_assume_tac >> drule $ iffLR ispb_def >>
- pop_assum strip_assume_tac >> 
- assume_tac sub_def >> cheat)
+(rpt strip_tac >> assume_tac sub_z_iff_le >>
+ first_x_assum (qspecl_then ["n0","z"] assume_tac) >>
+ by_tac “?(le0 : 1 -> LE). pa(Nn, nN, n0, z) = le o le0”
+ >-- (qexists_tac "a" >> arw[]) >>
+ fs[] >> 
+ assume_tac sub_zero_id >> fs[]
+ )
 (form_goal
 “!n0:1->N a:1->LE. pa(Nn,nN,n0,z) = le o a ==>
  n0 = z”)
@@ -4727,14 +4761,114 @@ e0
       pa(Nn,nN,n0,z) = i2”)
 *)
 
+val lt_le = proved_th $
+e0
+(rpt strip_tac >> assume_tac lt_def >>
+ assume_tac ltne_def >> drule $ iffLR ispb_def >>
+ pop_assum strip_assume_tac >> fs[] >>
+ pick_x_assum “le o ltle = ne o ltne” (assume_tac o GSYM) >>
+ fs[] >> 
+ qexists_tac "ltle o lt0" >> rw[o_assoc])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+ !n1:1->N n2:1->N. 
+ (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) ==>
+ (?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) ”)
 
+val lt_ne0 = proved_th $
+e0
+(rpt strip_tac >> assume_tac lt_def >>
+ assume_tac ltne_def >> drule $ iffLR ispb_def >>
+ pop_assum strip_assume_tac >> fs[] >>
+ qexists_tac "ltne o lt0" >> rw[o_assoc])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+ !n1:1->N n2:1->N. 
+ (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) ==>
+ (?ne0: 1->NE. pa(Nn,nN,n1,n2) = ne o ne0)”)
+
+
+val lt_ne = proved_th $
+e0
+(strip_tac >> strip_tac >> strip_tac >>
+ strip_tac >> strip_tac >> strip_tac >> disch_tac >> drule lt_ne0 >> first_x_assum drule >>
+ assume_tac ne_property >> pop_assum mp_tac >>
+ pop_assum (assume_tac o GSYM) >> strip_tac >> 
+ pop_assum (assume_tac o iffLR) >> first_x_assum drule >>
+ pop_assum mp_tac >> assume_tac nN_def >> drule p12_of_pa >>
+ arw[])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+ !n1:1->N n2:1->N. 
+ (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) ==>
+ ~n1 = n2”)
+
+
+(*TODO: ispb version of pb_fac_exists*)
+
+val le_ne_lt = proved_th $ 
+e0
+((*strip_tac >> strip_tac >> strip_tac >> strip_tac >>
+ strip_tac >> strip_tac >> disch_tac >>  *)
+ rpt strip_tac >>
+ assume_tac lt_def >> assume_tac ltne_def >>
+ drule $ iffLR ispb_def >> pop_assum strip_assume_tac >>
+ assume_tac ne_property >>
+ first_x_assum (qspecl_then ["pa(Nn,nN,n1,n2)"] assume_tac)>>
+ assume_tac nN_def >> drule p12_of_pa >> fs[] >>
+ pop_assum (K all_tac) >>
+ pick_x_assum 
+“(?nnb : 1 -> NE. ne o nnb = pa(Nn, nN, n1:1->N, n2)) <=> ~n1 = n2” (assume_tac o GSYM) >> fs[] >>
+ first_x_assum (qspecl_then ["1","le0","nnb"] assume_tac) >>
+ rfs[] >> qexists_tac "a" >> 
+ first_x_assum (qspecl_then ["a"] assume_tac) >> fs[] >>
+ arw[o_assoc])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+ !n1:1->N n2:1->N.
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)
+ ==> (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0)”)
+
+val lt_iff_le_ne = proved_th $
+e0
+(rpt strip_tac >> dimp_tac >> disch_tac (* 2 *)
+ >-- (drule lt_ne >> first_x_assum drule >>
+      drule lt_le >> first_x_assum drule >> arw[]) >>
+ drule le_ne_lt >> first_x_assum drule >> arw[])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
+ !n1:1->N n2:1->N.
+ (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) <=> 
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)”)
+
+val clt_iff_le_ne = proved_th $
+e0
+(rpt strip_tac >>
+ drule lt_iff_le_ne >> pop_assum (assume_tac o GSYM) >>
+ arw[] >> 
+ assume_tac lt_mono >>
+ assume_tac $ GSYM lt_def >> fs[] >>
+ drule char_def >> first_x_assum drule >>
+ pop_assum (assume_tac o GSYM) >> arw[] >>
+ dimp_tac >> strip_tac (* 2 *)
+ >-- (qexists_tac "x0" >> arw[]) >>
+ qexists_tac "lt0" >> arw[])
+(form_goal 
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
+ !n1:1->N n2:1->N.
+ (char(i1:1->two, i2:1->two, lt) o pa(Nn, nN, n1, n2) = i2) <=> 
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)”)
+
+
+(*TODO: in some thms above iscopr i1 i2 can be removed!*)
 
 val not_lt_z = proved_th $
 e0
 (rpt strip_tac >>
  ccontra_tac >>
  by_tac “char(i1:1->two, i2:1->two, lt) o pa(Nn, nN, n0, z) = i2 <=> (?a:1->LE.pa(Nn,nN,n0,z) = le o a) & 
- ~n0:1->N = z” >-- cheat >> fs[] >>
+ ~n0:1->N = z” 
+ >-- (drule clt_iff_le_ne >> arw[]) >> fs[] >>
  drule le_z >> fs[]
  )
 (form_goal 
