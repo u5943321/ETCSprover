@@ -4351,6 +4351,7 @@ e0
  !NNN NNn:NNN->NN nnN:NNN->N.ispr(NNn,nnN) ==>
  !N1 pN':N1->N pone:N1-> 1. ispr(pN',pone) ==>
  ?sub:NN->N.
+ sub o pa(Nn,nN,pN',z o pone) = pN' &
  p o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,s o nN)”)
 
 (*TODO: ppbug |-
@@ -4366,24 +4367,24 @@ val Nn_def = NN_def |> eqT_intro |> iffRL
 
 val Nn = mk_fun "Nn" []
 
-val nN = mk_fun "nN" []
 
 val nN_def = Nn_def |> eqT_intro |> iffRL 
                     |> ex2fsym "nN" [] |> C mp (trueI [])
 
+val nN = mk_fun "nN" []
 
 val NNN_def = pr_ex |> allE NN |> allE N |> eqT_intro |> iffRL 
                    |> ex2fsym "NNN" [] |> C mp (trueI [])
 
+val NNN = mk_fun "NNN" []
+
 val NNn_def = NNN_def |> eqT_intro |> iffRL 
                     |> ex2fsym "NNn" [] |> C mp (trueI [])
 
+val NNn = mk_fun "NNn" []
+
 val nnN_def = NNn_def |> eqT_intro |> iffRL 
                      |> ex2fsym "nnN" [] |> C mp (trueI [])
-
-val NNN = mk_fun "NNN" []
-
-val NNn = mk_fun "NNn" []
 
 val nnN = mk_fun "nnN" []
 
@@ -4442,15 +4443,141 @@ val ltle_def = LT_def |> eqT_intro |> iffRL |> ex2fsym "ltle" []
 val ltne_def = ltle_def |> eqT_intro |> iffRL |> ex2fsym "ltne" []
                       |> C mp (trueI [])
 
+(*TOdO:AQ slow!!!!!*)
+
+val pb_reorder = proved_th $
+e0
+(rw[ispb_def] >> rpt strip_tac 
+ >-- (pop_assum (K all_tac) >> once_arw[] >> rw[]) >>
+ first_x_assum (qspecl_then ["A","v","u"] assume_tac) >>
+ pick_x_assum “g:Y->Z o u:A->Y = f:X->Z o v”
+ (assume_tac o GSYM) >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ qexists_tac "a" >> strip_tac >>
+ first_x_assum (qspecl_then ["a'"] assume_tac) >>
+ (*TODO: AQ: how to automatic on this?*)
+ qby_tac ‘q0 o a' = u & p0 o a' = v <=> p0 o a' = v & q0 o a' = u’ >--
+ (dimp_tac >> disch_tac >> arw[] >>
+  fs[]) >>
+ arw[]
+)
+(form_goal
+“!X Z f:X->Z Y g:Y->Z P p0:P->X q0:P->Y.ispb(f,g,p0,q0) ==>
+ ispb(g,f,q0,p0)”)
 
 val lt_mono = proved_th $
 e0
-(cheat)
+(irule o_mono_mono >>
+ by_tac “ismono(ne)” >-- 
+ accept_tac (conjE1 ne_def) >>
+ assume_tac ltne_def >> arw[] >> 
+ strip_assume_tac le_def >>
+ by_tac “ismono(z)”
+ >-- (qspecl_then ["N","z"] accept_tac dom_1_mono) >>
+ drule pb_mono_mono >> first_x_assum drule >> 
+ qby_tac ‘ispb(ne,le, ltne, ltle)’ 
+ >-- (rev_drule pb_reorder >> first_x_assum accept_tac)>>
+ drule pb_mono_mono >> first_x_assum drule >>
+ first_x_assum accept_tac)
 (form_goal “ismono(ne o ltne)”)
+
+
+val inc_ismono = proved_th $
+e0
+(rpt strip_tac (* 2 *) >--
+ (irule ismono_applied >> rpt strip_tac >>
+ irule fun_ext >> strip_tac >>
+ qby_tac ‘copa(iA,iB,id(A),g o a o to1(B,1)) o iA o g = copa(iA,iB,id(A),g o a o to1(B,1)) o iA o h’
+ >-- arw[] >> pop_assum mp_tac >>
+ drule i1_of_copa >> rw[GSYM o_assoc] >>
+ arw[idL] >> strip_tac >> arw[]) >>
+ irule ismono_applied >> rpt strip_tac >>
+ irule fun_ext >> strip_tac >>
+ qby_tac ‘copa(iA,iB,g o a o to1(A,1),id(B)) o iB o g =
+          copa(iA,iB,g o a o to1(A,1),id(B)) o iB o h’
+ >-- arw[] >> pop_assum mp_tac >>
+ drule i2_of_copa >> rw[GSYM o_assoc] >>
+ arw[idL] >> strip_tac >> arw[])
+(form_goal 
+“!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+ ismono(iA) & ismono(iB)”)
+
+
+val ax7'= 
+ ax7 |> strip_all_and_imp |> gen_all |>
+ split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
+
+
+val ax7_const1 = proved_th $
+e0
+(rpt strip_tac >> drule ax7' >> assume_tac const1_def >>
+ first_x_assum drule >> fs[ismem0_def] >>
+ drule inc_ismono >> fs[] >> rfs[] >>
+ rw[ismem_def] >> arw[]
+ )
+(form_goal 
+“!A AB iA:A->AB B iB:B->AB. iscopr(iA,iB) ==>
+ !f:1->AB. ismem(f,iA) | ismem(f,iB)”)
+
+val copr_disjoint = proved_th $
+e0
+(rpt strip_tac >> drule prop_5_lemma >> 
+ drule ax7_const1 >> drule inc_ismono >> fs[ismem_def] >>
+ first_x_assum (qspecl_then ["x"] assume_tac) >>
+ cases_on “?x0 : 1 -> A. x:1->AB = iA o x0” (* 2 *)
+ >-- (arw[] >> pop_assum strip_assume_tac >>
+     ccontra_tac >> pop_assum strip_assume_tac >>
+     qby_tac ‘iA o x0 = iB o x0'’ 
+     >-- (pop_assum mp_tac >> 
+          pop_assum (assume_tac o GSYM) >>
+          strip_tac >> pop_assum (assume_tac o GSYM) >>
+          pick_xnth_assum 2 (K all_tac) >> arw[]) >>
+     rfs[]) >>
+ arw[] >> pop_assum_list (map_every strip_assume_tac) (* 2 *)
+ >-- (by_tac “?(x0 : 1 -> A). x = iA:A->AB o x0”
+      >-- (qexists_tac "x0" >> arw[]) >>
+      first_x_assum opposite_tac) >>
+ qexists_tac "x0" >> arw[])
+(form_goal “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+!x:1->AB. (~(?x0:1->A. x = iA o x0)) <=> (?x0:1->B. x = iB o x0)”)
+
+
+
+val i1_xor_i2 = proved_th $
+e0
+(rpt strip_tac >> drule copr_disjoint >>
+ cases_on “x = i1:1->two” (* 2 *)
+ >-- (arw[] >> drule i1_ne_i2 >> first_x_assum accept_tac) >>
+ arw[] >> first_x_assum (qspecl_then ["x"] assume_tac) >>
+ by_tac “~?x0.x = i1:1->two o x0:1->1”
+ >-- (ccontra_tac >> pop_assum strip_assume_tac >>
+     pop_assum mp_tac >> 
+     by_tac “x0 = id(1)”
+     >-- once_rw[one_to_one_id] >> arw[] >>
+     arw[idR]) >>
+ rfs[] >> once_rw[one_to_one_id] >> rw[idR])
+(form_goal 
+ “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+  !x:1->two. x = i1 <=> ~x = i2”)
+
 
 val  two2two_cases = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> drule from_copr_components >>
+ first_x_assum (qspecl_then ["two","f"] assume_tac) >> 
+ drule i1_xor_i2 >> once_arw[] >>
+ pop_assum mp_tac >> pop_assum (K all_tac) >>
+ strip_tac >> 
+ first_assum (qspecl_then ["f o i1"] assume_tac) >>
+ first_x_assum (qspecl_then ["f o i2"] assume_tac) >>
+ cases_on “f:two ->two o i1:1->two = i2” (* 2 *)
+ >-- (once_arw[] >> 
+      cases_on “f:two ->two o i2:1->two = i2” (*2  *) >--
+      (once_arw[] >> rw[]) >>
+      fs[]) >>
+ fs[] >> cases_on “f:two ->two o i2:1->two = i2” (*2 *) >--
+ (once_arw[] >> rw[]) >>
+ fs[])  
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
 !f:two->two. f = copa(i1,i2,i1,i1) | f = copa(i1,i2,i1,i2) | f = copa(i1,i2,i2,i2) | f = copa(i1,i2,i2,i1)”)
 
@@ -4465,13 +4592,156 @@ val lt_def = lt_def0 |> eqT_intro |> iffRL
                      |> C mp (trueI [])
 
 
+
+val iscopr_def = read_axiom $ q2str
+‘!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) <=>
+ !X f:A->X g:B->X.?fg:AB->X. fg o i1 = f & fg o i2 = g &
+ (!fg'. (fg' o i1 = f & fg' o i2 = g) ==> fg' = fg)’
+
+
+(*TODO: AQ: how does rename tac work?*)
+
+val iso_copr_copr = proved_th $
+e0
+(rpt strip_tac >> rw[iscopr_def] >> rpt strip_tac >>
+ drule $ iffLR isiso_def>> drule copa_def >> fs[] >>
+ first_x_assum (qspecl_then ["X'","f","g"] assume_tac) >>
+ qexists_tac "copa(iA,iB,f,g) o f'" >> rw[o_assoc] >>
+ by_tac “f' o f0 = iA & f':X->AB o g0:B->X = iB:B->AB” >-- 
+ (qby_tac ‘f' o copa(iA, iB, f0, g0) o iA = id(AB) o iA & 
+           f' o copa(iA, iB, f0, g0) o iB = id(AB) o iB’
+  >-- arw[GSYM o_assoc] >>
+  pop_assum mp_tac >> drule i12_of_copa >> arw[idL]) >>
+ arw[] >> 
+ drule i12_of_copa >> arw[] >> 
+ rpt strip_tac >> irule isepi_property >>
+ qexistsl_tac ["AB","copa(iA, iB, f0, g0)"] >>
+ drule iso_is_epi >> arw[o_assoc,idR] >>
+ drule from_cop_eq >> first_x_assum irule >> 
+ drule i12_of_copa >> arw[o_assoc]
+ )
+(form_goal “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
+ !X f0:A->X g0:B->X. isiso(copa(iA,iB,f0,g0)) ==> iscopr(f0,g0)”)
+
+val fac_diag_eq_iff = proved_th $
+e0
+(rpt strip_tac >> drule fac_diag_eq >>
+ dimp_tac >> strip_tac (* 2 *)
+ >-- (first_x_assum irule >> qexists_tac "a0" >>
+      drule to_p_eq >> first_x_assum irule >>
+      drule p12_of_pa >> arw[GSYM o_assoc]) >>
+ qexists_tac "aA o aa" >> drule to_p_eq >>
+ first_x_assum irule >> drule p12_of_pa >>
+ arw[GSYM o_assoc,idL])
+(form_goal
+ “!A AA Aa:AA->A aA:AA->A. ispr(Aa,aA) ==>
+ !aa:1->AA.(?a0:1->A. aa = pa(Aa,aA,id(A),id(A)) o a0) <=>
+  Aa o aa = aA o aa”)
+
+val ne_property = proved_th $
+e0
+(rpt strip_tac >> assume_tac ne_def >>
+ pop_assum strip_assume_tac >>
+ qspecl_then ["N","NE"] (x_choosel_then ["W","iN","iNE"] assume_tac) copr_ex >>
+ first_x_assum drule >>
+ drule iso_copr_copr >> first_x_assum drule >>
+ drule copr_disjoint >>
+ by_tac
+ “(?nnb : 1 -> NE. ne o nnb = nn:1->NN) <=> (?nnb : 1 -> NE. nn:1->NN= ne o nnb)” >--
+ (dimp_tac >> strip_tac >> qexists_tac "nnb" >> arw[]) >>
+ (*TODO AQ: how to avoid this trivial steps?*)
+ arw[] >> pop_assum (K all_tac) >>
+ pop_assum (assume_tac o GSYM) >>
+ once_arw[] >>
+ assume_tac nN_def >> drule fac_diag_eq_iff >>
+ first_x_assum (qspecl_then ["nn"] assume_tac) >>
+ arw[])
+(form_goal 
+ “!nn:1->NN.(?nnb:1->NE. ne o nnb = nn) <=> ~
+ Nn o nn = nN o nn”)
+
+val sub_z = proved_th $
+e0
+()
+(form_goal 
+“!n1:1->N n2:1->N.”)
+
+val le_z = proved_th $
+e0
+(rpt strip_tac >> assume_tac le_def >>
+ pop_assum strip_assume_tac >> drule $ iffLR ispb_def >>
+ pop_assum strip_assume_tac >> 
+ assume_tac sub_def >> cheat)
+(form_goal
+“!n0:1->N a:1->LE. pa(Nn,nN,n0,z) = le o a ==>
+ n0 = z”)
+
+(*TODO:
+(?(x0 : 1 -> LT). (ne o ltne) o x0# = x)
+             <=>
+             ?(x0 : 1 -> LT). (le o ltle) o x0# = x
+
+?
+*)
+(*
 val not_lt_z = proved_th $
 e0
-cheat
+(rpt strip_tac >> assume_tac lt_mono >>
+ assume_tac lt_def >> drule char_def >>
+ first_x_assum drule >> arw[] >>
+ pop_assum (assume_tac o GSYM) >> arw[] >>
+ assume_tac ne_property >>
+ first_x_assum 
+ (qspecl_then ["pa(Nn, nN, n0, z)"] assume_tac) >>
+ ccontra_tac >> pop_assum strip_assume_tac >> fs[o_assoc] >>
+ by_tac 
+ “?nnb : 1 -> NE. ne o nnb = pa(Nn, nN, n0:1->N, z)”
+ >-- (qexistsl_tac ["ltne o x0"] >> arw[]) >>
+ pop_assum mp_tac >> arw[] >>
+ ccontra_tac >> 
+ assume_tac nN_def >> drule p12_of_pa >> fs[] >>
+ assume_tac ltne_def >> drule $ iffLR ispb_def >>
+ pop_assum strip_assume_tac >> fs[GSYM o_assoc] >>
+ pick_x_assum “le o ltle = ne o ltne” (assume_tac o GSYM) >>
+ fs[] >> rfs[] >>
+ by_tac 
+ “!x : 1 -> NN. char(i1:1->two, i2, (le o ltle)) o x = i2 <=>
+   (?(x0 : 1 -> LT). (le o ltle) o x0 = x)”
+ (*this by should be automatic,TODO, AQ, why not?*)
+ >-- (pop_assum (assume_tac o GSYM) >> once_arw[] >>
+     rpt strip_tac >> dimp_tac >> strip_tac
+     >-- (qexists_tac "x0'" >> arw[]) >>
+     qexists_tac "x0'" >> arw[] >> 
+     pop_assum mp_tac >> arw[]) >>
+ first_x_assum
+ (qspecl_then ["pa(Nn, nN, n0, z)"] (assume_tac)) >>
+ by_tac “char(i1:1->two, i2:1->two, (le o ltle)) o pa(Nn, nN, n0, z) = i2”
+ >-- (arw[] >> qexists_tac "x0" >> arw[]) >>
+ 
+ 
+
+ )
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
       !n0:1->N. ~char(i1,i2:1->two,lt) o 
       pa(Nn,nN,n0,z) = i2”)
+*)
+
+
+
+val not_lt_z = proved_th $
+e0
+(rpt strip_tac >>
+ ccontra_tac >>
+ by_tac “char(i1:1->two, i2:1->two, lt) o pa(Nn, nN, n0, z) = i2 <=> (?a:1->LE.pa(Nn,nN,n0,z) = le o a) & 
+ ~n0:1->N = z” >-- cheat >> fs[] >>
+ drule le_z >> fs[]
+ )
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+      !n0:1->N. ~char(i1,i2:1->two,lt) o 
+      pa(Nn,nN,n0,z) = i2”)
+
 
 (*TODO: why slow?
 
@@ -4577,7 +4847,7 @@ first_x_assum irule >> drule lt_succ_le >> fs[])
 (*
 val in_total_ss = proved_th $
 e0
-cheat
+
 (form_goal
  “!eps”)
 TODO
@@ -4656,16 +4926,6 @@ e0
   !x:1->X. pxy o pa(Xy,xY,x,y) = i2)”)
 
 
-(*
-val imp_ex = proved_th $ 
-e0
-(cheat)
-(form_goal 
-“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
-?S inc:S->two. ismono(inc) & 
-!f:1->two. (?f0:1->S.f = inc o f0 <=> ~(f = copa(i1,i2,i1,i2)))”)
-*)
-
 
 (*TODO: wrong error message:
 ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))
@@ -4683,7 +4943,7 @@ val ax7'=
  ax7 |> strip_all_and_imp |> gen_all |>
  split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
 
-
+(*
 val inc_ismono = proved_th $
 e0
 (rpt strip_tac (* 2 *) >--
@@ -4703,7 +4963,9 @@ e0
 (form_goal 
 “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
  ismono(iA) & ismono(iB)”)
+*)
 
+(*
 val iscopr_def = read_axiom $ q2str
 ‘!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) <=>
  !X f:A->X g:B->X.?fg:AB->X. fg o i1 = f & fg o i2 = g &
@@ -4768,6 +5030,7 @@ e0
 (form_goal “!A B AB iA:A->AB iB:B->AB. iscopr(iA,iB) ==>
 !x:1->AB. (~(?x0:1->A. x = iA o x0)) <=> (?x0:1->B. x = iB o x0)”)
 
+
 val i1_xor_i2 = proved_th $
 e0
 (rpt strip_tac >> drule copr_disjoint >>
@@ -4784,6 +5047,7 @@ e0
 (form_goal 
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
   !x:1->two. x = i1 <=> ~x = i2”)
+*)
 
 (*TODO: should eliminate the x0:
 
