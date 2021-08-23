@@ -4574,9 +4574,78 @@ first_x_assum irule >> drule lt_succ_le >> fs[])
   (!n0:1->N. 
     char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
 
+(*
+val in_total_ss = proved_th $
+e0
+cheat
+(form_goal
+ “!eps”)
+TODO
+*)
+
 val Uq_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> 
+ qspecl_then ["X","1"] 
+ (x_choosel_then ["X1","pX","pone"] assume_tac) pr_ex >>
+ abbrev_tac “tp(p1:eps->X,p2:eps->ps,ev:eps->two,pX:X1->X,pone:X1->1,i2 o to1(X1,1)) = tXb” >>
+ qexists_tac "char(i1,i2,tXb)" >>
+ by_tac “ismono(tXb:1->ps)”
+ >-- (qspecl_then ["ps","tXb"] accept_tac) dom_1_mono >>
+ rpt strip_tac >>
+ drule char_def >> first_x_assum drule >> 
+ pop_assum (assume_tac o GSYM) >> arw[] >> 
+ (*qby does not work here*)
+ by_tac “(?(x0 : 1 -> 1). tXb:1->ps o x0 = tp(p1:eps->X, p2:eps->ps, ev:eps->two, Xy:XY->X, xY:XY->Y, pxy:XY->two) o y) <=> tXb = tp(p1, p2, ev, Xy, xY, pxy) o y”
+ >-- (dimp_tac >> rpt strip_tac (* 2 *)
+     >-- (pop_assum mp_tac >> once_rw[one_to_one_id] >>
+          rw[idR]) >>
+     qexists_tac "id(1)" >> arw[idR]) >>
+ once_arw[] >> dimp_tac >> rpt strip_tac (* 2 *) >--
+ (drule ev_of_tp >> first_x_assum drule >>
+  first_x_assum (qspecl_then ["pxy"] (assume_tac o GSYM)) >>
+  once_arw[] >> pop_assum (K all_tac) >>
+  rw[o_assoc] >>
+  by_tac 
+  “ev:eps->two o 
+   pa(p1:eps->X,p2:eps->ps,x,tXb:1->ps) = i2”
+  >-- cheat >>
+  suffices_tac 
+  “pa(p1, p2, Xy:XY->X, (tp(p1, p2, ev, Xy, xY:XY->Y, pxy:XY->two) o xY)) o pa(Xy, xY, x, y) = pa(p1:eps->X, p2:eps->ps, x:1->X, tXb:1->ps)”
+  >-- (strip_tac >> once_arw[] >> first_x_assum accept_tac)>>
+  drule exp_ispr >> drule to_p_eq >>
+  first_x_assum irule >> 
+  drule p12_of_pa >> rw[GSYM o_assoc] >> arw[] >>
+  pick_x_assum “ispr(Xy:XY->X,xY:XY->Y)” assume_tac >>
+  drule p12_of_pa >> rw[o_assoc] >> arw[]) >>
+  drule ev_eq_eq >> 
+  pick_x_assum “ispr(pX:X1->X,pone:X1->1)” assume_tac >>
+  first_x_assum drule >> 
+  first_x_assum irule >> 
+  pick_x_assum 
+  “tp(p1:eps->X, p2:eps->ps, ev:eps->two, pX:X1->X, pone:X1->1, i2:1->two o to1(X1, 1)) = tXb” (assume_tac o GSYM) >>
+  once_arw[] >>
+  drule ev_of_tp >> first_x_assum drule >> once_arw[] >>
+  drule ev_of_tp >> first_x_assum rev_drule >>
+  (*split  pa(p1, p2, pX, (tp(p1, p2, ev, Xy, xY, pxy) o y)*)  drule exp_ispr >> 
+  by_tac “ispr(pX:X1->X,pone:X1->1) & ispr(Xy:XY->X,xY:XY->Y) & ispr(p1:eps->X,p2:eps->ps)”
+  >-- arw[] >> drule parallel_p_one_side >>
+  rw[o_assoc] >> once_arw[] >> rw[GSYM o_assoc] >>
+  drule ev_of_tp >> first_x_assum rev_drule >> once_arw[] >>
+  irule fun_ext >> strip_tac >> 
+  pick_x_assum “ispr(pX:X1->X,pone:X1->1)” assume_tac >>
+  drule to_p_component >>
+  first_x_assum (qspecl_then ["1","a"] assume_tac) >>
+  once_arw[] >> pop_assum (assume_tac o GSYM) >>
+  rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR] >>
+  first_x_assum (qspecl_then ["pX o a"] assume_tac) >>
+  pop_assum (assume_tac o GSYM) >> once_arw[] >>
+  suffices_tac
+  “pa(Xy:XY->X, xY:XY->Y, pX:X1->X o a:1->X1, y) = 
+   pa(Xy, xY, pX, (y o pone:X1->1)) o pa(pX, pone, pX o a, id(1))” >-- (strip_tac >> arw[]) >>
+  rev_drule to_p_eq >> first_x_assum irule >>
+  rev_drule p12_of_pa >> rw[GSYM o_assoc] >> arw[] >>
+  drule p12_of_pa >> rw[o_assoc] >> arw[idR])
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !X eps ps p1:eps->X p2:eps ->ps ev:eps->two.isexp(p1,p2,ev) ==>
