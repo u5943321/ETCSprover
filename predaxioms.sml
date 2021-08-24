@@ -4911,9 +4911,33 @@ if instead of the first_x_assum irule, use  (*qsuff_tac ‘!n0:1->N. ~char(i1, i
 in  suffices_tac “isiso(q:Q->N)”, can use irule o_epi_imp_epi, but give the wrong thing.
 *)
 
+
+(*TODO: a version of thm that check equal of maps to products without the projections.*)
+
+(*
+need
+p o sub o pa(Nn,nN,s o n0, n0) = z
+hence need
+
+sub o pa(Nn,nN,s o n0, n0) = s o z
+*)
 val n_sub_n_z = proved_th $
 e0
-(strip_tac >> assume_tac sub_def >> cheat)
+(strip_tac >> assume_tac sub_def' >> 
+ assume_tac z_xor_s >>
+ first_x_assum (qspecl_then ["n"] assume_tac) >>
+ cases_on “n = z” >-- 
+ (fs[] >> 
+ by_tac “sub o pa(Nn, nN, id(N), z o to1(N, 1)) o z = id(N) o z” >-- arw[GSYM o_assoc] >>
+ pop_assum mp_tac >> assume_tac nN_def >>
+ drule p12_of_pa >> rw[idL] >> strip_tac >>
+ suffices_tac 
+ “pa(Nn, nN, id(N), (z o to1(N, 1))) o z = 
+  pa(Nn, nN, z, z)” >-- (strip_tac >> fs[]) >>
+ drule to_p_eq >> first_x_assum irule >>
+ arw[GSYM o_assoc,idL] >> rw[o_assoc] >> 
+ once_rw[one_to_one_id] >> rw[idR]) >>
+ fs[] >> cheat)
 (form_goal
 “!n:1->N. sub o pa(Nn,nN,n,n) = z”)
  
@@ -5062,7 +5086,7 @@ e0
  cases_on “n = z” >> arw[] >>
  ccontra_tac >> fs[] >> pop_assum mp_tac >>
  rw[] >> once_rw[one_to_one_id] >>
- arw[idR]
+ arw[idR] >> qexists_tac "id(1)" >> rw[]
  )
 (form_goal
 “!n:1->N. ~n = z <=> ?n0:1->N. n = s o n0”)
@@ -5091,9 +5115,21 @@ e0
 (form_goal 
 “!a:1->N b. sub o pa(Nn,nN,a,b) = s o z <=> a = s o b”)
 
+
+val s_eq_iff_eq = proved_th $
+e0
+cheat
+(form_goal 
+“!n1:1->N n2. s o n1 = s o n2 <=> n1 = n2”)
+
 val p_z_cases = proved_th $
 e0
-(cheat)
+(assume_tac pred_def >> strip_tac >>
+ cases_on “n = z” >-- arw[] >>
+ arw[] >> assume_tac z_xor_s >>
+ first_x_assum (qspecl_then ["n"] assume_tac) >>
+ rfs[] >> arw[GSYM o_assoc,idL] >>
+ assume_tac s_eq_iff_eq >> arw[])
 (form_goal
 “!n:1->N. p o n = z <=> (n = z | n = s o z)”)
 
