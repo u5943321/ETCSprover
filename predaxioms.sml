@@ -5167,31 +5167,64 @@ e0
  a = s o b | sub o pa(Nn,nN,a,b) = z”)
 
 
+(*TODO: aQ:
+ 5.!(x : 1 -> NN). (?(x0 : 1 -> LE). le o x0# = x#) <=>
+               char(i1, i2, le) o x# = i2
+   6.!(x : 1 -> N). char(i1, i2, le) o pa(Nn, nN, x#, x#) = i2
+   ----------------------------------------------------------------------
+   char(i1, i2, le) o pa(Nn, nN, n, n) = i2
 
+why arw[] uses 5, but not 6? still give trivial goal though, so not too bad
+*)
 
 
 val le_cases_iff = proved_th $
 e0
 (rpt strip_tac >> cases_on “n0 = n:1->N” (* 2 *)
- >-- arw[] >>
+ >-- (arw[] >>
  assume_tac clt_iff_le_ne >> first_x_assum drule >>
  arw[] >> assume_tac le_mono >> drule char_def >>
  first_x_assum drule >> pop_assum (assume_tac o GSYM) >>
- fs[] >> (*need le is refl of le*) cheat)
+ fs[] >> pop_assum (assume_tac o GSYM) >> arw[] >>
+ drule le_refl >> first_x_assum (qspecl_then ["n"] assume_tac) >>
+ first_x_assum accept_tac) >>
+ arw[] >> assume_tac clt_iff_le_ne >>
+ first_x_assum drule >> arw[] >> 
+ assume_tac le_mono >> drule char_def >>
+ first_x_assum drule >> pop_assum (assume_tac o GSYM) >>
+ arw[] >> dimp_tac >> strip_tac (* 2 *)
+ >-- (qexists_tac "x0" >> arw[])  >>
+ qexists_tac "le0" >> arw[])
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
  !n0:1->N n:1->N. char(i1, i2, le) o pa(Nn, nN, n0, n) = i2 <=> char(i1,i2,lt) o  pa(Nn, nN, n0, n) = i2 | n0 = n”)
 
 
+(*parser loop for:
 
+ qby_tac 
+ ‘(?(le0 : 1 -> LE). pa(Nn, nN, n0, s o n) = le o le0) <=> 
+  (?(x0 : 1 -> LE). le o x0 = pa(Nn, nN, n0, s o n))’
+*)
 
 val lt_succ_le = proved_th $
 e0
 (rpt strip_tac >> drule clt_iff_le_ne >> arw[] >>
  pop_assum (K all_tac) >> assume_tac le_mono >>
  drule char_def >> first_x_assum drule >>
- drule le_cases_iff >> arw[] >> cheat)
+ drule le_cases_iff >> 
+ first_x_assum (qspecl_then ["pa(Nn, nN, n0, s o n)"] assume_tac) >>
+ by_tac 
+ “(?le0 : 1 -> LE. pa(Nn, nN, n0:1->N, s o n:1->N) = le o le0) <=> 
+  (?x0 : 1 -> LE. le o x0 = pa(Nn, nN, n0, s o n))”
+ >-- (dimp_tac >> strip_tac
+      >-- (qexists_tac "le0" >> arw[]) >>
+      qexists_tac "x0" >> arw[]) >> arw[] >> 
+ once_arw[] >> pop_assum (K all_tac) >> pop_assum mp_tac >>
+ pop_assum (assume_tac o GSYM) >> once_arw[] >> 
+ strip_tac >> once_arw[] >> cheat)
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
  !n0:1->N n:1->N. char(i1, i2, lt) o pa(Nn, nN, n0, s o n) = i2 <=> char(i1,i2,le) o pa(Nn, nN, n0, n) = i2”)
+
 
 
 
@@ -5354,6 +5387,77 @@ e0
   !x:1->X. pxy o pa(Xy,xY,x,y) = i2)”)
 
 
+val prsym_def = ex2fsym "*" ["A","B"] (iffRL $ eqT_intro $ spec_all pr_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val p1_def = ex2fsym "p1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
+                        |> C mp (trueI []) |> gen_all
+
+val p2_def = ex2fsym "p2" ["A","B"] (iffRL $ eqT_intro $ spec_all p1_def)
+                        |> C mp (trueI []) |> gen_all
+
+
+val coprsym_def = ex2fsym "+" ["A","B"] (iffRL $ eqT_intro $ spec_all copr_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val 1_def = ex2fsym "p1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
+                        |> C mp (trueI []) |> gen_all
+
+val p2_def = ex2fsym "p2" ["A","B"] (iffRL $ eqT_intro $ spec_all p1_def)
+                        |> C mp (trueI []) |> gen_all
+
+
+(*TODO: parser cannot parse "r:A*B->A"*)
+
+(*
+val char2mono_ex = proved_th $
+e0
+cheat
+(form_goal 
+“!two i1:1->two i2:1->two. ispr(i1,i2) ==> 
+ !pred: X->two. ispb
+ ”)
+
+*)
+
+(*TODO: a tool su we can only inst the arrows once the sorts are correct, to avoid one by one for pb_ex*)
+
+val ind_principle = proved_th $
+e0
+(rpt strip_tac >> 
+ qspecl_then ["N","two","pred","1","i2"] (x_choosel_then ["A","a","At1"] assume_tac) pb_ex >>
+ drule pb_fac_iff_1 >> 
+ by_tac “ismono(a:A->N)”
+ >-- (drule pb_mono_mono >> first_x_assum irule >>
+      once_rw[dom_1_mono]) >>
+ by_tac “pred = i2:1->two o to1(N,1) <=> isiso(a:A->N)” >-- (
+ dimp_tac >> strip_tac (* 2 *) >--
+ (irule Thm2_3' >> arw[] >> drule $ iffLR ispb_def >>
+  pop_assum strip_assume_tac >> arw[ismem_def,o_assoc] >>
+  once_rw[one_to_one_id] >> rw[idR]) >>
+ fs[isiso_def] >> irule fun_ext >> strip_tac >>
+ rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR] >>
+ drule $ iffLR ispb_def >> pop_assum strip_assume_tac >>
+ by_tac 
+ “pred o (a:A->N o f':N->A) o a' = i2:1->two o At1:A->1 o f':N->A o a':1->N”
+ >-- (rw[GSYM o_assoc] >> arw[]) >>
+ rfs[idL] >> once_rw[one_to_one_id] >> rw[idR]) >>
+ arw[] >> pop_assum (K all_tac) >> dimp_tac >> strip_tac (* 2 *) >--
+ (fs[isiso_def] >> drule $ iffLR ispb_def >> 
+ pop_assum strip_assume_tac >> 
+ by_tac 
+  “!n0:1->N. pred o (a:A->N o f') o n0 = i2:1->two o At1:A->1 o f':N->A o n0” 
+ >-- (strip_tac >> arw[GSYM o_assoc]) >>
+ rpt strip_tac (* 2 *)
+ >-- (first_x_assum (qspecl_then ["z"] assume_tac) >> 
+      rfs[idL] >> once_rw[one_to_one_id] >> rw[idR]) >>
+ first_x_assum (qspecl_then ["s o n"] assume_tac) >> 
+ rfs[idL] >> once_rw[one_to_one_id] >> rw[idR]) >>
+ irule Thm2_3' >> arw[ismem_def])
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !pred:N->two. pred = i2 o to1(N,1) <=>
+ (pred o z = i2 & (!n:1->N. pred o n = i2 ==> pred o s o n = i2))”)
 
 (*TODO: wrong error message:
 ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))
