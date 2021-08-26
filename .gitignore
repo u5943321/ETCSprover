@@ -3,3 +3,9 @@
 .#testproof.sml
 .#pp.sml
 *.sml~
+*.sml#
+.#mp_then_ingredients.sml
+.#newtest.sml
+.#pp.sml
+.#q.sml
+*.sig~

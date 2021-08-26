@@ -3,7 +3,6 @@ struct
 open token pterm_dtype term form pterm symbols
 
 datatype thm = thm of ((string * sort) set * form list * form) 
-exception ERR of string * sort list * term list * form list
 
 fun dest_thm (thm(G,A,C)) = (G,A,C)
 
@@ -17,7 +16,7 @@ fun eq_forml (l1:form list) (l2:form list) =
     case (l1,l2) of 
         ([],[]) => true
       | (h1 :: t1, h2 :: t2) => eq_form(h1,h2) andalso eq_forml t1 t2
-      | _ => simple_fail "incorrect length of list"
+      | _ => raise simple_fail "incorrect length of list"
 
 fun fmem f fl = List.exists (curry eq_form f) fl
 
@@ -59,7 +58,7 @@ fun inst_thm env th =
         in
             thm(G,A,C)
         end
-    else simple_fail "bad environment"
+    else raise simple_fail "bad environment"
 
 (*fun subst_thm *)
 
@@ -149,7 +148,7 @@ fun thml_eq_pairs (th:thm,(ll,rl,asml)) =
 
 fun EQ_fsym f thml = 
     case lookup_fun fsyms0 f of 
-        NONE => simple_fail ("function: " ^ f ^ " is not found")
+        NONE => raise simple_fail ("function: " ^ f ^ " is not found")
       | SOME(s,l) => 
         let 
             val sl = List.map (fst o dest_eq o concl) thml
@@ -196,7 +195,7 @@ fun negE (thm (G1,A1,C1)) (thm (G2,A2,C2)) =
 
 fun falseE fl f = 
     let val _ = fmem FALSE fl orelse 
-                simple_fail "falseE.FALSE is not in the asl"
+                raise simple_fail "falseE.FALSE is not in the asl"
     in
         thm(fvfl (f::fl),fl,f)
     end
@@ -230,9 +229,9 @@ fun allI (a,s) (thm(G,A,C)) =
         val G0 = HOLset.delete(G,(a,s)) 
                  handle _ => G
         val _ = HOLset.isSubset(fvs s,G0) orelse 
-                simple_fail "sort of the variable to be abstract has extra variable(s)"
+                raise simple_fail "sort of the variable to be abstract has extra variable(s)"
         val _ = not (HOLset.member(fvfl A,(a,s))) orelse
-                simple_fail "variable to be abstract occurs in assumption" 
+                raise simple_fail "variable to be abstract occurs in assumption" 
     in thm(G0,A,mk_all a s C)
     end
 
@@ -278,12 +277,12 @@ fun existsI (thm(G,A,C)) (a,s) t f =
     let 
         val _ = HOLset.isSubset(fvt t,G)
         val _ = (sort_of t = s) orelse 
-                simple_fail"term and variable to be abstract of different sorts"
+                raise simple_fail"term and variable to be abstract of different sorts"
         val _ = eq_form (C, substf ((a,s),t) f) orelse
                 raise ERR ("existsI.formula has the wrong form, should be something else: ",
                            [],[],[C,substf ((a,s),t) f])
     in
-        thm(G,A,Quant("EXISTS",a,s,abstract (a,s) f))
+        thm(G,A,Quant("?",a,s,abstract (a,s) f))
     end
 
 
@@ -311,7 +310,7 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
                      (HOLset.union
                           (fvfl (ril (subst_bound (Var(a,s0)) b) A2),
                            fvf C2),(a,s0)) = false) orelse
-                simple_fail "the given variable occurs unexpectedly"
+                raise simple_fail "the given variable occurs unexpectedly"
     in
         thm(contl_U[G1,delete'(G2,(a,s0))],
             asml_U[A1,(ril (subst_bound (Var(a,s0)) b) A2)],C2)
@@ -356,7 +355,7 @@ do not require f1 in assumption, if not, add its variables into the context. *
 fun disch f1 (thm(G,A,f2)) =
     let 
         val _ = HOLset.isSubset(fvf f1,G) orelse
-                simple_fail"formula to be disch has extra variable(s)"
+                raise simple_fail"formula to be disch has extra variable(s)"
     in
         thm (HOLset.union(G,fvf f1),ril f1 A,Conn ("==>",[f1,f2]))
     end
@@ -487,22 +486,22 @@ fun ctn_ukn_fsym f = (no_ukn_fsym f = false)
 
 fun define_pred f = 
     let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse simple_fail"formula has unexpected free variables"
+        val _ = HOLset.isEmpty fvs orelse raise simple_fail"formula has unexpected free variables"
         val (body,bvs) = strip_all f 
         val (l,r) = dest_dimp body 
         val (P,args) = dest_pred l 
-        val _ = List.all is_var args orelse simple_fail"input arguments is not a variable list"
+        val _ = List.all is_var args orelse raise simple_fail"input arguments is not a variable list"
         val _ = HOLset.isSubset (fvf r,fvf l) 
-                orelse simple_fail"unexpected free variable on RHS"
-        val _ = (lookup_pred psyms0 P = NONE) orelse simple_fail("redefining predicate: " ^ P)
-        val _ = all_distinct args orelse simple_fail"input arguments are not all distinct"
-        val _ = no_ukn_psym r orelse simple_fail"RHS contains unknown predicate"
-        val _ = no_ukn_fsym r orelse simple_fail"RHS contains unknown function"
+                orelse raise simple_fail"unexpected free variable on RHS"
+        val _ = (lookup_pred (!psyms) P = NONE) orelse raise simple_fail("redefining predicate: " ^ P)
+        val _ = all_distinct args orelse raise simple_fail"input arguments are not all distinct"
+        val _ = no_ukn_psym r orelse raise simple_fail"RHS contains unknown predicate"
+        val _ = no_ukn_fsym r orelse raise simple_fail"RHS contains unknown function"
         (*check P is a fresh name if not then fail*)
         (*check RHS variables are subset of LHS ones*)
         (*check arguments are all distinct*)
         (*store P in psymd*)
-        val psyms0 = new_pred P (List.map dest_var args)
+        val _ = new_pred P (List.map dest_var args)
     in thm(essps,[],f)
     end
 (*check that R does not contain any unknown predicate symbols/fun syms*)
@@ -527,15 +526,15 @@ allow this, and put Q(a) in the output thm as well.
 
 fun define_fun f = 
     let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse simple_fail"formula has unexpected free variables"
+        val _ = HOLset.isEmpty fvs orelse raise simple_fail"formula has unexpected free variables"
         val (body,bvs) = strip_all f 
         val (l,r) = dest_eq body 
         val (nf,sf,args) = dest_fun l 
-        val _ = List.all is_var args orelse simple_fail"input arguments is not a variable list"
+        val _ = List.all is_var args orelse raise simple_fail"input arguments is not a variable list"
         val _ = HOLset.isSubset (fvt r,fvt l) 
-                orelse simple_fail"unexpected free variable on RHS"
-        val _ = (lookup_fun fsyms0 nf = NONE) orelse simple_fail("redefining predicate: " ^ nf)
-        val _ = all_distinct args orelse simple_fail"input arguments are not all distinct"
+                orelse raise simple_fail"unexpected free variable on RHS"
+        val _ = (lookup_fun fsyms0 nf = NONE) orelse raise simple_fail("redefining predicate: " ^ nf)
+        val _ = all_distinct args orelse raise simple_fail"input arguments are not all distinct"
         val fsyms0 = new_fun nf (sf,(List.map dest_var args))
     in thm(essps,[],f)
     end
@@ -548,54 +547,98 @@ fun read_thm thstr =
     let
         val f = readf thstr
         val _ = HOLset.equal(fvf f,essps) orelse
-                simple_fail"formula has free variables"
+                raise simple_fail"formula has free variables"
     in
-        thm(essps,[],f)
+        mk_thm essps [] f
     end
 
-val idL = read_thm "ALL B. ALL A. ALL f:B -> A. id (A) o f = f"
 
-val idR = read_thm "ALL A. ALL B. ALL f: A -> B. f o id(A) = f"
+val idL = read_axiom "!B. !(A) (f:B -> A). id (A) o f = f"
 
-val o_assoc = read_thm "ALL A. ALL B. ALL C. ALL D. ALL f: A -> B. ALL g:B -> C. ALL h: C -> D.(h o g) o f = h o g o f"
+val idR = read_thm rapf "!A.!(B) (f: A -> B). f o id(A) = f"
 
-val o_assoc' = read_thm "ALL A. ALL B. ALL f: A -> B. ALL C. ALL g:B -> C. ALL D.ALL h: C -> D.(h o g) o f = h o g o f"
+val o_assoc = read_thm "!A.!B.!C.!D.!f: A -> B.!g:B -> C.!h: C -> D.(h o g) o f = h o g o f"
 
-val ax1_1 = read_thm "ALL X. ALL tx: X -> 1. tx = to1(X)"
+val o_assoc' = read_thm "!A.!B.!f: A -> B.!C.!g:B -> C.!D.!h: C -> D.(h o g) o f = h o g o f"
+
+
+val psyms0 = insert_psym "istml";
+
+val istml_def = define_pred (readf "!one.istml(one) <=> !X.!t1x:X->one.t1x =to1(one,X)")
+
+val ax1_1 = read_thm "?one.istml(one)"
 
 val ax_tml = ax1_1
 
-val ax1_2 = read_thm "ALL X. ALL ix: 0 -> X. ix = from0(X)"
+val psyms0 = insert_psym "isinl";
 
-val ax_inl = ax1_2
+val isinl_def = define_pred (readf "!zero.isinl(zero) <=> !X.!f0x:zero ->X.f0x =from0(zero,X)")
 
-val ax1_3 = read_thm "ALL A. ALL B. ALL X. ALL fg: X -> A * B. ALL f: X -> A. ALL g: X -> B.(p1(A,B) o fg = f & p2(A,B) o fg = g) <=> fg = pa(f,g)"
+val zero_ex = read_thm "?zero.isinl(zero)"
 
-val ax_pr = ax1_3
+val ax1_2 = zero_ex
 
-val ax1_4 = read_thm "ALL A. ALL B. ALL X. ALL fg: A + B -> X. ALL f: A -> X. ALL g. (fg o i1(A,B) = f & fg o i2(A,B) = g) <=> fg = copa(f,g)"
+(**********************************************************************
+Ax1-3, existence of product
+**********************************************************************)
 
-val ax_copr = ax1_4
+val psyms0 = insert_psym "ispr";
+val fsyms0 = insert_fsym "pa";
+val pr_def = define_pred (readf "!A.!B.!AB.!p1:AB->A.!p2:AB->B.ispr(p1,p2)<=>!X.!f:X->A.!g:X->B.!fg:X->AB.p1 o fg = f & p2 o fg = g <=> fg = pa(p1,p2,f,g)")
+(*
+val pr_def = define_pred (readf "!A.!B.?AB.ispr (p1(AB,A),p2(AB,B)).
+*)
 
-val ax1_5 = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. ALL X. ALL x0: X -> eqo(f,g).ALL h: X -> A. g o eqa(f,g) = f o eqa(f,g) & (f o h = g o h ==> (eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
+!p1:AB->A.!p2:AB->B.ispr(p1,p2)<=>!X.!f:X->A.!g:X->B.!fg:X->AB.p1 o fg = f & p2 o fg = g <=> fg = pa(p1,p2,f,g)")
 
-val ax_eq = ax1_5
+val pr_ex = read_thm "!A.!B.?AB.?p1:AB->A.?p2:AB->A.ispr(p1,p2)"
+val ax1_3 = pr_ex
 
-val ax1_5' = read_thm "ALL A. ALL B. ALL f:A -> B. ALL g:A -> B. g o eqa(f,g) = f o eqa(f,g) & ALL X.ALL h: X -> A. (f o h = g o h ==> (ALL x0: X -> eqo(f,g).eqa(f,g) o x0 = h <=> x0 = eqinduce(f,g,h)))"
+(**********************************************************************
+Ax1-4, existence of coproduct
+**********************************************************************)
 
-(*actually stronger than ax1_5*)
+val psyms0 = insert_psym "iscopr";
+val fsyms0 = insert_fsym "copa";
+val pr_def = define_pred (readf "!A.!B.!AB.!i1:A->AB.!i2:B->AB.iscopr(i1,i2)<=>!X.!f:A->X.!g:B->X.!fg:AB->X.fg o i1 = f & fg o i2 = g <=> fg = copa(i1,i2,f,g)")
+val copr_ex = read_thm "!A.!B.?AB.?i1:A->AB.?i2:B->AB.iscopr(i1,i2)"
+val ax1_4 = copr_ex
 
-val ax_eq' = ax1_5'
+(**********************************************************************
+Ax1-5, existence of equalizer
+**********************************************************************)
 
-val ax1_6 = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. ALL X. ALL x0:coeqo(f,g) -> X. ALL h: B -> X. coeqa(f,g) o f = coeqa(f,g) o g & (h o f = h o g ==> (x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
+val psyms0 = insert_psym "iseq";
+val fsyms0 = insert_fsym "eqind";
 
-val ax_coeq = ax1_6
+val eq_def = define_pred (readf "!A.!B.!f:A->B.!g:A->B.!E.!e:E->A.iseq(e,f,g)<=> f o e = g o e & !X.!x:X->A.f o x = g o x ==> (!x0:X->E.e o x0 = x <=> x0 = eqind(e,f,g,x))")
+val eq_ex = read_thm "!A.!B.!f:A->B.!g:A->B.?E.?e:E->A.iseq(e,f,g)"
+val ax1_5 = eq_ex
 
+(**********************************************************************
+Ax1-6, existence of coequalizer
+**********************************************************************)
 
-val ax1_6' = read_thm "ALL A. ALL B. ALL f: A -> B. ALL g: A -> B. coeqa(f,g) o f = coeqa(f,g) o g & ALL X. ALL h: B -> X. (h o f = h o g ==> (ALL x0:coeqo(f,g) -> X. x0 o coeqa(f,g) = h <=> x0 = coeqinduce(f,g,h)))"
+val psyms0 = insert_psym "iscoeq";
+val fsyms0 = insert_fsym "coeqind";
+val coeq_def = define_pred (readf "!A.!B.!f:A->B.!g:A->B.!cE.!ce:B->cE.iscoeq(ce,f,g)<=> ce o f = ce o g & !X.!x:B->X. x o f = x o g ==> (!x0:cE->X.x0 o ce = x <=> x0 = coeqind(ce,f,g,x))")
+val coeq_ex = read_thm "!A.!B.!f:A->B.!g:A->B.?cE.?ce:B->cE.iscoeq(ce,f,g)"
+val ax1_6 = coeq_ex
 
-val ax_coeq' = ax1_6'
+(**********************************************************************
+Ax2, existence of exponential
+**********************************************************************)
 
+val psyms0 = insert_psym "isexp";
+val fsyms0 = insert_fsym "tp";
+val fsyms0 = insert_fsym "ev";
+val exp_def =
+    define_pred 
+        (readf 
+             "!A.!B.!A2B.!efs.!p1:efs ->A.!p2:efs ->A2B.!ev:efs->B.isexp(p1,p2,ev)<=> ispr(p1,p2) & !AX.!p1':AX->A.!p2':AX->X.!f:AX->B.!h:X->A2B.(ev o (p1',h o p2') = f <=> h = tp(p1,p2,ev,f))")
+val coeq_ex = read_thm "!A.!B.!f:A->B.!g:A->B.?cE.?ce:B->cE.iscoeq(ce,f,g)";
+
+val ax1_6 = coeq_ex
 
 val ax2 = read_thm "ALL A. ALL B. ALL X. ALL f: A * X -> B.ALL h: X -> exp(A,B). ev(A,B) o pa(p1(A,X), h o p2(A,X)) = f <=> h = tp(f)"
 

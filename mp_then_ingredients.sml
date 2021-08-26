@@ -41,15 +41,15 @@ fun mp_canon th =
     end
 
 fun imp_folk_fconv (fc1,fc2) f = 
-    case f of
-        Conn("==>",[p,q]) => 
-        imp_iff (try_fconv fc1 p) (try_fconv fc2 q)
+    case view_form f of
+        vConn("==>",[p,q]) => 
+        imp_iff (fc1 p) (fc2 q)
       | _ => raise simple_fail "imp_fconv_fconv.not an implication"
 
 fun conj_rand_fconv fc f = 
     case f of 
         Conn("&",[f1,f2]) =>
-            conj_iff (all_fconv f1) (try_fconv fc f2)
+            conj_iff (all_fconv f1) (fc f2)
       | _ => raise simple_fail "conj_rand_fconv.not a conjunction"
 
 val T_and = T_conj_1

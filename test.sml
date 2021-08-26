@@ -269,8 +269,9 @@ e0
     ?h1 h2.pb1 o h1 = a & a o h2 = pb1 & h1 o h2 = id(Pb) & h2 o h1 = id(A)”)
 
 
-e0
-(strip_tac >> arw[])
+e
+(strip_tac >> rw[]) ( new_goalstack (fvf f,[],f))
 (form_goal “(!A B a:A->B.~ismono(a)) ==> ismono(b:A->B)”)
 
-rapf' "~!X e1 : X -> X  e2 : X -> X. ~~e1 = e2"
+rapf' "~!X e1 : X -> X  e2 : X -> X. ~~e1 = e2" basic_fconv
+
