@@ -5459,6 +5459,59 @@ e0
  !pred:N->two. pred = i2 o to1(N,1) <=>
  (pred o z = i2 & (!n:1->N. pred o n = i2 ==> pred o s o n = i2))”)
 
+val pxy_true = proved_th $
+e0
+(cheat)
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !XY X Y Xy:XY->X xY:XY->Y.ispr(Xy,xY) ==>
+ !X2t efs p1:efs->X p2:efs->X2t ev:efs ->two. isexp(p1,p2,ev) ==>
+ !pred.pred = i2 o to1(XY,1) <=> !x:1->X y:1->Y. pred o pa(Xy,xY,x,y) = i2”)
+
+
+val ind_gen_principle = proved_th $
+e0
+(rpt strip_tac >> drule Uq_ex >>
+ qspecl_then ["X","two"] (x_choosel_then ["Xt2","efs","p1","p2","ev"] assume_tac) exp_ex >> 
+ first_x_assum drule >> pop_assum strip_assume_tac >> 
+ first_x_assum drule >> 
+ drule pxy_true >> first_x_assum drule >>
+ first_x_assum drule >> once_arw[] >>
+ pop_assum (K all_tac) >>
+ first_x_assum (qspecl_then ["pred"] assume_tac) >>
+ dimp_tac 
+ >-- (rpt strip_tac >-- arw[] >-- arw[]) >>
+ strip_tac >> 
+ suffices_tac 
+ “!y : 1 -> N  x : 1 -> X. pred:XN->two o pa(Xn:XN->X, xN:XN->N, x, y) = i2”
+ >-- (strip_tac >> arw[]) >>
+ strip_tac >> 
+ first_assum (qspecl_then ["y"] (assume_tac o GSYM)) >>
+ once_arw[] >>
+ suffices_tac 
+ “ Uq :Xt2->two o tp(p1:efs->X, p2:efs->Xt2, ev:efs->two, Xn:XN->X, xN, pred) = i2:1->two o to1(N,1)”
+ >-- (strip_tac >> (*seems loop here: todo*) 
+      pick_x_assum
+      “!y : 1 -> N. Uq o tp(p1:efs->X, p2:efs->Xt2, ev, Xn:XN->X, xN:XN->N, pred:XN->two) o y = i2 <=>
+       !x : 1 -> X. pred o pa(Xn, xN, x, y) = i2” (K all_tac) >>
+      arw[GSYM o_assoc] >> rw[o_assoc] >>
+      once_rw[one_to_one_id] >> rw[idR]) >>
+ drule ind_principle >> arw[] >>
+ pop_assum mp_tac >> pop_assum (K all_tac) >> strip_tac >>
+ strip_tac (* 2 *)
+ >-- arw[o_assoc]  >> 
+ rpt strip_tac >> fs[o_assoc] >> rfs[] >>
+ strip_tac >> last_x_assum (qspecl_then ["x"] assume_tac) >>
+ pop_assum strip_assume_tac >> first_assum irule >> arw[]
+ )
+(form_goal 
+“!X XN Xn:XN->X xN:XN->N. ispr(Xn,xN) ==>
+ !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !pred:XN->two. pred = i2 o to1(XN,1) <=>
+ (!x:1->X. pred o pa(Xn,xN,x,z) = i2 & 
+  !n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, s o n) = i2)”)
+
+
 (*TODO: wrong error message:
 ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))
 
