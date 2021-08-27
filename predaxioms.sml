@@ -5512,6 +5512,128 @@ e0
   !n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, s o n) = i2)”)
 
 
+
+
+val char_diag = proved_th $
+e0
+(rpt strip_tac >> drule fac_diag_eq_iff >>
+ first_x_assum (qspecl_then ["pa(Aa,aA,a1,a2)"] assume_tac) >>
+ drule p12_of_pa >> fs[] >> pop_assum (K all_tac) >>
+ pop_assum (assume_tac o GSYM) >> arw[] >> 
+ drule diag_is_mono >> drule char_def >> first_x_assum drule >>
+ pop_assum (assume_tac o GSYM) >> arw[] >> dimp_tac >> rpt strip_tac 
+ >-- (qexists_tac "x0" >> arw[]) >>
+ qexists_tac "a0" >> arw[])
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !A AA Aa:AA->A aA:AA ->A. ispr(Aa,aA) ==>
+ !a1:1->A a2:1->A. char(i1,i2,pa(Aa,aA,id(A),id(A))) o pa(Aa,aA,a1,a2) = i2 <=> a1 = a2”)
+
+val distr_to_pa =proved_th $
+e0
+(rpt strip_tac >> drule p12_of_pa >> drule to_p_eq >> first_x_assum irule >>
+ arw[GSYM o_assoc]  )
+(form_goal
+“!A AA Aa:AA->A aA:AA->A. ispr(Aa,aA) ==>
+ !X0 X x:X0->X a1:X->A a2:X->A. pa(Aa,aA,a1,a2) o x = 
+ pa(Aa,aA,a1 o x,a2 o x)”)
+
+val char_diag_gen = proved_th $
+e0
+(rpt strip_tac >> drule char_diag >> first_x_assum drule >>
+ dimp_tac >> strip_tac (* 2 *)
+ >-- (irule fun_ext >> strip_tac >> pop_assum mp_tac >>
+      pop_assum (assume_tac o GSYM) >> once_arw[] >> 
+      strip_tac >> 
+      by_tac 
+      “char(i1:1->two, i2:1->two, pa(Aa:AA->A, aA, id(A), id(A))) o pa(Aa, aA, a1, a2) o a = i2:1->two o to1(X,1) o a:1->X”
+      >-- arw[GSYM o_assoc] >>
+      pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR] >>
+      drule distr_to_pa >> arw[]) >>
+irule fun_ext >> strip_tac >> rw[o_assoc] >> once_rw[one_to_one_id] >>
+rw[idR] >> drule distr_to_pa >> arw[idR])
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !A AA Aa:AA->A aA:AA ->A. ispr(Aa,aA) ==>
+ !X a1:X->A a2:X->A. char(i1,i2,pa(Aa,aA,id(A),id(A))) o pa(Aa,aA,a1,a2) = i2 o to1(X,1) <=> a1 = a2”)
+
+
+(*TODO: wrong error message:
+
+ Exception- ERR ("not an infix operator: str", [], [], [])*)
+
+val sub_elements = proved_th $
+e0
+(strip_assume_tac sub_def' >> rpt strip_tac >--
+ (by_tac 
+ “sub o pa(Nn, nN, id(N), z o to1(N, 1)) o n:1->N = id(N) o n”
+ >-- arw[GSYM o_assoc] >>
+ assume_tac nN_def >> drule distr_to_pa >> fs[idL] >> 
+ pop_assum (K all_tac) >> pop_assum (K all_tac) >>
+ pop_assum mp_tac >> rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) >>
+ by_tac 
+ “p o sub o pa(Nn, nN, n:1->N, n0) = 
+  sub o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, n, n0)”
+ >-- arw[GSYM o_assoc] >>
+ arw[] >> assume_tac nN_def >> drule distr_to_pa >> arw[] >>
+ drule p12_of_pa >> arw[o_assoc])
+(form_goal
+“!n:1->N. sub o pa(Nn,nN,n,z) = n & 
+ !n0.sub o pa(Nn,nN,n,s o n0) = p o sub o pa(Nn,nN,n,n0)”)
+
+val suc_mono_eq = proved_th $
+e0
+(assume_tac nN_def >>
+ drule ind_gen_principle >>
+ qspecl_then ["1","1"] (x_choosel_then ["two","i1","i2"] assume_tac) copr_ex >>
+ first_assum drule >>
+ drule char_diag >> first_assum drule >> 
+ pop_assum (assume_tac o GSYM) >> once_arw[] >>
+ last_x_assum drule >>
+ suffices_tac
+ “char(i1,i2,pa(Nn, nN, id(N), id(N))) o 
+  pa(Nn, nN, sub o pa(Nn, nN, s o Nn, s o nN), sub) = i2:1->two o to1(NN,1)” >-- (rpt strip_tac >> 
+  by_tac 
+  “char(i1, i2, pa(Nn, nN, id(N), id(N))) o
+   pa(Nn, nN, sub o pa(Nn, nN, s o Nn, s o nN), sub) o 
+   pa(Nn,nN,m:1->N,n) =
+   i2:1->two o to1(NN, 1) o pa(Nn,nN,m,n)”
+  >-- (rw[GSYM o_assoc] >> arw[]) >>
+  pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR] >>
+  by_tac 
+  “pa(Nn, nN, (sub o pa(Nn, nN, s o Nn, s o nN)), sub) o pa(Nn, nN, m, n) =
+   pa(Nn, nN, sub o pa(Nn, nN, s o m:1->N, s o n), sub o pa(Nn, nN, m, n))” >--
+  (drule to_p_eq >> first_x_assum irule >> rw[GSYM o_assoc] >>
+  drule p12_of_pa >> pop_assum mp_tac >>
+  pop_assum_list (map_every (K all_tac)) >> strip_tac >> arw[] >>
+  rw[o_assoc] >>
+  suffices_tac “pa(Nn, nN, (s o Nn), (s o nN)) o pa(Nn, nN, m, n) =
+  pa(Nn, nN, s o m, s o n:1->N)”
+  >-- (strip_tac >> arw[]) >>
+  assume_tac nN_def >> drule to_p_eq >> first_x_assum irule >>
+  drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc]) >>
+  arw[]) >>
+ arw[] >> drule distr_to_pa >> rw[o_assoc] >> once_arw[] >>
+ pop_assum (K all_tac) >> pop_assum (K all_tac) >> 
+ pop_assum (assume_tac o GSYM) >> once_arw[] >>
+ strip_tac >> pop_assum_list (map_every (K all_tac)) >> 
+ assume_tac sub_elements >> rpt strip_tac (* 2 *) >-- (rw[o_assoc] >>
+ assume_tac nN_def >> drule distr_to_pa >> once_arw[] >>
+ rw[o_assoc] >> drule p12_of_pa >> arw[] >>
+ rw[GSYM o_assoc,pred_def,idL]) >>
+ assume_tac nN_def >> drule distr_to_pa >> fs[o_assoc] >>
+ drule p12_of_pa >> fs[]
+ )
+(form_goal 
+“!m:1->N n:1->N. 
+ sub o pa(Nn,nN,s o m, s o n) = sub o pa(Nn,nN,m,n)”) 
+
+
+(form_goal 
+“sub o pa(Nn,nN,s, s) = sub o pa(Nn,nN,id(N),id(N))”) 
+
+
+
 (*TODO: wrong error message:
 ismono(pa(Tt,tT:TT->two,i2:1->two,i1:1->two))
 
