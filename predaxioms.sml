@@ -4359,6 +4359,7 @@ e0
  sub o pa(Nn,nN,pN',z o pone) = pN' &
  p o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,s o nN)”)
 
+
 (*TODO: ppbug |-
    ?(p1 : NN -> N)  (p2 : NN -> N). ispr(p1#, p2): thm*)
 
@@ -4988,7 +4989,7 @@ e0
 “!n:1->N. ~n = z <=> ?n0:1->N. n = s o n0”)
  
 
-val n_sub_n_z = proved_th $
+val n_sub_n_z = sub_equal_0(* proved_th $
 e0
 (strip_tac >> assume_tac sub_def' >> 
  assume_tac z_xor_s >>
@@ -5004,9 +5005,9 @@ e0
  drule to_p_eq >> first_x_assum irule >>
  arw[GSYM o_assoc,idL] >> rw[o_assoc] >> 
  once_rw[one_to_one_id] >> rw[idR]) >>
- fs[] >> cheat)
+ fs[] ...)
 (form_goal
-“!n:1->N. sub o pa(Nn,nN,n,n) = z”)
+“!n:1->N. sub o pa(Nn,nN,n,n) = z”) *)
 
 val z_mono = proved_th $
 e0
@@ -5461,7 +5462,12 @@ e0
 
 val pxy_true = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> dimp_tac >> rpt strip_tac (* 2 *) >--
+ (arw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) >>
+ irule fun_ext >> rpt strip_tac >> rw[o_assoc] >> once_rw[one_to_one_id] >>
+ rw[idR] >> drule to_p_components >>
+ first_x_assum (qspecl_then ["1","a"] assume_tac) >>
+ once_arw[] >> pop_assum (K all_tac) >> arw[])
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !XY X Y Xy:XY->X xY:XY->Y.ispr(Xy,xY) ==>
@@ -5538,6 +5544,17 @@ e0
  !X0 X x:X0->X a1:X->A a2:X->A. pa(Aa,aA,a1,a2) o x = 
  pa(Aa,aA,a1 o x,a2 o x)”)
 
+
+
+val distr_to_pa' =proved_th $
+e0
+(rpt strip_tac >> drule p12_of_pa >> drule to_p_eq >> first_x_assum irule >>
+ arw[GSYM o_assoc]  )
+(form_goal
+“!A B AB Ab:AB->A aB:AB->B. ispr(Ab,aB) ==>
+ !X0 X x:X0->X a1:X->A a2:X->B. pa(Ab,aB,a1,a2) o x = 
+ pa(Ab,aB,a1 o x,a2 o x)”)
+
 val char_diag_gen = proved_th $
 e0
 (rpt strip_tac >> drule char_diag >> first_x_assum drule >>
@@ -5581,7 +5598,7 @@ e0
 “!n:1->N. sub o pa(Nn,nN,n,z) = n & 
  !n0.sub o pa(Nn,nN,n,s o n0) = p o sub o pa(Nn,nN,n,n0)”)
 
-val suc_mono_eq = proved_th $
+val sub_mono_eq = proved_th $
 e0
 (assume_tac nN_def >>
  drule ind_gen_principle >>
@@ -5628,10 +5645,239 @@ e0
 “!m:1->N n:1->N. 
  sub o pa(Nn,nN,s o m, s o n) = sub o pa(Nn,nN,m,n)”) 
 
+val ind_principle_elements = proved_th $
+e0
+(rpt strip_tac >> drule ind_principle >> pop_assum (assume_tac o GSYM) >>
+ arw[] >> dimp_tac >> rpt strip_tac (* 2 *)
+ >-- (irule fun_ext >> rpt strip_tac >> rw[o_assoc] >>
+      once_rw[one_to_one_id] >> rw[idR] >> arw[]) >>
+ arw[] >> rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]
+ )
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !pred:N->two. (!n.pred o n = i2) <=>
+ (pred o z = i2 & (!n:1->N. pred o n = i2 ==> pred o s o n = i2))”)
 
+(*
+
+fun occurs_f' f1 f2 = 
+    case (view_form f1,view_form f2) of
+        (vPred _,vPred _) => eq_form(f1,f2)
+      | (vQ(q1,n1,s1,b1) ,vQ(q2,n2,s2,b2)) => 
+        eq_form(f1,f2) orelse occurs_f f1 f2
+      | (vfVar _, vfVar _) => eq_form(f1,f2)
+      | (_,vConn(co,fl)) => List.exists (occurs_f f1) fl
+      | (_,vQ(_,_,_,b)) => occurs_f f1 b
+      | (_,_) => false
+
+
+fun cause_loop_dimp' th = 
+    let val (l,r) = dest_dimp(concl th)
+    in if occurs_f' l r then true else false
+    end
+
+
+fun rewr_no_loop_fconv' th f = 
+    let val th' = rewr_fconv th f
+    in if cause_loop_dimp' th' then
+           raise ERR ("rewr_no_loop_fconv.the result of form matching causes loop",[],[],[concl th'])
+       else th'
+    end
+
+
+fun rw_tac' thl:tactic = 
+    let 
+        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
+        val fconv = first_fconv (mapfilter rewr_no_loop_fconv' (flatten (mapfilter rw_fcanon thl)))
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+*)
+
+
+(*TODO:!!!!!!! occurs check WRONG!!!!! as above*)
+
+val equality_ind = proved_th $ 
+e0
+(rpt strip_tac >> 
+ qspecl_then ["1","1"] (x_choosel_then ["two","i1","i2"] assume_tac) copr_ex >>
+ qspecl_then ["A","A"] (x_choosel_then ["AA","Aa","aA"] assume_tac) pr_ex >> 
+ drule char_diag >> first_x_assum drule >>
+ pop_assum (assume_tac o GSYM) >> 
+ by_tac “(!n:1->N.f o pa(Xn:XN->X,xN:XN->N,x,n) = g o pa(Yn:YN->Y,yN:YN->N,y,n)) <=>
+          !n. char(i1,i2,pa(Aa,aA,id(A),id(A))) o 
+              pa(Aa:AA->A,aA:AA->A,f:XN->A o pa(Xn:XN->X,xN:XN->N,x,n), g:YN->A o pa(Yn:YN->Y,yN:YN->N,y:1->Y,n)) = i2:1->two”
+ >-- (dimp_tac >> rpt strip_tac >-- 
+      (pop_assum mp_tac >> pop_assum (assume_tac o GSYM) >> arw[] >>
+       strip_tac >> arw[]) >>
+      arw[]) >>
+ arw[] >> 
+ by_tac 
+“(!n. char(i1,i2,pa(Aa,aA,id(A),id(A))) o 
+      pa(Aa:AA->A,aA:AA->A,f:XN->A o pa(Xn:XN->X,xN:XN->N,x,n), g:YN->A o pa(Yn:YN->Y,yN:YN->N,y:1->Y,n)) = i2:1->two) <=>
+  !n. char(i1,i2,pa(Aa,aA,id(A),id(A))) o 
+      pa(Aa:AA->A,aA:AA->A,f:XN->A o pa(Xn:XN->X,xN:XN->N,x o to1(N,1),id(N)), g:YN->A o pa(Yn:YN->Y,yN:YN->N,y:1->Y o to1(N,1),id(N))) o n = i2:1->two” >-- 
+ (dimp_tac >> rpt strip_tac (* 2 *)
+  >-- (drule distr_to_pa >> rev_drule distr_to_pa' >>
+       pick_x_assum “ispr(Yn:YN->Y,yN:YN->N)” assume_tac >>
+       drule distr_to_pa' >>  arw[o_assoc] >> once_rw[one_to_one_id] >> 
+       rw[idL,idR] >> arw[]) >>
+  drule distr_to_pa >> rev_drule distr_to_pa' >>
+  pick_x_assum “ispr(Yn:YN->Y,yN:YN->N)” assume_tac >>
+  drule distr_to_pa' >> fs[o_assoc] >>
+  pick_xnth_assum 6 mp_tac(*to be edited*) >> 
+  once_arw[one_to_one_id] >> rw[idL,idR] >>
+  strip_tac >> arw[]) >>
+once_arw[] >> pop_assum (K all_tac) >>
+drule ind_principle_elements >> rw[GSYM o_assoc] >>
+first_x_assum (qspecl_then [" (char(i1, i2, pa(Aa, aA, id(A), id(A))) o pa(Aa, aA, f o pa(Xn, xN, x o to1(N, 1), id(N)), g o  pa(Yn, yN, y o to1(N, 1), id(N))))"] assume_tac) >> once_arw[] >>
+ pop_assum (K all_tac) >> 
+ drule distr_to_pa' >> rev_drule distr_to_pa' >>
+ pick_x_assum “ispr(Yn:YN->Y,yN:YN->N)” assume_tac >>
+ drule distr_to_pa' >> fs[o_assoc] >>
+ once_rw[one_to_one_id] >> rw[idL,idR])
 (form_goal 
-“sub o pa(Nn,nN,s, s) = sub o pa(Nn,nN,id(N),id(N))”) 
+“!X XN Xn:XN->X xN:XN->N. ispr(Xn,xN) ==>
+ !Y YN Yn:YN->Y yN:YN->N. ispr(Yn,yN) ==>
+ !A f:XN->A g:YN->A.
+ !x:1->X y:1->Y.(!n.f o pa(Xn,xN,x,n) = g o pa(Yn,yN,y,n)) <=>
+ f o pa(Xn,xN,x,z) = g o pa(Yn,yN,y,z) & 
+ !n0:1->N. f o pa(Xn,xN,x,n0) = g o pa(Yn,yN,y,n0) ==> 
+ f o pa(Xn,xN,x,s o n0) = g o pa(Yn,yN,y,s o n0)”)
 
+val ind_one_component = proved_th $
+e0
+(rpt strip_tac >> assume_tac nN_def >> drule equality_ind >>
+ first_x_assum drule >> 
+ arw[])
+(form_goal
+“!f:NN->N g:NN->N.
+ !n0.(!n.f o pa(Nn,nN,n0,n) = g o pa(Nn,nN,n0,n)) <=>
+ f o pa(Nn,nN,n0,z) = g o pa(Nn,nN,n0,z) & 
+ !n:1->N. f o pa(Nn,nN,n0,n) = g o pa(Nn,nN,n0,n) ==> 
+ f o pa(Nn,nN,n0,s o n) = g o pa(Nn,nN,n0,s o n)”)
+
+
+val ind_N_element = proved_th $
+e0
+(rpt strip_tac >> assume_tac ind_one_component >>
+ first_x_assum (qspecl_then ["f o nN","g o nN","z"] assume_tac) >>
+ assume_tac nN_def >> drule p2_of_pa >>
+ fs[o_assoc])
+(form_goal
+“!f:N->N g:N->N. (!n:1->N.f o n = g o n) <=>
+  f o z = g o z & 
+  !n:1->N. f o n = g o n ==> f o s o n = g o s o n”)
+
+
+
+val sub_0 = proved_th $
+e0
+(suffices_tac
+ “!n:1->N. (sub o pa(Nn,nN,z o to1(N,1), id(N))) o n = z o to1(N,1) o n” >--
+ (rpt strip_tac >> assume_tac nN_def >> drule distr_to_pa' >>
+ fs[o_assoc] >> last_x_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR,idL] >>
+ strip_tac >> arw[]) >>
+ rw[GSYM o_assoc] >> once_rw[ind_N_element] (* TODO: occurs check definitely wrong, bug!!!!!!!!!!*) >>
+ assume_tac sub_elements >> assume_tac nN_def >>
+ drule distr_to_pa' >> fs[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR] >>
+ arw[] >> rpt strip_tac >> arw[] >> assume_tac pred_def >> arw[])
+(form_goal 
+“!n:1->N. sub o pa(Nn,nN,z,n) = z”)
+
+val add_ex = proved_th $
+e0
+(assume_tac nN_def >> assume_tac nnN_def >> assume_tac pr_with_one >>
+ first_x_assum (qspecl_then ["N"] assume_tac) >>
+ rev_drule Thm1 >> first_x_assum drule >> first_x_assum drule >>
+ first_x_assum (qspecl_then ["id(N)","s o nnN"] assume_tac) >>
+ pop_assum strip_assume_tac  >>
+ first_x_assum (qspecl_then ["f"] assume_tac) >> fs[] >>
+ qexists_tac "f" >> fs[o_assoc,idL])
+(form_goal 
+“?add:NN->N.add o pa(Nn,nN,id(N),z o to1(N,1)) = id(N) & 
+ add o pa(Nn,nN,Nn,s o nN) = s o nnN o pa(NNn,nnN,id(NN),add)”)
+
+
+val add_def0 = add_ex |> eqT_intro |> iffRL |> ex2fsym "add" []
+                      |> C mp (trueI [])
+
+val add = mk_fun "add" [] >>
+
+val add_def = proved_th $
+e0
+(assume_tac add_def0 >> assume_tac nnN_def >> drule p2_of_pa >>
+ fs[])
+(form_goal
+“add o pa(Nn,nN,id(N),z o to1(N,1)) = id(N) & 
+ add o pa(Nn,nN,Nn,s o nN) = s o add”)
+
+
+val add_elements = proved_th $
+e0
+(rpt strip_tac >> assume_tac add_def (* 2 *)
+ >-- (by_tac “add o pa(Nn, nN, id(N), z o to1(N, 1)) o n:1->N = id(N) o n”
+      >-- arw[GSYM o_assoc] >>
+      assume_tac nN_def >> drule distr_to_pa' >>
+      fs[] >>
+      pick_x_assum “add o pa(Nn, nN, id(N) o n:1->N, (z o to1(N, 1)) o n) = 
+      id(N) o n” mp_tac >>
+      rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR]) >>
+ by_tac “add o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, n, n0:1->N) = s o add o pa(Nn, nN, n, n0)” >-- arw[GSYM o_assoc] >>
+ assume_tac nN_def >> drule distr_to_pa' >> fs[o_assoc] >>
+ drule p12_of_pa >> fs[])
+(form_goal 
+“!n:1->N. add o pa(Nn,nN,n,z) = n &
+ !n0:1->N. add o pa(Nn,nN,n, s o n0) = s o add o pa(Nn,nN,n,n0)”)
+
+
+val add_sub0 = proved_th $
+e0
+(once_rw[ind_one_component] (* TODO: test here should be able to rw *) >>
+ assume_tac nN_def >> drule distr_to_pa' >> fs[o_assoc] >>
+ drule p12_of_pa >> fs[] >>
+ assume_tac add_elements >> arw[] >> rpt strip_tac >--
+ (assume_tac sub_elements >> fs[]) >>
+ assume_tac sub_mono_eq >> fs[])
+(form_goal 
+“!a:1->N. (!c:1->N. (sub o pa(Nn,nN,add,nN)) o pa(Nn,nN,a,c) = Nn o pa(Nn,nN,a,c))”)
+
+val add_sub = proved_th $
+e0
+(assume_tac add_sub0 >> assume_tac nN_def >> drule p12_of_pa >> fs[] >>
+ drule distr_to_pa' >> fs[o_assoc])
+(form_goal 
+“!a:1->N c:1->N. sub o pa(Nn,nN,add o pa(Nn,nN,a,c),c) = a”)
+
+
+val add_z_n0 = proved_th $
+e0
+(once_rw[ind_N_element] >> rw[o_assoc] >> 
+ assume_tac nN_def >> drule distr_to_pa' >> arw[o_assoc,idL] >>
+ once_rw[one_to_one_id] >> rw[idR] >> assume_tac add_elements >> arw[] >>
+ rpt strip_tac >> arw[])
+(form_goal
+“!n:1->N. (add o pa(Nn,nN,z o to1(N,1),id(N))) o n = id(N) o n”)
+
+
+val add_z_n = proved_th $
+e0
+(strip_tac >> assume_tac add_z_n0 >> fs[o_assoc] >> assume_tac nN_def >>
+ drule distr_to_pa' >> fs[] >> last_x_assum mp_tac >> rw[o_assoc] >>
+ once_rw[one_to_one_id] >> rw[idR,idL] >> strip_tac >> arw[])
+(form_goal
+“!n:1->N. add o pa(Nn,nN,z,n) = n”)
+
+val add_clauses1 = add_z_n
+
+val sub_equal_0 = proved_th $
+e0
+(strip_tac >> 
+ assume_tac add_sub >>
+ first_x_assum (qspecl_then ["z","n"] assume_tac) >>
+ assume_tac add_elements >> fs[] >>
+ assume_tac add_z_n >> fs[])
+(form_goal 
+“!n. sub o pa(Nn,nN,n,n) = z”)
 
 
 (*TODO: wrong error message:
