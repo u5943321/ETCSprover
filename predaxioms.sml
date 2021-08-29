@@ -5268,7 +5268,10 @@ e0
  drule double_ind >>
  by_tac 
  “(!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),s o a) = i2) <=>
-  (!n m. pred o pa(NNn,nnN,id(NN), s o a o to1(NN,1)) o pa(Nn,nN,m,n) = i2:1->two)” >-- cheat >>
+  (!n m. pred o pa(NNn,nnN,id(NN), s o a o to1(NN,1)) o pa(Nn,nN,m,n) = i2:1->two)” >-- 
+ (pop_assum_list (map_every (K all_tac)) >>
+  assume_tac nnN_def >> drule distr_to_pa' >>
+  arw[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR]) >>
  arw[GSYM o_assoc] >> 
  first_x_assum 
  (qspecl_then ["pred o pa(NNn, nnN, id(NN), (s o a) o to1(NN, 1))"] assume_tac) >> once_arw[] >>
