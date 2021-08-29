@@ -5300,9 +5300,65 @@ e0
          (!n. pred o pa(NNn,nnN,pa(Nn,nN,n,s o m),s o a) = i2              ==> 
               pred o pa(NNn,nnN,pa(Nn,nN,s o n,s o m),s o a) = i2)))”)
 
-val cancel_sub00 = proved_th $
+val le_sub = proved_th $
 e0
 (cheat)
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ (!m:1->N n. char(i1,i2,le) o pa(Nn,nN,m,n) = i2 <=>
+ sub o pa(Nn,nN,m,n) = z)”)
+
+val inv_suc_eq = proved_th $
+e0
+cheat
+(form_goal 
+“!m n:1->N. s o m = s o n <=> m = n”)
+
+val cancel_sub00 = proved_th $
+e0
+(strip_tac >> strip_tac >> strip_tac >> strip_tac >>
+by_tac “?pred:NNN->two. 
+!a:1->N m n.(char(i1,i2,le) o pa(Nn,nN,a,n) = i2 ==>
+char(i1,i2,le) o pa(Nn,nN,a,m) = i2 ==>
+ (sub o pa(Nn,nN,n,a) = sub o pa(Nn,nN,m,a) <=> n = m)) <=>
+ pred o pa(NNn,nnN,pa(Nn,nN,n,m),a) = i2:1->two”
+ >-- cheat >>
+ pop_assum strip_assume_tac >> once_arw[] >>
+ drule triple_ind >> once_arw[] >> pop_assum (K all_tac) >>
+ pop_assum (assume_tac o GSYM) >> once_arw[] >>
+ strip_tac (* 2 *) >--
+ (rpt strip_tac >> assume_tac sub_zero_id >> arw[]) >>
+ strip_tac >> strip_tac >> strip_tac (* 2 *) >-- 
+ (rpt strip_tac >> 
+ drule le_sub >> fs[] >> 
+ pop_assum mp_tac >> pop_assum mp_tac >>
+ rw[sub_zero_id] (* 2 do not understand why it can be solved by fs[sub_zero_id],ahh eight*) >> rpt strip_tac >>
+ fs[Thm2_1]) >> 
+ strip_tac >> strip_tac >> strip_tac (* 2 *) >--
+ (rpt strip_tac >> drule le_sub >> fs[] >>
+  fs[sub_zero_id]) >>
+ rpt strip_tac >> rw[sub_mono_eq] >>
+ rw[inv_suc_eq] >> first_x_assum irule >>
+ drule le_sub >> fs[] >> fs[sub_mono_eq]
+)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !a m n. char(i1,i2,le) o pa(Nn,nN,a,n) = i2 ==>
+ char(i1,i2,le) o pa(Nn,nN,a,m) = i2 ==>
+ (sub o pa(Nn,nN,n,a) = sub o pa(Nn,nN,m,a)  <=> n = m)”)
+
+
+val cancel_sub00 = proved_th $
+e0
+(strip_tac >> strip_tac >> strip_tac >> strip_tac >>
+by_tac “?pred:NNN->two. 
+!a:1->N m n.(char(i1,i2,le) o pa(Nn,nN,a,n) = i2 ==>
+char(i1,i2,le) o pa(Nn,nN,a,m) = i2 ==>
+ (sub o pa(Nn,nN,n,a) = sub o pa(Nn,nN,m,a) <=> n = m)) <=>
+ pred o pa(NNn,nnN,pa(Nn,nN,n,m),a) = i2:1->two”
+ >-- cheat >>
+
+)
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !a n. char(i1,i2,le) o pa(Nn,nN,a,n) = i2 ==>
