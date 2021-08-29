@@ -5307,6 +5307,94 @@ cheat
 (form_goal 
 “!m n:1->N. s o m = s o n <=> m = n”)
 
+val conj_ex = proved_th $
+e0
+(cheat)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
+ ?conj:TT->two. 
+ !p1:1->two p2:1->two. conj o pa(Tt,tT,p1,p2) = i2 <=>
+ (p1 = i2 & p2 = i2)”)
+
+
+val iff_ex = proved_th $
+e0
+(cheat)
+(form_goal 
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
+ ?iff:TT->two. 
+ !p1:1->two p2:1->two. iff o pa(Tt,tT,p1,p2) = i2 <=>
+ (p1 = i2 <=> p2 = i2)”)
+
+(*i2
+             =
+             char(i1, i2, le) o pa(Nn, nN, a, n)
+             &
+             i2
+             =
+             char(i1, i2, le) o pa(Nn, nN, a, m)
+             ==>
+             (n
+             =
+             m
+             <=>
+             sub o pa(Nn, nN, n, a)
+             =
+             sub o pa(Nn, nN, m, a))
+
+TODO: a version of GSYM top-down*)
+
+val cancel_sub_pred = proved_th $
+e0
+(rpt strip_tac >> drule imp_ex >> drule iff_ex >>
+ qspecl_then ["two","two"] assume_tac pr_ex >>
+ pop_assum (x_choosel_then ["TT","Tt","tT"] assume_tac)
+ (*if continuation then complain, todo*) >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ drule conj_ex >> first_x_assum drule >>
+ pop_assum strip_assume_tac >> 
+ drule char_diag >> assume_tac nN_def >>
+ first_x_assum drule >> 
+ qexists_tac
+ $ q2str
+ ‘imp o 
+  pa(Tt,tT,
+     conj o 
+       pa(Tt,tT,
+          char(i1,i2,le) o 
+          pa(Nn,nN,nnN,Nn o NNn),
+          char(i1,i2,le) o
+          pa(Nn,nN,nnN,nN o NNn)),
+     iff o 
+       pa(Tt,tT,
+          char(i1,i2,pa(Nn,nN,id(N),id(N))) o 
+          pa(Nn,nN,sub o pa(Nn,nN,Nn o NNn,nnN), 
+                   sub o pa(Nn,nN,nN o NNn,nnN)),
+          char(i1,i2,pa(Nn,nN,id(N),id(N))) o 
+          pa(Nn,nN,Nn o NNn,nN o NNn)))’ >>
+drule distr_to_pa' >> rev_drule distr_to_pa' >>
+rw[o_assoc] >> once_arw[] >> 
+drule p12_of_pa >> assume_tac nnN_def >>
+drule p12_of_pa >> once_arw[] >> once_arw[] >> 
+rw[o_assoc] >> once_arw[] >> once_arw[] >>
+rw[o_assoc] >> once_arw[] >> once_arw[] >>
+rw[o_assoc] >> once_arw[] >> rw[o_assoc] >> once_arw[] >>
+once_arw[] >>
+rpt strip_tac >> dimp_tac >> rpt strip_tac (* 2 *) >--
+(first_x_assum drule >> first_x_assum drule >>
+ first_x_assum accept_tac) >>
+fs[])
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+?pred:NNN->two. 
+!a:1->N m n.(char(i1,i2,le) o pa(Nn,nN,a,n) = i2 ==>
+char(i1,i2,le) o pa(Nn,nN,a,m) = i2 ==>
+ (sub o pa(Nn,nN,n,a) = sub o pa(Nn,nN,m,a) <=> n = m)) <=>
+ pred o pa(NNn,nnN,pa(Nn,nN,n,m),a) = i2:1->two”)
+
 val cancel_sub00 = proved_th $
 e0
 (strip_tac >> strip_tac >> strip_tac >> strip_tac >>
