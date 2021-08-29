@@ -5200,12 +5200,24 @@ e0
  first_x_assum (qspecl_then ["pred"] assume_tac) >> 
  by_tac 
  “(!a:1->N m:1-> N n:1->N. pred:NNN->two o pa(NNn, nnN, pa(Nn, nN, n, m), a) = i2:1->two) <=> 
-  (!a:1->N. Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred) o a = i2)” >-- cheat >>
+  (!a:1->N. Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred) o a = i2)” >-- 
+ (arw[] >> dimp_tac >> rpt strip_tac >--  
+  (assume_tac nN_def >> drule to_p_components >> 
+  first_x_assum (qspecl_then ["1","x"] assume_tac) >>
+  once_arw[] >> pop_assum (K all_tac) >> 
+  once_arw[]) >> arw[]) >>
  once_arw[] >> rw[GSYM o_assoc] >> 
  pick_xnth_assum 2 (pspecl_then ["(Uq:NNt2->two o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two))"] assume_tac) >> (* TODO: bug, qparser loop here *)
  once_arw[] >>
- (*by_tac 
- “(Uq o tp(p1, p2, ev, NNn, nnN, pred)) o z = i2 <=> ” *)
+ by_tac 
+ “!a:1->N.(Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two)) o a = i2:1->two <=> 
+  (!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),a) = i2)” >--
+ (strip_tac >> dimp_tac >> rpt strip_tac (* 2 *) >--
+  rfs[o_assoc] >> arw[o_assoc] >>
+  strip_tac >> assume_tac nN_def >> drule to_p_components >>
+  first_x_assum (qspecl_then ["1","x"] assume_tac) >>
+  once_arw[] >> pop_assum (K all_tac) >> once_arw[]) >>
+ once_arw[] >> rw[] >> 
  suffices_tac 
  “(!a:1->N. (Uq:NNt2->two o tp(p1:nnps->NN, p2:nnps->NNt2, ev:nnps->two, NNn, nnN, pred:NNN->two)) o a = i2
    ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o s o a = i2)
@@ -5220,7 +5232,18 @@ e0
                  !n. pred o
                      pa(NNn, nnN, pa(Nn, nN, n, s o m), s o a) = i2 ==>
                    pred o pa(NNn, nnN, pa(Nn, nN, s o n, s o m), s o a) =
-                   i2” >-- cheat >>
+                   i2” >--
+ (strip_tac >> dimp_tac >> strip_tac >> arw[] >--
+  (suffices_tac
+  “(!(a : 1 -> N). (Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two)) o a = i2:1->two ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o s o a = i2)”
+  >-- (once_arw[] >> strip_tac) >>
+  strip_tac >> once_arw[] >> strip_tac >> 
+  first_x_assum drule >> first_x_assum accept_tac) >>
+ pick_xnth_assum 7 (assume_tac o GSYM) >>
+ once_arw[] >> pop_assum (K all_tac) >> once_arw[] >>
+ first_x_assum accept_tac) 
+ (*here does not use any technical lemma so it is problematic that it need hand*) >>
+ once_arw[] >>
  suffices_tac
  “!a. (!m n. pred o pa(NNn, nnN, pa(Nn, nN, n, m), a) = i2)
   ==>
@@ -5233,60 +5256,27 @@ e0
                  !n. pred o
                      pa(NNn, nnN, pa(Nn, nN, n, s o m), s o a) = i2 ==>
                    pred o pa(NNn, nnN, pa(Nn, nN, s o n, s o m), s o a) =
-                   i2) ” >-- cheat >>
+                   i2) ” >-- 
+ (strip_tac >> dimp_tac >> strip_tac (* 2 *)>--
+  (strip_tac >> strip_tac >>
+   pick_xnth_assum 8 drule >> rfs[] >>
+   first_x_assum drule >> rfs[]) >> 
+  rfs[] >> strip_tac >> strip_tac >>
+  last_x_assum drule >> once_arw[] >> first_x_assum irule >>
+  first_x_assum accept_tac) >>
  rpt strip_tac >> arw[o_assoc] >> 
  drule double_ind >>
  by_tac 
- “(!x:1->NN. pred o pa(NNn,nnN,x,s o a) = i2) <=>
+ “(!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),s o a) = i2) <=>
   (!n m. pred o pa(NNn,nnN,id(NN), s o a o to1(NN,1)) o pa(Nn,nN,m,n) = i2:1->two)” >-- cheat >>
- arw[] >> cheat
-(*
-
- by_tac 
- “(!a:1->N m:1-> N n:1->N. pred o pa(NNn, nnN, pa(Nn, nN, n, m), a) = i2) <=> pred = i2:1->two o to1(NNN,1)”
- >-- (dimp_tac >> rpt strip_tac (* 2 *) >-- 
-      (irule fun_ext >> strip_tac >> rw[o_assoc] >>
-       once_rw[one_to_one_id] >> rw[idR] >>
-       drule to_p_components >>
-       first_x_assum (qspecl_then ["1","a"] assume_tac) >>
-       once_arw[] >>
-       assume_tac nN_def >> drule to_p_components >>
-       first_x_assum 
-        (qspecl_then ["1","NNn o a"] assume_tac) >>
-       once_arw[] >> pop_assum (K all_tac) >>
-       pop_assum (K all_tac) >> pop_assum (K all_tac) >>
-       once_arw[]) >>
-      once_arw[] >> rw[o_assoc] >> once_rw[one_to_one_id] >>
-      rw[idR]) >>
- once_arw[]>> pop_assum (K all_tac) >>
- once_arw[] >> pop_assum (K all_tac) >>
- by_tac 
- “(!x:1->NN.pred o pa(NNn,nnN,x,z) = i2) <=>
-  (!m n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),z) = i2:1->two)” >--
- (cheat (*trivial*)) >> arw[] >>
- 
-
-
- (*bug, once arw should do it, not exactly, should have another ver of genind*)
- suffices_tac
- “(!x:1->NN n. pred o pa(NNn, nnN, x, n) = i2:1->two ==>
-  pred o pa(NNn, nnN, x, s o n) = i2) <=>
-  !a : 1 -> N. (!m n. pred o pa(NNn, nnN, pa(Nn, nN, n, m), a) =
-                  i2) ==>
-               (!n. pred o pa(NNn, nnN, pa(Nn, nN, n, z), s o a)
-                  = i2) &
-               !m. (!n. pred o
-                      pa(NNn, nnN, pa(Nn, nN, n, m), s o a) = i2) ==>
-                 pred o pa(NNn, nnN, pa(Nn, nN, z, s o m), s o a) = i2 &
-                 !n. pred o
-                     pa(NNn, nnN, pa(Nn, nN, n, s o m), s o a) = i2 ==>
-                   pred o pa(NNn, nnN, pa(Nn, nN, s o n, s o m), s o a) =
-                   i2” >-- cheat (*trivial*)>>
- pop_assum (K all_tac) >>
- assume_tac double_ind >> first_x_assum drule >>
- by_tac 
- “(!x:1->NN n. pred o pa(NNn, nnN, x, n) = i2 ==> pred o pa(NNn, nnN, x, s o n) = i2) <=> 
-  ()” *))
+ arw[GSYM o_assoc] >> 
+ first_x_assum 
+ (qspecl_then ["pred o pa(NNn, nnN, id(NN), (s o a) o to1(NN, 1))"] assume_tac) >> once_arw[] >>
+ rw[o_assoc] >>
+ pop_assum_list (map_every (K all_tac)) >>
+ assume_tac nnN_def >> drule distr_to_pa' >>
+ arw[] >> rw[o_assoc] >> once_arw[one_to_one_id] >>
+ rw[idL,idR])
 (form_goal
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
   !pred:NNN->two. 
