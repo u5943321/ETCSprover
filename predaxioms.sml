@@ -5307,9 +5307,49 @@ cheat
 (form_goal 
 “!m n:1->N. s o m = s o n <=> m = n”)
 
+(*TODO: this thm:
+
+pa(Tt, tT, i2, i2) = pa(Tt, tT, p1, p2)
+
+<=> i2 = p1 & i2 = p2*)
+
+val pa_eq = proved_th $
+e0
+(rpt strip_tac >> 
+ dimp_tac >> strip_tac (* 2 *) >-- 
+ (qby_tac
+ ‘Ab o pa(Ab, aB, f1, g1) = Ab o pa(Ab, aB, f2, g2)’
+ >-- arw[] >>
+ qby_tac
+ ‘aB o pa(Ab, aB, f1, g1) = aB o pa(Ab, aB, f2, g2)’
+ >-- arw[] >>
+ drule p12_of_pa >> fs[]) >>
+ arw[])
+(form_goal
+“!A B AB Ab:AB->A aB:AB->B. ispr(Ab,aB) ==>
+ !X f1:X->A g1 f2 g2. pa(Ab,aB,f1,g1) = pa(Ab,aB,f2,g2) <=>
+ f1 = f2 & g1 = g2”)
+
 val conj_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> 
+ qexists_tac "char(i1,i2,pa(Tt,tT,i2,i2))" >>
+ assume_tac dom_1_mono >>
+ first_x_assum 
+  (qspecl_then ["TT","pa(Tt,tT,i2,i2)"] assume_tac) >>
+ drule char_def >>
+ first_x_assum drule >> 
+ pop_assum (assume_tac o GSYM) >>
+ once_arw[] >>
+ rpt strip_tac >> once_rw[one_to_one_id] (* 2 why rw[one_to_one_id] DOES the correct thing now? *) >>
+ rw[idR] >> dimp_tac >> rpt strip_tac (* 3 *)
+ >-- (drule pa_eq >> fs[] >>
+     pick_x_assum “i2:1->two = p1” (assume_tac o GSYM) >>
+     arw[]) 
+ >-- (drule pa_eq >> fs[] >>
+      pick_x_assum “i2:1->two = p1” (assume_tac o GSYM) >>
+      arw[]) >>
+ qexists_tac "id(1)" >> arw[])
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
@@ -5320,7 +5360,18 @@ e0
 
 val iff_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >>
+ drule imp_ex >> first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ drule conj_ex >> first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "conj o pa(Tt,tT,imp,imp o pa(Tt,tT,tT,Tt))">>
+ drule distr_to_pa' >> arw[o_assoc] >>
+ drule p12_of_pa >> arw[] >> rpt strip_tac >> dimp_tac >>
+ rpt strip_tac (* 2 *) >--
+ (dimp_tac >> arw[]) >>
+ fs[]
+ )
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !TT Tt:TT->two tT:TT->two. ispr(Tt,tT) ==>
