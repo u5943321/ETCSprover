@@ -6331,7 +6331,9 @@ e0
 
 val equality_NN_ind = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> assume_tac nN_def >>
+ drule equality_ind >> first_x_assum drule >> once_arw[] >>
+ rw[])
 (form_goal
 “!f:NN->N g:NN->N.
  !m:1->N.(!n.f o pa(Nn,nN,m,n) = g o pa(Nn,nN,m,n)) <=>
