@@ -690,7 +690,7 @@ fun ast2pf ast (env:env) =
             in
                 (pPred(str,[pt1,pt2]),env2)
             end else
-        raise simple_fail ("not an infix operator: " ^ "str")
+        raise simple_fail ("not an infix operator: " ^ str)
       | aBinder(str,ns,b) => 
         if str = "!" orelse str = "?" then
             let val (pt,env1) = ast2pt ns env in 
@@ -1060,7 +1060,7 @@ type pne = (string,int)Binarymap.dict * int
 
 
 fun n2l n = 
-    if n > 0 then n :: (n2l (n - 1)) else [] 
+    if n > 0 then n :: (n2l (Int.-(n, 1))) else [] 
   
 
 fun bad_name (n,s:sort) = if List.hd (explode n) = #" " then true else false
@@ -1119,8 +1119,8 @@ fun cast2t ct ast =
              mk_fun str (List.map (cast2t ct) astl)
         else raise simple_fail("not a function symbol: " ^ str) 
       | aInfix(aId(n),":",aInfix(ast1,"->",ast2)) =>
-        let val dom = cast2t ct ast
-            val cod = cast2t ct ast
+        let val dom = cast2t ct ast1
+            val cod = cast2t ct ast2
         in mk_var n (mk_ar_sort dom cod)
         end (*assume sort annotation only happens for bound variables, in that case, change the ct when moving into quantifiers*)
       | aInfix(ast1,str,ast2) => 

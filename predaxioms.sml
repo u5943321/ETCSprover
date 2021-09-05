@@ -5468,6 +5468,15 @@ e0
 (form_goal 
 “!a:1->N c:1->N. sub o pa(Nn,nN,add o pa(Nn,nN,a,c),c) = a”)
 
+(*
+val plus_def = 
+
+“plus(m,n) = add o pa(Nn,nN,m,n)”
+
+TODO: turn the arrows about arith into function symbols.
+
+*)
+
 
 val ind_N_element = proved_th $
 e0
@@ -6844,6 +6853,85 @@ e0
  (!n:1->N. 
   (!n0:1->N. 
     char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
+
+
+val neg_ex = proved_th $
+e0
+(rpt strip_tac >> 
+ qexists_tac "copa(i1,i2,i2,i1)" >> strip_tac >>
+ drule i1_xor_i2 >> 
+ cases_on “pred = i1:1->two” (* 2 *) >--
+ (arw[] >> drule i1_of_copa >>arw[]) >>
+ rfs[] >> pop_assum (K all_tac) >> pop_assum (assume_tac o GSYM)>>
+ fs[] >> drule i2_of_copa >> arw[])
+(form_goal
+“!two i1:1->two i2:1->two.iscopr(i1,i2) ==>
+ ?neg: two -> two.
+ !pred:1->two. neg o pred = i2 <=> pred = i1”)
+
+
+val o_assoc_middle = proved_th $
+e0
+(rpt strip_tac >> rw[o_assoc])
+(form_goal 
+“!A B f:A->B C g:B->C D h:C->D E i:D->E. 
+ i o h o g o f = i o (h o g) o f”)
+
+
+val exists_forall0 = 
+exists_forall ("x",mk_ar_sort (mk_ob "A") (mk_ob "B"))
+
+val Exq_ex = proved_th $
+e0
+(rpt strip_tac >> drule Uq_ex >> first_x_assum drule >>
+ pop_assum strip_assume_tac >> 
+ drule neg_ex >> pop_assum strip_assume_tac >>
+ qexists_tac "neg o Uq o tp(p1,p2,ev,p1,p2,neg o ev)" >>
+ rpt strip_tac >> first_x_assum drule >>
+ rw[o_assoc] >> once_arw[] >> 
+ qby_tac 
+ ‘tp(p1, p2, ev, p1, p2, (neg o ev)) o tp(p1, p2, ev, Xy, xY, pxy)   = tp(p1,p2,ev,Xy,xY,neg o pxy)’ >-- 
+ (drule is_tp >> first_x_assum drule >> 
+  first_x_assum irule >> 
+ (*ToDO: ppbug
+   pa(p1, p2, Xy, (tp(p1, p2, ev, p1, p2, (neg o ev)) *)
+  qby_tac 
+  ‘pa(p1, p2, Xy, (tp(p1, p2, ev, p1, p2, (neg o ev)) o
+   tp(p1, p2, ev, Xy, xY, pxy)) o xY) = 
+   pa(p1, p2, p1,tp(p1, p2, ev, p1, p2, (neg o ev)) o p2) o 
+   pa(p1, p2,Xy,tp(p1, p2, ev, Xy, xY, pxy) o xY)’ >--
+  (drule exp_ispr >> drule to_p_eq >> first_x_assum irule >>
+   drule p12_of_pa >> arw[GSYM o_assoc] >>
+   arw[o_assoc]) >>
+  once_arw[] >> rw[GSYM o_assoc] >>  
+  drule ev_of_tp >> drule exp_ispr >> first_x_assum drule >>
+  once_arw[] >> rw[o_assoc] >> drule ev_of_tp >> 
+  first_x_assum rev_drule >> arw[]) >>
+ once_rw[o_assoc_middle] >> once_arw[] >> 
+ qby_tac 
+ ‘Uq o tp(p1, p2, ev, Xy, xY, (neg o pxy)) o y = i1 <=>
+  ~Uq o tp(p1, p2, ev, Xy, xY, (neg o pxy)) o y = i2’ >--
+ (drule i1_xor_i2 >> arw[]) >>
+ once_arw[] >> pop_assum (K all_tac) >> once_arw[] >>
+ pop_assum (K all_tac) >> pop_assum (K all_tac) >>
+ arw[o_assoc] >> drule i1_xor_i2 >> once_arw[] >>
+ once_rw[exists_forall0] >> rw[]
+(* dimp_tac >> rpt strip_tac (* 2 *) >--
+ (ccontra_tac >> 
+  qsuff_tac
+  ‘!x : 1 -> X. ~pxy o pa(Xy, xY, x, y) = i2’ >-- fs[] >>
+  strip_tac >> ccontra_tac >>
+  qsuff_tac 
+  ‘?(x : 1 -> X). pxy o pa(Xy, xY, x, y) = i2’ >-- fs[] >>
+  ) *))
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !X eps ps p1:eps->X p2:eps ->ps ev:eps->two.isexp(p1,p2,ev) ==>
+ ?Exq:ps -> two. 
+ !Y XY Xy:XY->X xY:XY->Y. ispr(Xy,xY) ==>
+ !pxy:XY->two y:1->Y. 
+ (Exq o tp(p1,p2,ev,Xy,xY,pxy) o y = i2  <=> 
+  ?x:1->X. pxy o pa(Xy,xY,x,y) = i2)”)
 
 
 fun fl_diff fl1 fl2 = 
