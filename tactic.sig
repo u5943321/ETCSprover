@@ -85,10 +85,12 @@ val rev_full_simp_tac: thm list -> tactic
 
 val cheat: tactic
 
-(*val wrap_err: string -> exn -> exn*)
+val rw: thm list -> tactic 
+val once_rw: thm list -> tactic 
+val once_arw: thm list -> tactic
+val fs: thm list -> tactic 
 
-
-
+val rpt: tactic -> tactic
 
 end
 

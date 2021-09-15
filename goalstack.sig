@@ -8,8 +8,6 @@ sig
                              stack : tac_result list}
     val prove: form.form -> tactic.tactic -> logic.thm
     val new_goal: abbrev.cont * form.form list * form.form -> gstk
-    val read_goal: string -> gstk
-    val rpg: string -> gstk
     val rapg: string -> gstk
     val proved_th: gstk -> logic.thm
     val ppgstk: gstk -> ('a, unit) smpp.t

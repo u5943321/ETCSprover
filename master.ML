@@ -1,14 +1,7 @@
-(*use "pp.sig";
-use "pp.sml";
-open pp;
-
-*)
 use "term.sig";
 use "term.sml";
 open term;
-(*
-val _ = PolyML.addPrettyPrinter PPterm;
-*)
+
 
 use "form.sig";
 use "form.sml";
@@ -30,9 +23,9 @@ use "pterm_dtype.sml";
 open pterm_dtype;
 
 
-use "pterm.sig";
-use "pterm.sml";
-open pterm;
+use "parser.sig";
+use "parser.sml";
+open parser;
 
 use "drule.sig";
 use "drule.sml";
@@ -57,3 +50,7 @@ use "goalstack.sig";
 use "goalstack.sml";
 open goalstack;
 
+use "iffLR.sml";
+use "irule_canon.sml";
+use "q.sml";
+use "proofmanager.sml";

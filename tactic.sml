@@ -1077,7 +1077,11 @@ fun subst_tac eqth (g as (ct,asl,w):goal) =
 *)
 
 
+val rw = rw_tac
+val once_rw = once_rw_tac
+val once_arw = once_arw_tac
 
-
+val fs = full_simp_tac
+val rpt = repeat  
 end
     

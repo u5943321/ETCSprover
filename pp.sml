@@ -5,7 +5,7 @@ open (* term form logic*) smpp
 infix >>
 
 fun is_infix sym = 
-    if mem sym ["*","+","^","=","o"] then true else false
+    if mem sym ["*","+","=","o"] then true else false
 
  
 fun paren pp = block HOLPP.INCONSISTENT 1 
@@ -51,8 +51,20 @@ fun ppterm ss g t =
                                ppterm ss g2 t2
                 end
         else 
-            if f = "pa" then 
-                add_string "<" >> ppterm ss g t1 >> add_string " , " >> ppterm ss g t2 >> add_string ">"
+            if f = "^" then 
+            case g of 
+                LR(lg,rg) => 
+                let 
+                    val g1 = LR (lg, SOME (fxty f))
+                    val g2 = LR (SOME (fxty f),rg)
+                in 
+                    if int_option_less (fxty f, lg) orelse int_option_leq (fxty f, rg) then 
+                        add_string "(" >> 
+                                   ppterm ss (LR (NONE, SOME (fxty f))) t2 >>  add_break(1,0) >> add_string f >> add_break(1,0) >>
+                                   ppterm ss (LR (SOME (fxty f), NONE)) t1 >> add_string ")"
+                    else 
+                        ppterm ss g1 t2 >> add_string f >> ppterm ss g2 t1
+                end
             else
             add_string f >> paren (pr_list (ppterm ss g) (add_string "," >> add_break (1,0)) [t1,t2])
       | vFun(f,s,args) => 

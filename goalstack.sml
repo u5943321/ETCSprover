@@ -1,6 +1,6 @@
 structure goalstack :> goalstack = 
 struct
-open term form logic abbrev tactic pterm smpp pp
+open term form logic abbrev tactic parser smpp pp
 
 fun prove f tac = 
     let
@@ -22,12 +22,7 @@ datatype gstk = GSTK of {prop  : proposition,
 
 fun new_goal g = GSTK{prop=POSED g, stack=[]}
 
-fun read_goal f = 
-    let val f0 = readf f in new_goal (fvf f0,[]:form list,f0) end
-
 (*read goal with pretty name*)
-fun rpg f = 
-    let val f0 = rpf f in new_goal (fvf f0,[]:form list,f0) end
 
 fun rapg f = 
     let val f0 = rapf f in new_goal (fvf f0,[]:form list,f0) end

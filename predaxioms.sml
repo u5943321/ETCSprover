@@ -1,71 +1,9 @@
-(*
-fun all_distinct l = 
-    case l of [] => true
-            | h :: ts => if List.exists (fn t => eq_term(t,h)) ts then false
-                         else true
-
-fun no_ukn_psym f = HOLset.isEmpty (HOLset.filter (not o is_pred) (psymsf f))
-
-fun no_ukn_fsym f = HOLset.isEmpty (HOLset.filter (not o is_fun) (fsymsf f))
-
-fun define_pred f = 
-    let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse raise simple_fail"formula has unexpected free variables"
-        val (body,bvs) = strip_forall f 
-        val (l,r) = dest_dimp body 
-        val (P,args) = dest_pred l 
-        val _ = List.all is_var args orelse raise simple_fail"input arguments is not a variable list"
-        val _ = HOLset.isSubset (fvf r,fvf l) 
-                orelse raise simple_fail"unexpected free variable on RHS"
-        val _ = case lookup_pred (psyms0) P of NONE => () | _ => raise simple_fail("redefining predicate: " ^ P)
-        val _ = all_distinct args orelse raise simple_fail"input arguments are not all distinct"
-        val _ = no_ukn_psym r orelse raise simple_fail"RHS contains unknown predicate"
-        val _ = no_ukn_fsym r orelse raise simple_fail"RHS contains unknown function"
-        (*check P is a fresh name if not then fail*)
-        (*check RHS variables are subset of LHS ones*)
-        (*check arguments are all distinct*)
-        (*store P in psymd*)
-        val _ = new_pred P (List.map dest_var args)
-    in mk_thm essps [] f
-    end
-(*check that R does not contain any unknown predicate symbols/fun syms*)
-
-(*define fun spec
-
-a rule that turns
-
-!a b c. ?!R. P(a,b,c,R).
-
-into 
-
-ALL a b c. P(a,b,c,f(a,b,c))
-
-and defines f
+fun form_goal f = new_goal (fvf f,[]:form list,f)
+val irule = match_mp_tac o irule_canon
 
 
-!a b c. Q(a) ==> ?!R. P(a,b,c,R).
-
-allow this, and put Q(a) in the output thm as well.
-*)
-
-fun define_fun f = 
-    let val fvs = fvf f
-        val _ = HOLset.isEmpty fvs orelse raise simple_fail"formula has unexpected free variables"
-        val (body,bvs) = strip_forall f 
-        val (l,r) = dest_eq body 
-        val (nf,sf,args) = dest_fun l 
-        val _ = List.all is_var args orelse raise simple_fail"input arguments is not a variable list"
-        val _ = HOLset.isSubset (fvt r,fvt l) 
-                orelse raise simple_fail"unexpected free variable on RHS"
-        val _ = case lookup_fun fsyms0 nf of NONE => () | _ => raise simple_fail("redefining predicate: " ^ nf)
-        val _ = all_distinct args orelse raise simple_fail"input arguments are not all distinct"
-        val fsyms0 = new_fun nf (sf,(List.map dest_var args))
-    in mk_thm essps [] f
-    end
-*)
-
-(*definition database*)
-
+val ob_sort = mk_ob_sort
+val ar_sort = mk_ar_sort
 (*ETCS axioms*)
 
 fun check_wffv fvs = 
@@ -96,6 +34,7 @@ val idL = read_axiom "!B A f:B -> A. id (A) o f = f"
 val idR = read_axiom "!A B f: A -> B. f o id(A) = f"
 
 val o_assoc = read_axiom "!A.!B.!f: A -> B.!C.!g:B -> C.!D.!h: C -> D.(h o g) o f = h o g o f";
+
 
 val to1_def = read_axiom "!one.is1(one) ==> !X.!t1x:X->one.t1x =to1(X,one)";
 
@@ -144,6 +83,8 @@ val ax2 = exp_ex
 
 val Nind0_def = read_axiom "!N0 one z0:one -> N0 s0:N0->N0. isN0(z0,s0) ==> is1(one) & !X x0:one -> X t:X -> X x:N0 -> X. x o z0 = x0 & x o s0 = t o x <=> x = Nind0(z0,s0,x0,t)";
 
+val _ = new_fun "SUC" (ar_sort N N,[])
+
 
 val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.(x o z = x0 & x o s = t o x) <=> x = Nind(x0,t)"
 
@@ -175,7 +116,7 @@ val ax_incfac0 = read_axiom "!A B AB i1:A->AB i2:B->AB one f:one -> AB. iscopr(i
 
 val ax7 = ax_incfac0 
 
-val ax_2el = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~ x1 = x2"
+val ax_2el = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~ (x1 = x2)"
 
 
 val ax8 = ax_2el
@@ -285,13 +226,14 @@ ax3_conj2
 val exp_ispr = tp_def |> strip_all_and_imp |> conjE1 |> disch_all |> gen_all
 
 
+val irule = match_mp_tac o ir_canon
 
 val ev_eq_eq = proved_th $
 e0
 (repeat strip_tac >> 
  suffices_tac (rapf "f = tp (p1:efs->A,p2:efs->A2B,ev:efs->B,p1':AX->A,p2':AX->X,ev o pa(p1, p2, p1', f o p2')) & g = tp (p1,p2,ev,p1',p2',ev o pa(p1, p2, p1', f o p2'))")
  >-- (strip_tac >> once_arw_tac[] >> rw_tac[]) >> strip_tac
- >> (match_mp_tac $ irule_canon is_tp >> arw_tac[]))
+ >> (irule is_tp >> arw_tac[]))
 (rapg "!A A2B B efs ev:efs->B p1:efs -> A p2:efs->A2B. isexp(p1,p2,ev) ==> !AX p1':AX->A X p2':AX->X. ispr(p1',p2') ==> !f: X -> A2B g. ev o pa(p1, p2, p1', f o p2')=ev o pa(p1, p2, p1', g o p2')==> f = g")
 
 (*
@@ -301,7 +243,7 @@ e0
 
 val to_p_component = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (pa_def |> iffLR |> irule_canon) >>
+(repeat strip_tac >> match_mp_tac (pa_def |> iffLR |> ir_canon) >>
  arw_tac[])
 (rapg "!A B AB p1:AB->A p2:AB->B. ispr(p1, p2) ==>!X f:X->AB. f = pa(p1, p2, p1 o f, p2 o f)")
 
@@ -313,9 +255,10 @@ e0
  >> match_mp_tac to_p_component >> arw_tac[])
 (rapg "!A B AB p1:AB->A p2:AB->B.ispr(p1,p2) ==> !X f:X ->AB g. p1 o f = p1 o g & p2 o f = p2 o g ==> f = g ")
 
+
 val from_copr_components = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (copa_def |> iffLR |> irule_canon) >>
+(repeat strip_tac >> match_mp_tac (copa_def |> iffLR |> ir_canon) >>
 arw_tac[])
 (rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1, i2) ==>!X f:AB->X. f = copa(i1, i2, f o i1, f o i2)")
 
@@ -358,10 +301,10 @@ e0
  rev_full_simp_tac[] >> (*suffices_tac (rapf "x1:1->X = x2") *)
  qsuff_tac ‘x1 = x2’
  >-- (arw_tac[]) >>
- qpick_x_assum ‘~x1 = x2’ (K all_tac)
+ qpick_x_assum ‘~(x1 = x2)’ (K all_tac)
  (*pick_x_assum (rapf "~x1:1->X = x2") (K all_tac)*) >> once_arw_tac[] >> rw_tac[] >>
  rw_tac[])
-(rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~i1 = i2")
+(rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~(i1 = i2)")
 
 (*∀A B x. ¬(x∶one → (A + B) ∧ (∃x0 x0'. x0∶one → A ∧ x0'∶one → B ∧
                              i1 A B ∘ x0 = x ∧
@@ -390,14 +333,13 @@ first_x_assum (specl_then (List.map rastt ["oneone","(one1:1->oneone) o (to1(A,1
                                            "(one2:1->oneone) o (to1(B,1))"]) assume_tac) >>
 repeat strip_tac >>
 suffices_tac (rapf "(one1:1->oneone) o (to1(A,1)) o (x0:1->A) = (one2:1->oneone) o (to1(B,1)) o (x0':1->B)") 
->-- ((*by_tac (rapf " to1(A, 1) o (x0:1->A) = to1(B, 1) o x0'") TO-DO: do not understand why cannot use rw to1_unique to solve this by solved*)
-      assume_tac (specl (List.map rastt ["1","id(1)","to1(A, 1) o (x0:1->A)"]) to1_unique) >>  assume_tac (specl (List.map rastt ["1","id(1)","to1(B, 1) o (x0':1->B)"]) to1_unique)>>
+>-- (assume_tac (specl (List.map rastt ["1","id(1)","to1(A, 1) o (x0:1->A)"]) to1_unique) >>  assume_tac (specl (List.map rastt ["1","id(1)","to1(B, 1) o (x0':1->B)"]) to1_unique)>>
   arw_tac[] >> rw_tac[idR]) >>
 suffices_tac (rapf "copa(i1:A->AB, i2:B->AB, ((one1:1->oneone) o to1(A, 1)), ((one2:1->oneone) o to1(B, 1))) o i1 o (x0:1->A) = copa(i1, i2, (one1 o to1(A, 1)), (one2 o to1(B, 1))) o i2 o x0'") 
 >-- (rw_tac[GSYM o_assoc] >> arw_tac[]) >>
 arw_tac[]
 )
-(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x0:1->A x0':1->B.~i1 o x0 = i2 o x0'")
+(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x0:1->A x0':1->B.~(i1 o x0 = i2 o x0')")
 
 val from_cop_eq = proved_th $
 e0
@@ -413,7 +355,7 @@ e0
 val i1_i2_disjoint = proved_th $
 e0
 (repeat strip_tac >> match_mp_tac prop_5_lemma >> arw_tac[])
-(rapg "!X XX i1:X->XX i2:X->XX. iscopr(i1,i2) ==> !t:1->X. ~i1 o t = i2 o t")
+(rapg "!X XX i1:X->XX i2:X->XX. iscopr(i1,i2) ==> !t:1->X. ~(i1 o t = i2 o t)")
 
 val pr_with_one = proved_th $
 e0
@@ -448,11 +390,12 @@ val p2_of_pa =  pa_def |> iffRL |> spec_all |> undisch
 
 (*AQ: massive conditional rw here *)
 (*AQ: why is pb proof so slow*)
+
 val parallel_p_compose = proved_th $
 e0
-(strip_tac >> match_mp_tac (irule_canon to_p_eq) >> 
- exists_tac (rastt "P") >> exists_tac (rastt "Q") >>
- exists_tac (rastt "pP:PQ->P") >> exists_tac (rastt "pQ:PQ->Q") >> strip_tac (* 2 *)
+(strip_tac >> irule to_p_eq >> 
+ exists_tac (rastt "P") >> exists_tac (rastt "pP:PQ->P") >> exists_tac (rastt "Q") >>
+ exists_tac (rastt "pQ:PQ->Q") >> strip_tac (* 2 *)
  >-- (drule p2_of_pa >> arw_tac[] >> arw_tac[GSYM o_assoc] >> 
       pick_x_assum (rapf "ispr(pC:CD->C, pD:CD->D)") assume_tac >> 
       drule p2_of_pa >> arw_tac[o_assoc]) >>
@@ -460,23 +403,8 @@ e0
  pick_x_assum (rapf "ispr(pC:CD->C, pD:CD->D)") assume_tac >> 
  drule p1_of_pa >> arw_tac[o_assoc]
  )
-(rapg "ispr(pM:MN->M,pN:MN->N1)& ispr(pC:CD->C,pD:CD->D) & ispr(pP:PQ->P,pQ:PQ->Q) ==> pa(pP,pQ, i o pC,j o pD) o pa(pC,pD,f o pM,g o pN) = pa(pP,pQ,i o f o pM,j o g o pN) ")
+(form_goal “ispr(pM:MN->M,pN:MN->N1)& ispr(pC:CD->C,pD:CD->D) & ispr(pP:PQ->P,pQ:PQ->Q) ==> pa(pP,pQ, i o pC,j o pD) o pa(pC,pD,f o pM,g o pN) = pa(pP,pQ,i o f o pM,j o g o pN)”)
 
-
-
-(*
-∀A B C D P Q f g i j. f∶ A → C ∧ g∶ B → D ∧ i∶ C → P ∧ j∶ D → Q ⇒
-                      ⟨i o p1 C D,j o p2 C D⟩ o ⟨f o p1 A B, g o p2 A B⟩ =
-                      ⟨i o f o p1 A B, j o g o p2 A B⟩
-
-(id A)∶A → A ∧ f∶B → C ∧ id A∶ A → A ∧ g∶ C → D ⇒
-   ⟨(id A) ∘ p1 A C, g ∘ p2 A C⟩ ∘ ⟨id A ∘ p1 A B, f ∘ p2 A B⟩ =
-   ⟨(id A) ∘ (id A) ∘ p1 A B,g ∘ f ∘ p2 A B⟩
-
-∀A B C D f g.f∶ B → C ∧ g∶ C→ D ⇒
-             ⟨p1 A B,g o f o p2 A B⟩ =
-             ⟨p1 A C, g o p2 A C⟩ o ⟨p1 A B, f o p2 A B⟩
-*)
 
 val parallel_p_one_side = 
 proved_th $ 
@@ -521,12 +449,13 @@ drule parallel_p_one_side >> arw_tac[])
 
 val iterated_p_eq_applied = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (irule_canon to_p_eq) >> 
-exists_tac (rastt "PQ") >> exists_tac (rastt "C") >> exists_tac (rastt "pPQ:PQC->PQ") >>
-exists_tac (rastt "pC:PQC->C") >> arw_tac[] >> match_mp_tac (irule_canon to_p_eq) >>
-exists_tac (rastt "P") >> exists_tac (rastt "Q") >> 
-exists_tac (rastt "pP:PQ->P")>> exists_tac (rastt "pQ:PQ->Q") >> arw_tac[])
-(rapg "ispr(pPQ:PQC->PQ,pC:PQC->C) & ispr(pP:PQ->P,pQ:PQ->Q) ==> !X f:X->PQC g. pP o pPQ o f = pP o pPQ o g & pQ o pPQ o f = pQ o pPQ o g & pC o f = pC o g ==> f = g")
+(repeat strip_tac >> irule to_p_eq >> 
+exists_tac (rastt "PQ") >>  exists_tac (rastt "pPQ:PQC->PQ") >> exists_tac (rastt "C") >>
+exists_tac (rastt "pC:PQC->C") >> arw_tac[] >> irule to_p_eq >>
+exists_tac (rastt "P") >>
+exists_tac (rastt "pP:PQ->P")>>
+ exists_tac (rastt "Q") >>  exists_tac (rastt "pQ:PQ->Q") >> arw_tac[])
+(form_goal “ispr(pPQ:PQC->PQ,pC:PQC->C) & ispr(pP:PQ->P,pQ:PQ->Q) ==> !X f:X->PQC g. pP o pPQ o f = pP o pPQ o g & pQ o pPQ o f = pQ o pPQ o g & pC o f = pC o g ==> f = g”)
 
 
 (*id N = N_ind z s*)
@@ -657,7 +586,7 @@ e0
  >-- (strip_tac >> once_arw_tac[] >> rw_tac[]) >> 
  drule eq_equality >> 
  strip_tac (* 2 *)
- >> (match_mp_tac (irule_canon is_eqind) >> arw_tac[] >> arw_tac[GSYM o_assoc])
+ >> (irule is_eqind >> arw_tac[] >> arw_tac[GSYM o_assoc])
  )
 (rapg "iseq(e0:E0->A0,f0:A0->B0,g0) ==> ismono(e0)")
 
@@ -671,7 +600,7 @@ e0
  >-- (strip_tac >> once_arw_tac[] >> rw_tac[]) >> 
  drule coeq_equality >> 
  strip_tac (* 2 *)
- >> (match_mp_tac (irule_canon is_coeqind) >> arw_tac[o_assoc]) 
+ >> (irule is_coeqind >> arw_tac[o_assoc]) 
  )
 (rapg "iscoeq(ce0:B0->cE0,f0:A0->B0,g0) ==> isepi(ce0)")
 
@@ -708,7 +637,11 @@ e0
       strip_tac >> first_x_assum (match_mp_tac o iffLR) >> arw_tac[]) >>
  dimp_tac >> strip_tac >> arw_tac[] >> pop_assum_list (map_every strip_assume_tac) >>
  first_x_assum match_mp_tac >> arw_tac[])
-(rapg "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y. ispb(f, g, p, q) <=> f o p = g o q & !A u : A -> X v : A -> Y. f o u = g o v ==> ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2")
+(rapg "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y.\
+      \ ispb(f, g, p, q) <=> \
+      \  f o p = g o q & \
+      \  !A u : A -> X v : A -> Y. \
+      \      f o u = g o v ==> ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2")
 
 val long_induced_map = rastt "eqind(e:E->XY, (f:X->Z) o pX, (g:Y->Z) o pY, pa(pX:XY->X, pY:XY->Y, u:A->X, v:A->Y))"
 
@@ -811,7 +744,7 @@ e0
 (strip_tac >> drule ax6 >> pop_assum strip_assume_tac >> strip_tac >>
  match_mp_tac ax5 >> exists_tac one >> exists_tac (rastt "x:1->A") >> 
  rw_tac[const1_def])
-(rapg "(~is0(A)) ==>!B f:A->B.?g:B->A. f o g o f = f")
+(rapg "~is0(A)==>!B f:A->B.?g:B->A. f o g o f = f")
 
 (*∀A B f g. f∶ A → B ∧ g∶B → A ∧ is_epi f ∧ f ∘ g ∘ f = f ⇒ f o g = id B*)
 
@@ -849,7 +782,7 @@ e0
  first_x_assum (specl_then (List.map rastt ["B","f:A->B"]) strip_assume_tac) >>
  drule mono_pinv_post_inv >> first_x_assum drule >> exists_tac (rastt "g:B->A") >>
  arw_tac[])
-(rapg "!A B f:A->B. ismono(f) ==> (~is0(A)) ==> ?g:B->A. g o f = id(A)")
+(rapg "!A B f:A->B. ismono(f) ==> ~is0(A) ==> ?g:B->A. g o f = id(A)")
 
 (*∀A B C f g. is_mono f ∧ is_mono g ∧ f∶ A → B ∧ g∶ B → C ⇒ is_mono (g o f)*)
 
@@ -880,7 +813,7 @@ e0
 
 val mono_o_iso_mono = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (irule_canon o_mono_mono) >> drule iso_is_mono >>
+(repeat strip_tac >> irule o_mono_mono >> drule iso_is_mono >>
  arw_tac[])
 (rapg "!X A i:X->A.isiso(i) ==> !B f:A->B. ismono(f) ==> ismono(f o i)")
 
@@ -1004,7 +937,7 @@ e0
 (rw_tac[areiso_def,is0_def] >> strip_tac >> dimp_tac >> repeat strip_tac 
  >-- (assume_tac const0_def >> drule (iffLR is0_def) >> 
       first_x_assum (specl_then [rastt "X"] strip_assume_tac) >>
-      exists_tac (rastt "(f0x:0->X) o f:A->0") >> strip_tac >>
+      exists_tac (rastt "(f0x:0->X) o (f:A->0)") >> strip_tac >>
       suffices_tac (rapf "f0x' o g o f = (f0x:0->X) o (f:A->0) o (g:0->A) o f") 
       >-- arw_tac[idR] >> arw_tac[GSYM o_assoc]) >>
  first_assum (specl_then [zero] strip_assume_tac) >>
@@ -1039,19 +972,19 @@ e0
  >-- (drule i1_ne_i2 >> strip_tac) >> 
  assume_tac const1_def >> drule (iffLR is1_def) >> pop_assum strip_assume_tac >>
  first_x_assum (specl_then [rastt "B"] strip_assume_tac) >> 
- suffices_tac (rapf "i1 o t1x = (i2:1->oneone) o t1x:B->1")
+ suffices_tac (rapf "i1 o t1x = (i2:1->oneone) o (t1x:B->1)")
  >-- (drule ax6 >> pop_assum strip_assume_tac >>
       strip_tac >> 
       by_tac (rapf "(t1x:B->1) o x = id(1)") 
       >-- accept_tac (one_to_one_id|> allE (rastt "(t1x:B->1) o (x:1->B)")) >>
-      suffices_tac (rapf "i1 o t1x o (x:1->B) = (i2:1->oneone) o t1x:B->1 o x") 
+      suffices_tac (rapf "i1 o t1x o (x:1->B) = (i2:1->oneone) o (t1x:B->1) o x") 
       >-- arw_tac[idR] >>
       arw_tac[GSYM o_assoc]) >>
  drule isepi_property >> first_x_assum match_mp_tac >> 
  drule (iffLR is0_def) >> first_x_assum (specl_then [rastt "oneone"] strip_assume_tac) >>
  arw_tac[]
  )
-(rapg "!A B f:A->B. isepi(f) ==> (~is0(B)) ==> ~is0(A)")
+(rapg "!A B f:A->B. isepi(f) ==> ~is0(B) ==> ~is0(A)")
 
 (*∀A B f. is_epi f /\ f∶ A → B /\ ¬(B ≅ zero)⇒ ∃g. g∶ B → A ∧ f o g = id B*)
 
@@ -1060,7 +993,7 @@ val epi_pre_inv = proved_th $
 e0
 (repeat strip_tac >> drule no_epi_from_zero >> first_x_assum drule >> 
  drule epi_non_zero_pre_inv >> first_x_assum drule >> arw_tac[])
-(rapg "!A B f:A->B. isepi(f) ==> (~is0(B)) ==> ?g:B->A. f o g = id(B)")
+(rapg "!A B f:A->B. isepi(f) ==> ~is0(B) ==> ?g:B->A. f o g = id(B)")
 
 (*∀f. ¬(f∶ one → zero)*)
 
@@ -1089,16 +1022,16 @@ e0
 (ccontra_tac >> pop_assum strip_assume_tac >> 
  strip_assume_tac ax8 >>
  suffices_tac (rapf "x1:1->X = x2") 
- >-- (arw_tac[] (*>> first_x_assum accept_tac*)) >>
+ >-- arw_tac[] >>
  assume_tac const0_def >> drule from0_exists >> 
  first_assum (specl_then [one] strip_assume_tac) >> 
- suffices_tac (rapf "x1 o f':0->1 o f:1->0 = (x2:1->X) o f' o f") 
- >-- (assume_tac (one_to_one_id |> allE (rastt "f':0->1 o f:1->0")) >>
+ suffices_tac (rapf "x1 o (f':0->1) o (f:1->0) = (x2:1->X) o f' o f") 
+ >-- (assume_tac (one_to_one_id |> allE (rastt "(f':0->1) o (f:1->0)")) >>
       arw_tac[idR]) >>
- suffices_tac (rapf "x1 o f':0->1 = (x2:1->X) o f'")
+ suffices_tac (rapf "x1 o (f':0->1) = (x2:1->X) o f'")
  >-- (strip_tac >> arw_tac[] >> arw_tac[GSYM o_assoc]) >>
  match_mp_tac from0_unique >> rw_tac[const0_def])
-(rapg "~?f:1->0.T")
+(rapg "~(?f:1->0.T)")
 
 (*∀A. A≅ zero ⇒ ¬(∃x. x∶ one → A)*)
 
@@ -1109,7 +1042,7 @@ e0
  suffices_tac (rapf "?f:1->0.T")
  >-- (strip_tac >> contr_tac (zero_no_mem |> eqF_intro |> iffLR |> undisch)) >>
  exists_tac (rastt "(f:A->0) o (f':1->A)") >> rw_tac[])
-(rapg "!A. areiso(A,0) ==> ~?f:1->A.T")
+(rapg "!A. areiso(A,0) ==> ~(?f:1->A.T)")
 
 (*∀A B f. is_epi f /\ f∶ A → B ==> (∀b. b∶ one → B ⇒ ∃b0. b0∶ one → A ∧ f o b0 = b)*)
 
@@ -1128,7 +1061,7 @@ e0
       ccontra_tac >> assume_tac (allE (rastt "B") iso_zero_no_mem) 
       >> last_assum drule >> full_simp_tac[]) >>
  by_tac (rapf "~areiso(A,0)")
- >-- (match_mp_tac (irule_canon no_epi_from_iso_zero) >> exists_tac (rastt "B") >>
+ >-- (irule no_epi_from_iso_zero >> exists_tac (rastt "B") >>
       exists_tac (rastt "f:A->B") >> arw_tac[] >> first_assum accept_tac) >>
  drule epi_non_zero_pre_inv >> 
  by_tac (rapf "~is0(A)") >-- (ccontra_tac >> full_simp_tac[GSYM iso_zero_is_zero]) >>
@@ -1151,7 +1084,7 @@ e0
  by_tac (rapf "copa(i1:1->oneone, i2:1->oneone, i1, i2) o i1 = copa(i1, i2, i2, i1) o i1")
  >-- arw_tac[] >> pop_assum mp_tac >> drule i1_of_copa >>
  arw_tac[])
-(rapg "!oneone i1:1->oneone i2:1->oneone. iscopr(i1,i2) ==> ~copa(i1,i2,i1,i2) = copa(i1,i2,i2,i1)") 
+(rapg "!oneone i1:1->oneone i2:1->oneone. iscopr(i1,i2) ==> ~(copa(i1,i2,i1,i2) = copa(i1,i2,i2,i1))") 
 
 
 (*∃X e1 e2. e1∶ X → X ∧ e2∶ X → X ∧ e1 ≠ e2*)
@@ -1163,7 +1096,7 @@ exists_tac (rastt "oneone") >>
 exists_tac (rastt "copa(i1:1->oneone, i2:1->oneone, i1, i2)") >>
 exists_tac (rastt "copa(i1:1->oneone, i2:1->oneone, i2, i1)") >>
 first_x_assum accept_tac)
-(rapg "?X e1:X->X e2. ~e1 = e2")
+(rapg "?X e1:X->X e2. ~(e1 = e2)")
 
 (*∀f A. f∶ A → zero ⇒ A ≅ zero*)
 
@@ -1263,9 +1196,11 @@ e0
  by_tac (rapf "ispr(p1:efs->X,p2:efs->X2Y)")
  >-- (drule exp_ispr >> arw_tac[]) >>
  by_tac (rapf "pa(p1:efs->X, p2:efs->X2Y, x:1->X, tp(p1, p2, ev:efs->Y, pX:X1->X, pone:X1->1, f o pX)) = pa(p1,p2,pX,tp(p1, p2, ev, pX, pone, f o pX) o pone) o pa(pX,pone,x,id(1))")
- >-- (match_mp_tac (irule_canon to_p_eq) >> exists_tac (rastt "X") >>
+ >-- (irule to_p_eq >> 
+qexistsl_tac ["X","p1:efs->X","X2Y","p2:efs->X2Y"]
+(*exists_tac (rastt "X") >>
       exists_tac (rastt "X2Y") >> exists_tac' (rastt "p1:efs->X") >> 
-      exists_tac' (rastt "p2:efs->X2Y") >> arw_tac[] >> repeat strip_tac (* 2 *) 
+      exists_tac' (rastt "p2:efs->X2Y")*) >> arw_tac[] >> repeat strip_tac (* 2 *) 
       >-- (drule p2_of_pa >> arw_tac[GSYM o_assoc] >> rw_tac[o_assoc] >>
            by_tac (rapf "pone o pa(pX:X1->X, pone:X1->1, x:1->X, id(1)) = id(1)")
            >-- (once_rw_tac[one_to_one_id] >> rw_tac[]) >>
@@ -1281,7 +1216,7 @@ e0
  pick_x_assum (rapf "ispr(p1:efs->X,p2:efs->X2Y)") (K all_tac) >>
  drule p1_of_pa >> once_arw_tac[] >> rw_tac[]
 )
-(rapg "!X Y X2Y efs ev p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==>!x:1->X f:X->Y.ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x")
+(form_goal “!X Y X2Y efs ev p1 p2. isexp(p1:efs ->X,p2:efs->X2Y,ev:efs -> Y) ==> !X1 pX:X1->X pone:X1->1. ispr(pX,pone) ==>!x:1->X f:X->Y.ev o pa(p1,p2,x,tp (p1,p2,ev,pX,pone,f o pX)) = f o x”)
 
 (*last_x_assum (first_assum o mp_then Any mp_tac) rev_drule 
 use mp_then, but a better style is to use spec first.
@@ -1321,7 +1256,7 @@ e0
       (*generates 2 more subgoals, 3 subgoals in total*)
       >-- (suffices_tac (rapf "x0':1->A = x0")
           >-- (strip_tac >> full_simp_tac[]) >>
-          match_mp_tac (irule_canon ismono_property) >>
+          irule ismono_property >>
           exists_tac' (rastt "X") >> exists_tac' (rastt "a:A->X") >>
           drule i1_of_copa >>
           by_tac (rapf "a = copa(iA:A->A1,ione:1->A1,a:A->X, x:1->X) o iA")
@@ -1330,7 +1265,7 @@ e0
           rw_tac[GSYM o_assoc] >> 
           pop_assum (K all_tac) >> pop_assum (K all_tac) >> 
           once_arw_tac[] >> rw_tac[]) >>
-      assume_tac (specl (List.map readt ["1","id(1)","x0':1->1"]) to1_unique) >>
+      assume_tac (specl (List.map rastt ["1","id(1)","x0':1->1"]) to1_unique) >>
       suffices_tac (rapf "?x0:1->A. (a:A->X) o x0 = x") 
       >-- (disch_tac >> first_assum opposite_tac) >> 
       exists_tac' (rastt "x0:1->A") >>
@@ -1340,7 +1275,7 @@ e0
       arw_tac[idR] >> strip_tac >> arw_tac[]) >> 
 first_assum 
           (specl_then [rastt "(g:X'->A1) o (a':1->X')"] strip_assume_tac)
->-- (assume_tac (specl (List.map readt ["1","id(1)","x0:1->1"]) to1_unique) >>
+>-- (assume_tac (specl (List.map rastt ["1","id(1)","x0:1->1"]) to1_unique) >>
      suffices_tac (rapf "?x0:1->A. (a:A->X) o x0 = x") 
      >-- (disch_tac >> first_assum opposite_tac) >> 
      exists_tac' (rastt "x0':1->A") >> 
@@ -1436,7 +1371,7 @@ e0
  pop_assum strip_assume_tac 
  >-- (suffices_tac (rapf "(g:A->Y) o (b:Y->A) o (h1:X->Y) o h2 = id(Y)")
       >-- arw[GSYM o_assoc,idL] >>
-      by_tac (rapf "g o b o h1 o h2 = (g:A->Y) o (b o h1:X->Y) o h2:Y->X")
+      by_tac (rapf "g o b o h1 o h2 = (g:A->Y) o (b o (h1:X->Y)) o (h2:Y->X)")
       >-- rw[o_assoc] >> arw_tac[idL]) >>
  pick_x_assum (rapf "ismono(b:Y->A)") (K all_tac) >>
  drule mono_non_zero_post_inv >> first_x_assum drule >> 
@@ -1492,20 +1427,20 @@ val prop_2_corollary_as_subobj = proved_th $
 e0
 (repeat strip_tac >> 
  by_tac (rapf "?h1:X->Y. (b:Y->A) o h1 = a") 
- >-- (match_mp_tac (irule_canon prop_2_half2) >> arw_tac[] >> 
+ >-- (irule prop_2_half2 >> arw_tac[] >> 
       repeat strip_tac >> 
       first_x_assum (specl_then [rastt "xb:1->X"] assume_tac) >> 
       pop_assum strip_assume_tac >> exists_tac' (rastt "y:1->Y") >>
       full_simp_tac[]) >> 
  by_tac (rapf "?h2:Y->X. (a:X->A) o h2 = b") 
- >-- (match_mp_tac (irule_canon prop_2_half2) >> arw_tac[] >> 
+ >-- (irule prop_2_half2 >> arw_tac[] >> 
       repeat strip_tac >>
       first_x_assum (specl_then [rastt "xb:1->Y"] assume_tac) >>
-      pop_assum strip_assume_tac >> exists_tac' (readt "x':1->X") >>
+      pop_assum strip_assume_tac >> qexists_tac "x':1->X" >>
       full_simp_tac[]) >>
  pop_assum_list (map_every strip_assume_tac) >> 
  exists_tac' (rastt "h1:X->Y") >> exists_tac' (rastt "h2:Y->X") >>
- arw[] >> match_mp_tac (irule_canon inc_inc_iso_as_subobj) >>
+ arw[] >> irule inc_inc_iso_as_subobj >>
  exists_tac' (rastt "A") >> exists_tac' (rastt "a:X->A") >> exists_tac' (rastt "b:Y->A") >> arw[])
 (rapg "!X A a:X->A.ismono(a) ==> !Y b:Y->A. ismono(b) & (!y:1->Y. ?x:1->X.a o x = b o y) & (!x:1->X.?y:1->Y.a o x = b o y) ==> ?h1:X->Y h2:Y->X. b o h1 = a & a o h2 = b & h1 o h2 = id(Y) & h2 o h1 = id(X)") 
 
@@ -1572,7 +1507,7 @@ e0
       first_x_assum (specl_then [rastt "id(B)"] assume_tac) >>
       remove_asm_tac (rapf "!f0x0: B -> A. f0x0 = f0x'") >>
       arw_tac[]) >>
- match_mp_tac (irule_canon epi_pre_inv) >> full_simp_tac[iso_zero_is_zero])
+ irule epi_pre_inv >> full_simp_tac[iso_zero_is_zero])
 (rapg "!A B e.isepi(e) ==> ?s0:B->A.e o s0 = id(B)")
 
 (*∀f g h h0 A B X. f∶ A → B ∧ g∶ A → B ∧ h∶ X → A ∧ h0∶ X → eqo f g ∧
@@ -1590,7 +1525,7 @@ e0
 val fac_through_coeq = proved_th $
 e0
 (repeat strip_tac >> 
- suffices_tac (rapf "ce o f = ce:B->cE o (g:A->B)")
+ suffices_tac (rapf "ce o f = (ce:B->cE) o (g:A->B)")
  >-- (strip_tac >> rule_assum_tac (fn th => sym th handle _ => th)
       >> arw[GSYM o_assoc]) >> 
  drule coeq_equality >> arw_tac[] >> pop_assum (K all_tac) >>
@@ -1652,14 +1587,13 @@ e0
         (h o ⟨id N,f⟩ = f o s ⇔ ⟨s o p1 N B, h⟩ o ⟨id N, f⟩ = ⟨id N, f⟩ o s)
 cannot use different choice of products for two N* B, because of the h.
 *)
-val once_arw = once_arw_tac
 
 val Thm1_case1_comm_condition_right = proved_th $
 e0
 (repeat strip_tac >> dimp_tac >> strip_tac
  >-- (drule to_p_eq >> first_x_assum match_mp_tac >> 
      drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR]) >>
- drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB","s o pN:NB->N","h:NB->B"]) (assume_tac o GSYM)) >> 
+ drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB","s o (pN:NB->N)","h:NB->B"]) (assume_tac o GSYM)) >> 
 first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) (assume_tac o GSYM)) >> pop_assum mp_tac >> once_arw_tac[] >> rw_tac[o_assoc] >>
 strip_tac >> drule p2_of_pa >> once_arw[] >> rw[o_assoc])
 (rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N),f) = f o s <=> pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s")
@@ -1672,7 +1606,7 @@ e0
  >-- (rev_drule to_p_eq >> first_x_assum match_mp_tac >> 
      rev_drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR] >>
      drule p1_of_pa >> arw[idR]) >>
- rev_drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB'","s o pN':NB'->N","h:NB'->B"]) (assume_tac o GSYM)) >> once_arw[] >> 
+ rev_drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB'","s o (pN':NB'->N)","h:NB'->B"]) (assume_tac o GSYM)) >> once_arw[] >> 
  rw[o_assoc] >> once_arw[] >> once_arw[]>> 
 first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) assume_tac) >>
 rw[GSYM o_assoc] >> once_arw[] >> rw[])
@@ -1826,7 +1760,7 @@ val parallel_p_one_side_split =
                      |> split_assum' |> split_assum' |> disch_all'' |> gen_all
 
 val f0 = rastt "(f:AN->B) o pa(pA:AN->A, pN:AN->N, pA':A1->A, z o (pone:A1->1))"
-val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o z o pone:A1->1)"
+val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o z o (pone:A1->1))"
 
 
 
@@ -1859,13 +1793,13 @@ val Thm1_comm_eq_left = proved_th $
        (specl_then ([rastt "A1"]) assume_tac) >>
       first_x_assum drule >> 
       first_x_assum 
-       (specl_then ([rastt "(g:A->B) o (pA':A1->A)"]) accept_tac)
-      (*turn ev o pa(p1, p2, pA', (tp(p1, p2, ev, pA, pN, f) o z) o pone)
-        into ev o pa(p1, p2, pA', tp(p1, p2, ev, pA', pone, (g o pA')) o pone)
-        by assumption then into non-tp*)) >>
- match_mp_tac (irule_canon ev_eq_eq) >>
- pexistsl_tac ["A","A1","B","efs","ev:efs->B","p1:efs->A",
-               "pA':A1->A","p2:efs->A2B","pone:A1->1"] >>
+       (specl_then ([rastt "(g:A->B) o (pA':A1->A)"]) accept_tac)) >>
+ irule ev_eq_eq >>
+ qexistsl_tac ["A","A1","pA':A1->A","pone:A1->1",
+              "B","efs","ev:efs->B",
+              "p1:efs->A","p2:efs->A2B"]
+ (*pexistsl_tac ["A","A1","B","efs","ev:efs->B","p1:efs->A",
+               "pA':A1->A","p2:efs->A2B","pone:A1->1"]*) >>
  once_arw[] >> rw[] >>
  drule ev_of_tp >> first_x_assum (pspecl_then ["A1"] assume_tac) >>
  first_x_assum drule >> once_arw[] >>
@@ -1876,7 +1810,7 @@ val Thm1_comm_eq_left = proved_th $
       first_x_assum 
        (specl_then (List.map rastt ["f:AN->B"]) assume_tac) >>
  once_arw[] >> first_x_assum accept_tac)
-(rapg "!A AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !A2B B efs p1:efs->A p2:efs->A2B ev:efs->B. isexp(p1,p2,ev) ==> !A1 pA':A1->A pone:A1->1. ispr(pA',pone) ==> !g:A->B f:AN->B.tp(p1,p2,ev,pA,pN,f) o z = tp(p1,p2,ev,pA',pone,g o pA') <=> f o pa(pA,pN,pA',z o pone) = g o pA'")
+(form_goal “!A AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !A2B B efs p1:efs->A p2:efs->A2B ev:efs->B. isexp(p1,p2,ev) ==> !A1 pA':A1->A pone:A1->1. ispr(pA',pone) ==> !g:A->B f:AN->B.tp(p1,p2,ev,pA,pN,f) o z = tp(p1,p2,ev,pA',pone,g o pA') <=> f o pa(pA,pN,pA',z o pone) = g o pA'”)
 
 
 
@@ -1887,14 +1821,10 @@ fun sym_tac (G,fl,f) =
         ([(G,fl,mk_eq t2 t1)], sing sym)
       | _ => raise ERR ("sym_tac.not an equation",[],[],[f])
 
-fun readfq [QUOTE s] = rapf s
-
-structure Parse = struct val Term=readfq end
-
 
 val Thm1_comm_eq_right_lemma_short = proved_th $
  e0
-(repeat strip_tac >> sym_tac >> match_mp_tac (irule_canon is_tp) >> arw[] >>
+(repeat strip_tac >> sym_tac >> irule is_tp >> arw[] >>
  (*split the pa(p1, p2, pA, (tp(p1, p2, ev, pA, pN, f) o s) o pN)*) 
  drule exp_ispr >>
  by_tac 
@@ -1905,7 +1835,7 @@ val Thm1_comm_eq_right_lemma_short = proved_th $
  arw[GSYM o_assoc])
 (rapg "!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. isexp(p1,p2,ev) ==> !AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !f:AN->B.tp(p1,p2,ev,pA,pN,f o pa(pA,pN,pA,s o pN)) = tp(p1,p2,ev,pA,pN,f) o s")
 
-fun form_goal f = new_goal (fvf f,[]:form list,f)
+
 
 (*(pick_x_assum “ispr(Ap:AP->P, aP:AP->A)” mp_tac) if the input not in the asumption list, then HOL error instead of pick x assum err TODO*)
 
@@ -1913,7 +1843,7 @@ fun form_goal f = new_goal (fvf f,[]:form list,f)
 val Thm1_comm_eq_right_lemma_long = proved_th $ 
 e0 
 (repeat strip_tac >> pop_assum (assume_tac o sym) >> arw[] >>
- sym_tac >> match_mp_tac (irule_canon is_tp) >> arw[] >>
+ sym_tac >> irule is_tp >> arw[] >>
  pspecl_then ["A","AN","pA:AN->A","AP","Ap:AP->A","AA2B"] assume_tac parallel_p_one_side >>
  drule exp_ispr >>
  by_tac “ispr(pA:AN->A,pN:AN->N) & ispr(Ap:AP->A, aP:AP->P) & ispr(p1:AA2B->A, p2:AA2B->A2B)” >-- arw[] >>
@@ -1964,8 +1894,8 @@ e0
  >-- (strip_tac >> once_arw[] >> drule ev_of_tp >>
       pick_x_assum “ispr(pA:AN->A,pN:AN->N)” assume_tac >>
       first_x_assum drule >> once_arw[] >> rw[]) >>
- match_mp_tac (irule_canon to_p_eq) >> 
- pexistsl_tac ["A","A2B","p1 : AA2B ->A","p2 : AA2B -> A2B"] >>
+ irule to_p_eq >> 
+ pexistsl_tac ["A","p1 : AA2B ->A","A2B","p2 : AA2B -> A2B"] >>
  drule p12_of_pa >> once_arw[] >> rw[GSYM o_assoc] >> once_arw[] >>
  pick_x_assum “ispr(Ap:AP->A, aP:AP->P)” assume_tac >>
  drule p12_of_pa >> rw[o_assoc] >> once_arw[] >>
@@ -2000,6 +1930,7 @@ val Thm1_comm_eq_right_lemma_long' =
          "tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, (h:ANB->B) o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B))"] |>
  undisch |> prove_hyp (refl (rastt "tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, (h:ANB->B) o pa(pAN:ANB->AN, pB:ANB->B, id(AN), f:AN->B))"))
  |> spec_all |> undisch|> spec_all |> undisch
+
 (*))
 (form_goal
  “!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. 
@@ -2132,7 +2063,7 @@ val Thm1 = proved_th $
  pexistsl_tac ["(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,pA:AN->A,(fb:N->A2B) o (pN:AN->N))"] >>
  abbrev_tac “(ev:AA2B->B) o pa(p1:AA2B->A,p2:AA2B->A2B,pA:AN->A,(fb:N->A2B) o (pN:AN->N)) = f” >>
  by_tac “tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA:AN->A,pN:AN->N,f:AN->B) = fb”
- >-- (sym_tac >> match_mp_tac (irule_canon is_tp) >> once_arw[] >> rw[]) >>
+ >-- (sym_tac >> irule is_tp >> once_arw[] >> rw[]) >>
  strip_tac >> dimp_tac >> strip_tac (* 2 *)
  >-- (once_arw[] >> match_mp_tac (gen_all tp_eq) >>
       pexistsl_tac ["A","A2B","pA:AN->A","N","pN:AN->N",
@@ -2150,7 +2081,7 @@ val Thm1 = proved_th $
      pick_xnth_assum 15 mp_tac >> pop_assum mp_tac >> 
      pop_assum_list (map_every (K all_tac)) >>
      repeat strip_tac >> rev_full_simp_tac[]) >>
- once_arw[] >> sym_tac >> match_mp_tac (irule_canon is_tp) >>
+ once_arw[] >> sym_tac >> irule is_tp >>
  once_arw[] >> once_arw[] >> rw[])
 (form_goal
  “!A AN pA:AN->A pN:AN->N.
@@ -2217,7 +2148,7 @@ strip_assume_tac
      >-- (strip_tac >> pick_xnth_assum 5 mp_tac >> rev_full_simp_tac[]) >>
      rw[o_assoc] >> once_arw[] >> rw[]
  )
-(form_goal “!n:1->N. ~ s o n = z”)
+(form_goal “!n:1->N. ~ (s o n = z)”)
 
 (*is_mono s*)
 
@@ -2230,7 +2161,7 @@ e0
 (*∀A a s' z'. a∶ A → N ∧ is_mono a ∧ s'∶ A → A ∧ z'∶ one → A ∧
             a o s' = s o a ∧ a o z' = z ⇒ A ≅ N*)
 
-val rpt = repeat  
+
 
 val Thm2_3_alt = proved_th $ 
 e0
@@ -2266,7 +2197,7 @@ e0
 val ind_fac = proved_th $
  e0
 (rpt strip_tac >> 
- strip_assume_tac (pb_exists |> pspecl ["A","N","s o a:A->N","A","a:A->N"]) >>
+ strip_assume_tac (pb_exists |> pspecl ["A","N","s o (a:A->N)","A","a:A->N"]) >>
  drule pb_equality >>
  suffices_tac “isiso(p:P->A)”
  >-- (rw[isiso_def] >> strip_tac >> pexistsl_tac ["(q:P->A) o (f':A->P)"] >>
@@ -2289,16 +2220,11 @@ val ind_fac = proved_th $
 (*Theorem Thm2_3:        
 ∀A a. is_subset a N ∧ (∀n. is_mem n a N ⇒ is_mem (s o n) a N) ∧
     is_mem z a A ⇒ dom a ≅ N
-Proof
-rw[] >> irule Thm2_3_alt >> fs[is_subset_def] >>
-‘a∶ dom a → N’ by metis_tac[hom_def] >>
-qabbrev_tac ‘A = dom a’ >>
-drule ind_factorization >> fs[is_mem_def] >> metis_tac[]
-QED*)
+*)
 
 val Thm2_3 = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (irule_canon Thm2_3_alt) >> 
+(repeat strip_tac >> irule Thm2_3_alt >> 
  drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
  full_simp_tac[ismem_def] >> 
  pexistsl_tac ["a:A->N","t:A->A","x0:1->A"] >> arw[])
@@ -2307,7 +2233,7 @@ e0
 
 val Thm2_3' = proved_th $
 e0
-(repeat strip_tac >> match_mp_tac (irule_canon Thm2_3_alt') >> 
+(repeat strip_tac >> irule Thm2_3_alt' >> 
  drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
  full_simp_tac[ismem_def] >> strip_tac
  >-- (qexistsl_tac ["x0"] >> arw[]) >>
@@ -2331,7 +2257,7 @@ val coeq_of_equal_post_inv = proved_th $
 e0
 (rpt strip_tac >> 
  drule coeqind_def >> pop_assum strip_assume_tac >>
- by_tac “id(B) o f = id(B) o f:A->B” >-- rw[] >> first_x_assum drule >>
+ by_tac “id(B) o f = id(B) o (f:A->B)” >-- rw[] >> first_x_assum drule >>
  pexistsl_tac ["coeqind(e:B->cE, f, f:A->B, id(B))"] >>
  arw[])
 (form_goal 
@@ -2353,10 +2279,10 @@ e0
  drule coeq_of_equal_post_inv >> 
  first_x_assum (x_choose_then "k''" assume_tac) >>
  drule eq_equality >>
- suffices_tac “k'' o (k' o i1) o q' o t = (k'':R'->BB) o (k' o (i2:B->BB)) o q' o t:1->I0” 
+ suffices_tac “k'' o (k' o i1) o q' o t = (k'':R'->BB) o (k' o (i2:B->BB)) o q' o (t:1->I0)” 
  >-- (rw[GSYM o_assoc] >> once_arw[] >> rw[idL]) >>
- by_tac “k'' o (k' o i1) o q' o t = (k'':R'->BB) o ((k' o i1:B->BB) o q') o (t:1->I0) & 
-         k'' o (k' o i2) o q' o t = (k'':R'->BB) o ((k' o i2:B->BB) o q') o (t:1->I0)”
+ by_tac “k'' o (k' o i1) o q' o t = (k'':R'->BB) o ((k' o (i1:B->BB)) o q') o (t:1->I0) & 
+         k'' o (k' o i2) o q' o t = (k'':R'->BB) o ((k' o (i2:B->BB)) o q') o (t:1->I0)”
  >-- rw[o_assoc] >>
  once_arw[] >> once_arw[] >> rw[]
  )
@@ -2415,13 +2341,13 @@ e0
  drule coeqa_is_epi >> rev_drule coeqa_is_epi >> 
  by_tac “~(areiso(I0,0))”
  >-- (ccontra_tac >> suffices_tac “areiso(A,0)” >-- arw[] >>
-      match_mp_tac to_zero_zero >> pexistsl_tac ["I0","(h:I'->I0) o q:A->I'"] >>
+      match_mp_tac to_zero_zero >> pexistsl_tac ["I0","(h:I'->I0) o (q:A->I')"] >>
       arw[]) >>
  strip_tac  (* 2 *)
  >-- (suffices_tac “ismono((q':I0->B) o h:I'->I0)” 
       >-- (strip_tac >> drule o_mono_imp_mono >> first_x_assum accept_tac) >>
       by_tac “?t.(q:A->I') o t = id(I')”
-      >-- (match_mp_tac (irule_canon epi_non_zero_pre_inv) >>
+      >-- (irule epi_non_zero_pre_inv >>
            fs[iso_zero_is_zero]) >>
       pop_assum strip_assume_tac >>
       match_mp_tac ismono_applied >> rpt strip_tac >>
@@ -2601,11 +2527,11 @@ e0
  rev_drule eqa_is_mono >> drule coeqa_is_epi >>
  fs[GSYM o_assoc] >> 
  pexistsl_tac ["I'","q':I0->B o h:I'->I0","q:A->I'"] >>
- arw[] >> match_mp_tac (irule_canon mono_o_iso_mono) >> arw[])
+ arw[] >> irule mono_o_iso_mono >> arw[])
 (form_goal “!A B f:A->B. ?X m:X->B e:A->X. isepi(e) & ismono(m) & f = m o e”)
 
 
-val irule = match_mp_tac o irule_canon
+
 
 val isepi_surj = is_epi_surj
 
@@ -2625,7 +2551,7 @@ val Thm4 = proved_th $
  >-- (strip_tac >> 
       by_tac “pa(p1:P->X,p2:P->X2two,x:1->X,ss:J->X2two o j:1->J) = 
               pa(p1,p2,pX:XJ->X,ss o pJ:XJ->J) o pa(pX,pJ,x,j)”
-      >-- (irule to_p_eq >> pexistsl_tac ["X","X2two","p1:P->X","p2:P->X2two"]>>
+      >-- (irule to_p_eq >> pexistsl_tac ["X","p1:P->X","X2two","p2:P->X2two"]>>
            drule exp_ispr >> drule p12_of_pa >> arw[GSYM o_assoc] >>
            rev_drule p12_of_pa >> arw[o_assoc]) >>
       once_arw[] >> arw[GSYM o_assoc]) >>
@@ -2636,7 +2562,7 @@ dimp_tac >> strip_tac (* 2 *) >--
  pexistsl_tac ["pJ:XJ->J o k:E->XJ o xb:1->E"] >>
  by_tac 
  “pa(pX:XJ->X,pJ:XJ->J,x,pJ:XJ->J o k:E->XJ o xb:1->E) = k:E->XJ o xb:1->E”
- >-- (irule to_p_eq >> pexistsl_tac ["X","J","pX:XJ->X","pJ:XJ->J"] >>
+ >-- (irule to_p_eq >> pexistsl_tac ["X","pX:XJ->X","J","pJ:XJ->J"] >>
      drule p12_of_pa >> arw[] >>
      arw[GSYM o_assoc] >> arw[o_assoc]) >>
  drule eq_equality >> 
@@ -2737,7 +2663,7 @@ AQ9. Jim replyed and prefers having equality on objects.
 
 *)
 
-(*TODO: parser bug rapg "!i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x:1->AB. (?x0:1->A. i1 o x0 = x) | (?x0:1->B. i2 o x0 = x)" need () around  (?x0:1->B. i2 o x0 = x)*)
+
 
 val Thm5_constructions = proved_th $
 e0
@@ -2795,7 +2721,7 @@ e0
  by_tac “pa(p1', p2', (a o Ax2:AX2->A), aX2:AX2->X2) o pa(Ax2, aX2, pA:A1->A, phi0 o pone:A1->1) = 
         pa(p1':XX2->X,p2':XX2->X2,pX':X1->X, phi0:1->X2 o pone':X1->1) o pa(pX',pone',a:A->X o pA:A1->A, pone)”
  >-- (irule to_p_eq >> 
-     pexistsl_tac ["X","X2","p1':XX2->X","p2':XX2->X2"] >>
+     pexistsl_tac ["X","p1':XX2->X","X2","p2':XX2->X2"] >>
      drule exp_ispr >> drule p12_of_pa >> rw[GSYM o_assoc] >>
      once_arw[] >> rw[o_assoc] >> 
      pop_assum (K all_tac) >> pop_assum (K all_tac) >>
@@ -2849,7 +2775,7 @@ by_tac “ub:XL->two o pa(pX:XL->X, pL:XL->L, b:1->X, phi0':1->L) = (i2:1->two o
 >-- (by_tac “pa(p1':XX2->X,p2':XX2->X2,pX:XL->X,u:L->X2 o pL:XL->L) o pa(pX, pL, b:1->X, phi0':1->L) = 
             pa(p1', p2', b, u o phi0')”
      >-- (irule to_p_eq >> 
-          pexistsl_tac ["X","X2","p1':XX2->X","p2':XX2->X2"] >>
+          pexistsl_tac ["X","p1':XX2->X","X2","p2':XX2->X2"] >>
           drule exp_ispr >> drule p12_of_pa >> rw[GSYM o_assoc] >>
           once_arw[] >> 
           assume_tac (assume “ispr(pX:XL->X, pL:XL->L)”) >>
@@ -2870,7 +2796,7 @@ by_tac “?bp0:1->E.k:E->XL o bp0 = pa(pX:XL->X,pL:XL->L,b:1->X,phi0':1->L)”
      drule eq_eqn >> first_x_assum drule >> once_arw[] >> rw[]) >>
 pop_assum strip_assume_tac >> pexistsl_tac ["bp0:1->E"] >> 
 irule to_p_eq >> drule exp_ispr >> 
-pexistsl_tac ["X","X2","p1':XX2->X","p2':XX2->X2"] >> once_arw[] >>
+pexistsl_tac ["X","p1':XX2->X","X2","p2':XX2->X2"] >> once_arw[] >>
 drule p12_of_pa >> rw[GSYM o_assoc] >> once_arw[] >>
 assume_tac (assume “ispr(pX:XL->X, pL:XL->L)”) >>
 drule p12_of_pa >> rw[o_assoc] >> once_arw[] >> once_arw[] >>
@@ -2942,9 +2868,6 @@ pop_assum (assume_tac o GSYM) >> once_arw[] >> rw[o_assoc]
  !A' a':A'->X q:E->A'.isepi(q) & ismono(a') & pX o k = a' o q ==>
         !AA' iA:A->AA' iA':A'->AA'. iscopr(iA,iA') ==> isepi(copa(iA,iA',a,a'))”)
 
-(*TO-DO: AQ: should I edit the once arw so it rw a refl into T? to avoid once_arw[] >> rw[] 
-
-but sometimes once_arw gives t = t & x = x but arw gives something weird*)
 
 (*TO-DO: rpt strip can create variables whose name clashes with existing variables belive it is done by editing strip.*)
 
@@ -3016,7 +2939,7 @@ by_tac “!x:1 -> X. (?xb: 1 -> A'. a':A'->X o xb = x) ==>
  by_tac “pa(p1', p2', x, u o pL o k o x0) = 
          pa(p1':XX2->X, p2':XX2->X2, pX, u:L->X2 o pL) o pa(pX:XL->X,pL:XL->L,x:1->X,pL:XL->L o k:E->XL o x0:1->E)”
  >-- (irule to_p_eq >> drule exp_ispr >> drule p12_of_pa >>
-     pexistsl_tac ["X","X2","p1':XX2->X","p2':XX2->X2"] >> once_arw[] >>
+     pexistsl_tac ["X","p1':XX2->X","X2","p2':XX2->X2"] >> once_arw[] >>
      rw[GSYM o_assoc] >> once_arw[] >>
      assume_tac (assume “ispr(pX:XL->X,pL:XL->L)”) >>
      drule p12_of_pa >> rw[o_assoc] >> once_arw[] >> rw[]) >>
@@ -3028,7 +2951,7 @@ by_tac “!x:1 -> X. (?xb: 1 -> A'. a':A'->X o xb = x) ==>
       rw[GSYM o_assoc] >> once_arw[] >> rw[]) >>
  once_arw[] >> 
  by_tac “pa(pX:XL->X, pL, pX o k o x0, (pL:XL->L o k) o x0) = k:E->XL o x0:1->E”
- >-- (irule to_p_eq >> pexistsl_tac ["X","L","pX:XL->X","pL:XL->L"] >>
+ >-- (irule to_p_eq >> pexistsl_tac ["X","pX:XL->X","L","pL:XL->L"] >>
       once_arw[] >> assume_tac (assume “ispr(pX:XL->X, pL:XL->L)”) >>
       drule p12_of_pa >> once_arw[] >> once_arw[] >>
       rw[o_assoc]) >>
@@ -3294,7 +3217,7 @@ val Thm6_first_sentence = proved_th $
  first_x_assum (qspecl_then ["p1 o e o y","p2 o e o y"] assume_tac) >>
  drule eq_equality >>
  fs[GSYM o_assoc] >> qexists_tac "r" >> 
- irule to_p_eq >> qexistsl_tac ["A","A","p1","p2"] >> 
+ irule to_p_eq >> qexistsl_tac ["A","p1","A","p2"] >> 
  drule p12_of_pa >> arw[GSYM o_assoc]
 )
 (form_goal “!R A f0:R->A f1. isrefl(f0,f1) & issymm(f0,f1) & istrans(f0,f1)==> !AA p1:AA->A p2:AA->A. ispr(p1,p2) ==> ismono(pa(p1,p2,f0,f1)) ==> 
@@ -3380,7 +3303,7 @@ val _ = new_fun "char" (mk_ar_sort (mk_ob "X") (mk_ob "two"),[("i1",mk_ar_sort o
 
 val compose_with_id_to1 = proved_th $
 e0
-(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","1","pA","pone"] >>
+(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","pA","1","pone"] >>
 arw[GSYM o_assoc] >> drule p12_of_pa >> once_arw[] >>
 rw[idL] >> once_rw[one_to_one_id] >> rw[])
 (form_goal
@@ -3416,7 +3339,7 @@ e0
 
 val two_steps_compose_combine = proved_th $
 e0
-(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","Y","Ay","aY"] >>
+(rpt strip_tac >> irule to_p_eq >> qexistsl_tac ["A","Ay","Y","aY"] >>
  rw[GSYM o_assoc] >> drule p12_of_pa >> once_arw[] >>
  rw[o_assoc] >> rev_drule p12_of_pa >> once_arw[] >> rw[idR])
 (form_goal 
@@ -3443,7 +3366,7 @@ qsuff_tac
  pone)) o pa(pA, pone, x, id(1))’ 
 >-- (strip_tac >> once_arw[] >> rw[]) >>
 irule to_p_eq >> rev_drule p12_of_pa >>
-qexistsl_tac ["A","X2Y","Ax2y","aX2Y"] >> once_arw[] >>
+qexistsl_tac ["A","Ax2y","X2Y","aX2Y"] >> once_arw[] >>
 rw[GSYM o_assoc] >> once_arw[] >> rw[o_assoc] >>
 drule p12_of_pa >> once_arw[] >> rw[idR])
 (form_goal 
@@ -3497,7 +3420,7 @@ val to_p_with_1 = proved_th $
 e0
 (rpt strip_tac >> qexistsl_tac ["pA o a"] >>
 drule p12_of_pa >> irule to_p_eq >>
-qexistsl_tac ["A","1","pA","pone"] >> arw[] >> once_rw[one_to_one_id] >>
+qexistsl_tac ["A","pA","1","pone"] >> arw[] >> once_rw[one_to_one_id] >>
 rw[])
 (form_goal
 “!A A1 pA:A1->A pone:A1->1. ispr(pA,pone) ==> 
@@ -3589,13 +3512,6 @@ qspecl_then ["A","R2"] (x_choosel_then ["AR2","Ar2","aR2"] assume_tac) pr_ex >>
 abbrev_tac (rapf "pa(Ar2:AR2->A,aR2:AR2->R2,h:R->A o p1':RR2->R,p2':RR2->R2) = h2R") >>
 qspecl_then ["R'","AR2","h2R o Psi"] (x_choosel_then ["M","m","e"] assume_tac) mono_epi_fac >>
 abbrev_tac (rapf "char(i1:1->two,i2:1->two,m:M->AR2) = phi") >> 
-(*qby_tac ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’
-example of qby does not response.
-TODO!!!: parser problem:
-
-pwcfq ct  ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’; looping
-
-*)
 by_tac (rapf "!x:1->AR2. (?x0:1->M. m:M->AR2 o x0 = x) <=> phi:AR2->two o x = i2:1->two")
 >-- (pop_assum_list (map_every strip_assume_tac) >>
      drule char_def >> first_x_assum drule >> 
@@ -3617,7 +3533,7 @@ strip_tac >> dimp_tac >> strip_tac (* 2 *)>--
  rfs[] >> (*already have ‘∃r'. r'∶one → R' ∧ (h2R ∘ ψ) ∘ r' = ⟨x,tp (psi ∘ p1 R one)⟩’ here the r' is called a*)
  qexistsl_tac ["p1' o Psi o a"] >> strip_tac (* 2 *)
  >-- (qexistsl_tac ["a"] >> irule to_p_eq >>
-      qexistsl_tac ["R","R2","p1'","p2'"] >> 
+      qexistsl_tac ["R","p1'","R2","p2'"] >> 
       drule exp_ispr >> drule p12_of_pa >> once_arw[] >> rw[] >> 
       qby_tac ‘p2' = aR2 o h2R’
       >-- (qpick_x_assum ‘pa(Ar2, aR2, h o p1', p2') = h2R’ 
@@ -3652,7 +3568,7 @@ qby_tac ‘m o e o r' = h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o
      once_arw[] >> first_x_assum accept_tac) >>
 qby_tac ‘h2R o pa(p1', p2', r, tp(p1', p2', ev', pR, pone', psi o pR)) = 
 pa(Ar2, aR2, x, tp(p1', p2', ev', pR, pone', psi o pR))’
->-- (irule to_p_eq >> qexistsl_tac ["A","R2","Ar2","aR2"] >>
+>-- (irule to_p_eq >> qexistsl_tac ["A","Ar2","R2","aR2"] >>
      drule p12_of_pa >> once_arw[] >> 
      qpick_x_assum 
      ‘pa(Ar2, aR2, h o p1', p2') = h2R’ (assume_tac o GSYM) >>
@@ -3830,7 +3746,8 @@ split_assum' |> split_assum' |> gen_all |> disch_first |> gen_all
 val Thm6_g_ev_lemma = proved_th $
 e0
 (rpt strip_tac >> irule ev_eq_eq >>
- qexistsl_tac ["R","R1","two","RR2","ev'","p1'","pR","p2'","pone'"] >>
+ qexistsl_tac ["R","R1","pR","pone'","two","RR2","ev'","p1'","p2'"]
+ (*qexistsl_tac ["R","R1","two","RR2","ev'","p1'","pR","p2'","pone'"] *)>>
  arw[] >> pop_assum (assume_tac o GSYM) >> once_arw[] >>
  drule exp_ispr >> drule parallel_p_one_side_three' >>
  qpick_x_assum ‘ispr(pR, pone')’ assume_tac>>
@@ -3857,7 +3774,7 @@ e0
  pone)) o pa(pA, pone, id(A), to1(A, 1)) o f0 o pR’
  >-- (strip_tac >> once_arw[] >> rw[]) >>
  irule to_p_eq >>
- qexistsl_tac ["A","A2","p1","p2"] >> 
+ qexistsl_tac ["A","p1","A2","p2"] >> 
  rev_drule exp_ispr >> drule p12_of_pa >> rw[GSYM o_assoc] >> 
  once_arw[] >>
  qby_tac 
@@ -3962,7 +3879,8 @@ tp(p1',p2',ev',Ra2,rA2,ev o pa(p1,p2,f0 o Ra2,rA2)) o sg(i1,i2,p1,p2,ev,pA,pone,
 val f0g_eq_f1g = proved_th $
  e0
 (rpt strip_tac >> irule fun_ext >> strip_tac >> irule ev_eq_eq >>
- qexistsl_tac ["A","A1","two","AA2","ev","p1","pA","p2","pone"] >> 
+ qexistsl_tac ["A","A1","pA","pone","two","AA2","ev","p1","p2"]
+ (*qexistsl_tac ["A","A1","two","AA2","ev","p1","pA","p2","pone"] *) >> 
  arw[] >> irule fun_ext >> strip_tac >> 
  qpick_x_assum ‘ispr(pA, pone)’ assume_tac >>
  drule to_p_with_1 >> 
@@ -4087,7 +4005,8 @@ e0
 val Thm6 = proved_th $
 e0
 (rpt strip_tac >> irule Thm6_first_sentence >> 
- qexistsl_tac ["A","AA","cE","ce","e","f0","f1","pA1","pA2"] >>
+ qexistsl_tac ["A","f0","f1","AA","e","pA1","pA2","cE","ce"] 
+ (*qexistsl_tac ["A","AA","cE","ce","e","f0","f1","pA1","pA2"] *)>>
  arw[] >> rpt strip_tac >> irule equiv_to_same_element >> 
  once_arw[] >> rw[] >> 
  qspecl_then ["1","1"] 
@@ -4318,6 +4237,7 @@ e0
                      isiso(copa(iEQ#, iNE#, pa(Nn#, nN#, id(N), id(N)), ne))]
 
 ppbug , see ne has no #*)
+
 val ne_ex = proved_th $
 e0
 (rpt strip_tac >> drule diag_is_mono >> drule Thm5 >>
@@ -4327,21 +4247,21 @@ e0
  !Sum iEQ:N -> Sum iNE:NE->Sum. iscopr(iEQ:N->Sum,iNE:NE->Sum) ==>
  isiso(copa(iEQ,iNE,pa(Nn,nN,id(N),id(N)),ne))”)
 
-val pred_def = ex2fsym "p" [] $ iffRL $ eqT_intro pred_exists 
+val pre_def = ex2fsym "pre" [] $ iffRL $ eqT_intro pred_exists 
                        |> C mp (trueI [])
 
 val minus_uex = proved_th $
 e0
 (rpt strip_tac >> rev_drule Thm1 >> first_x_assum drule >> 
  first_x_assum drule >> 
- first_x_assum (qspecl_then ["id(N)","p o nnN"] assume_tac) >>
+ first_x_assum (qspecl_then ["id(N)","pre o nnN"] assume_tac) >>
  pop_assum strip_assume_tac >> qexistsl_tac ["f"] >> fs[idL,o_assoc])
 (form_goal
 “!NN Nn:NN->N nN:NN->N. ispr(Nn,nN) ==>
  !NNN NNn:NNN->NN nnN:NNN->N.ispr(NNn,nnN) ==>
  !N1 pN':N1->N pone:N1-> 1. ispr(pN',pone) ==>
  ?sub:NN->N.!sub':NN->N.sub' o pa(Nn,nN,pN',z o pone) = pN' & 
- p o nnN o pa(NNn,nnN,id(NN),sub') = sub' o pa(Nn,nN,Nn,s o nN) <=> sub' = sub”)
+ pre o nnN o pa(NNn,nnN,id(NN),sub') = sub' o pa(Nn,nN,Nn,s o nN) <=> sub' = sub”)
 
 
 
@@ -4357,7 +4277,7 @@ e0
  !N1 pN':N1->N pone:N1-> 1. ispr(pN',pone) ==>
  ?sub:NN->N.
  sub o pa(Nn,nN,pN',z o pone) = pN' &
- p o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,s o nN)”)
+ pre o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,s o nN)”)
 
 
 (*TODO: ppbug |-
@@ -4578,7 +4498,7 @@ e0
  cases_on “x = i1:1->two” (* 2 *)
  >-- (arw[] >> drule i1_ne_i2 >> first_x_assum accept_tac) >>
  arw[] >> first_x_assum (qspecl_then ["x"] assume_tac) >>
- by_tac “~?x0.x = i1:1->two o x0:1->1”
+ by_tac “~(?x0.x = i1:1->two o x0:1->1)”
  >-- (ccontra_tac >> pop_assum strip_assume_tac >>
      pop_assum mp_tac >> 
      by_tac “x0 = id(1)”
@@ -4587,7 +4507,7 @@ e0
  rfs[] >> once_rw[one_to_one_id] >> rw[idR])
 (form_goal 
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
-  !x:1->two. x = i1 <=> ~x = i2”)
+  !x:1->two. x = i1 <=> ~(x = i2)”)
 
 
 val  two2two_cases = proved_th $
@@ -4687,7 +4607,7 @@ e0
  arw[])
 (form_goal 
  “!nn:1->NN.(?nnb:1->NE. ne o nnb = nn) <=> ~
- Nn o nn = nN o nn”)
+ (Nn o nn = nN o nn)”)
 
 (*n1 <= n2 <=> n1 - n2 = 0
 TODO: maybe an iff version of ispb_def
@@ -4830,7 +4750,7 @@ e0
 “
  !n1:1->N n2:1->N. 
  (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) ==>
- ~n1 = n2”)
+ ~(n1 = n2)”)
 
 
 (*TODO: ispb version of pb_fac_exists*)
@@ -4846,7 +4766,7 @@ e0
  assume_tac nN_def >> drule p12_of_pa >> fs[] >>
  pop_assum (K all_tac) >>
  pick_x_assum 
-“(?nnb : 1 -> NE. ne o nnb = pa(Nn, nN, n1:1->N, n2)) <=> ~n1 = n2” (assume_tac o GSYM) >> fs[] >>
+“(?nnb : 1 -> NE. ne o nnb = pa(Nn, nN, n1:1->N, n2)) <=> ~(n1 = n2)” (assume_tac o GSYM) >> fs[] >>
  first_x_assum (qspecl_then ["1","le0","nnb"] assume_tac) >>
  rfs[] >> qexists_tac "a" >> 
  first_x_assum (qspecl_then ["a"] assume_tac) >> fs[] >>
@@ -4854,7 +4774,7 @@ e0
 (form_goal 
 “
  !n1:1->N n2:1->N.
- ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~(n1 = n2))
  ==> (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0)”)
 
 val lt_iff_le_ne = proved_th $
@@ -4867,7 +4787,7 @@ e0
 “
  !n1:1->N n2:1->N.
  (?lt0: 1->LT. pa(Nn,nN,n1,n2) = lt o lt0) <=> 
- ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)”)
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~(n1 = n2))”)
 
 val clt_iff_le_ne = proved_th $
 e0
@@ -4885,7 +4805,7 @@ e0
 “!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
  !n1:1->N n2:1->N.
  (char(i1:1->two, i2:1->two, lt) o pa(Nn, nN, n1, n2) = i2) <=> 
- ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~n1 = n2)”)
+ ((?le0: 1->LE. pa(Nn,nN,n1,n2) = le o le0) & ~(n1 = n2))”)
 
 
 (*TODO: in some thms above iscopr i1 i2 can be removed!*)
@@ -4895,14 +4815,14 @@ e0
 (rpt strip_tac >>
  ccontra_tac >>
  by_tac “char(i1:1->two, i2:1->two, lt) o pa(Nn, nN, n0, z) = i2 <=> (?a:1->LE.pa(Nn,nN,n0,z) = le o a) & 
- ~n0:1->N = z” 
+ ~(n0:1->N = z)” 
  >-- (drule clt_iff_le_ne >> arw[]) >> fs[] >>
  drule le_z >> fs[]
  )
 (form_goal 
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
-      !n0:1->N. ~char(i1,i2:1->two,lt) o 
-      pa(Nn,nN,n0,z) = i2”)
+      !n0:1->N. ~(char(i1,i2:1->two,lt) o 
+      pa(Nn,nN,n0,z) = i2)”)
 
 
 (*TODO: why slow?
@@ -4929,7 +4849,7 @@ e0
  drule p12_of_pa >> fs[])
 (form_goal 
 “sub o pa(Nn, nN, id(N), z o to1(N, 1)) = id(N) &
- p o sub = sub o pa(Nn, nN, Nn, s o nN)”)
+ pre o sub = sub o pa(Nn, nN, Nn, s o nN)”)
 
 
 val SoE_lemma_2_5_5 = proved_th $
@@ -4986,7 +4906,7 @@ e0
  arw[idR] >> qexists_tac "id(1)" >> rw[]
  )
 (form_goal
-“!n:1->N. ~n = z <=> ?n0:1->N. n = s o n0”)
+“!n:1->N. ~(n = z) <=> ?n0:1->N. n = s o n0”)
  
 
 (**order okay up to here**)
@@ -5041,10 +4961,10 @@ e0
  first_x_assum (qspecl_then ["a"] assume_tac) >> fs[] >>
  qexists_tac "a" >> arw[])
 (form_goal 
-“!X Z f:X->Z Y g:Y->Z P p0:P->X q.
- ispb(f,g,p0,q) ==>
+“!X Z f:X->Z Y g:Y->Z P p:P->X q.
+ ispb(f,g,p,q) ==>
  !A u:A->X v:A->Y. 
- (?a:A->P. p0 o a = u & q o a = v) <=> f o u = g o v”)
+ (?a:A->P. p o a = u & q o a = v) <=> f o u = g o v”)
 
 val pb_fac_iff_1 = proved_th $
 e0
@@ -5231,14 +5151,14 @@ e0
  pop_assum (K all_tac) >> pop_assum (K all_tac) >>
  pop_assum mp_tac >> rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) >>
  by_tac 
- “p o sub o pa(Nn, nN, n:1->N, n0) = 
+ “pre o sub o pa(Nn, nN, n:1->N, n0) = 
   sub o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, n, n0)”
  >-- arw[GSYM o_assoc] >>
  arw[] >> assume_tac nN_def >> drule distr_to_pa >> arw[] >>
  drule p12_of_pa >> arw[o_assoc])
 (form_goal
 “!n:1->N. sub o pa(Nn,nN,n,z) = n & 
- !n0.sub o pa(Nn,nN,n,s o n0) = p o sub o pa(Nn,nN,n,n0)”)
+ !n0.sub o pa(Nn,nN,n,s o n0) = pre o sub o pa(Nn,nN,n,n0)”)
 
 
 val pxy_true = proved_th $
@@ -5442,7 +5362,7 @@ e0
  assume_tac sub_elements >> rpt strip_tac (* 2 *) >-- (rw[o_assoc] >>
  assume_tac nN_def >> drule distr_to_pa >> once_arw[] >>
  rw[o_assoc] >> drule p12_of_pa >> arw[] >>
- rw[GSYM o_assoc,pred_def,idL]) >>
+ rw[GSYM o_assoc,pre_def,idL]) >>
  assume_tac nN_def >> drule distr_to_pa >> fs[o_assoc] >>
  drule p12_of_pa >> fs[]
  )
@@ -5610,7 +5530,7 @@ val sub_s = proved_th $
 e0
 (rpt strip_tac >> assume_tac sub_def' >>
  by_tac
- “p o sub o pa(Nn, nN, a:1->N, b:1->N) = 
+ “pre o sub o pa(Nn, nN, a:1->N, b:1->N) = 
  sub o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, a, b)”
  >-- arw[GSYM o_assoc] >>
  assume_tac nN_def >> drule p12_of_pa >>
@@ -5624,7 +5544,7 @@ e0
  arw[o_assoc])
 (form_goal
 “!a:1->N b:1->N.sub o pa(Nn,nN,a,s o b) = 
- p o sub o pa(Nn,nN,a,b)”)
+ pre o sub o pa(Nn,nN,a,b)”)
 
 (*TODO: prec parser bug! need () around <=> *)
 
@@ -5895,10 +5815,10 @@ e0
       qexists_tac "x0" >> arw[]) >>
  arw[] >> once_rw[one_to_one_id] >> rw[idR] >>
  suffices_tac
- “(~pa(Tt, tT, p1, p2) = pa(Tt:TT->two, tT, i2, i1:1->two)) <=> 
+ “~(pa(Tt, tT, p1, p2) = pa(Tt:TT->two, tT, i2, i1:1->two)) <=> 
   (p1 = i2 ==> p2:1->two = i2:1->two)”
  >-- (strip_tac >> dimp_tac>> strip_tac >--
-      (by_tac “~ pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i2:1->two, i1:1->two)” 
+      (by_tac “~(pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i2:1->two, i1:1->two))” 
        >-- (ccontra_tac >>
            suffices_tac “?x0:1->1. pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i2:1->two, i1:1->two)”
            >-- (disch_tac >> first_x_assum opposite_tac) >>
@@ -6080,7 +6000,7 @@ e0
  rw[GSYM o_assoc] >> once_rw[ind_N_element] (* TODO: occurs check definitely wrong, bug!!!!!!!!!!*) >>
  assume_tac sub_elements >> assume_tac nN_def >>
  drule distr_to_pa' >> fs[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR] >>
- arw[] >> rpt strip_tac >> arw[] >> assume_tac pred_def >> arw[])
+ arw[] >> rpt strip_tac >> arw[] >> assume_tac pre_def >> arw[])
 (form_goal 
 “!n:1->N. sub o pa(Nn,nN,z,n) = z”)
 
@@ -6140,8 +6060,7 @@ e0
  assume_tac lt_iff_le_ne >> once_arw[] >>
  assume_tac Thm2_1 >>
  first_x_assum (qspecl_then ["n"] assume_tac) >>
- by_tac
- “~z = s o n” >--
+ by_tac “~(z = s o n)” >--
  (ccontra_tac >> fs[]) >>
  arw[] >> pop_assum (K all_tac) >> pop_assum (K all_tac) >>
  drule le_char_LE >> arw[] >>
@@ -6187,7 +6106,6 @@ e0
  drule copr_disjoint >> 
  first_x_assum 
  (qspecl_then ["pa(Tt, tT, p1, p2)"] (assume_tac o GSYM)) >>
-
  (*should not be done by hand*)
  by_tac
  “(?x0 : 1 -> O. or0:O->TT o x0 = pa(Tt:TT->two, tT:TT->two, p1:1->two, p2:1->two)) <=> 
@@ -6196,10 +6114,10 @@ e0
       qexists_tac "x0" >> arw[]) >>
  arw[] >> once_rw[one_to_one_id] >> rw[idR] >>
  suffices_tac
- “(~pa(Tt, tT, p1, p2) = pa(Tt:TT->two, tT, i1, i1:1->two)) <=> 
+ “~(pa(Tt, tT, p1, p2) = pa(Tt:TT->two, tT, i1, i1:1->two)) <=> 
   (p1 = i2 | p2:1->two = i2:1->two)”
  >-- (strip_tac >> dimp_tac>> strip_tac >--
-      (by_tac “~ pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i1:1->two, i1:1->two)” 
+      (by_tac “~(pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i1:1->two, i1:1->two))” 
        >-- (ccontra_tac >>
            suffices_tac “?x0:1->1. pa(Tt:TT->two, tT:TT->two, p1:1->two, p2) = pa(Tt, tT, i1:1->two, i1:1->two)”
            >-- (disch_tac >> first_x_assum opposite_tac) >>
@@ -6335,7 +6253,7 @@ e0
  fs[]
  )
 (form_goal 
-“!a n m. (~sub o pa(Nn,nN,n,a) = z) & (~sub o pa(Nn,nN,m,a) = z) ==>
+“!a n m. ~(sub o pa(Nn,nN,n,a) = z) & ~(sub o pa(Nn,nN,m,a) = z) ==>
  (sub o pa(Nn,nN,n,a) = sub o pa(Nn,nN,m,a)  <=> n = m)”)
 
 val equality_NN_ind = proved_th $
@@ -6416,14 +6334,14 @@ e0
 
 val p_z_cases = proved_th $
 e0
-(assume_tac pred_def >> strip_tac >>
+(assume_tac pre_def >> strip_tac >>
  cases_on “n = z” >-- arw[] >>
  arw[] >> assume_tac z_xor_s >>
  first_x_assum (qspecl_then ["n"] assume_tac) >>
  rfs[] >> arw[GSYM o_assoc,idL] >>
  assume_tac s_eq_iff_eq >> arw[])
 (form_goal
-“!n:1->N. p o n = z <=> (n = z | n = s o z)”)
+“!n:1->N. pre o n = z <=> (n = z | n = s o z)”)
 
 (*correct thm wrong proof*)
 val sub_s_z_cases = proved_th $
@@ -6474,7 +6392,7 @@ e0
 
 
 (*parser loop for:
-
+| 
  qby_tac 
  ‘(?(le0 : 1 -> LE). pa(Nn, nN, n0, s o n) = le o le0) <=> 
   (?(x0 : 1 -> LE). le o x0 = pa(Nn, nN, n0, s o n))’
@@ -6504,25 +6422,13 @@ the not on the outmost is for the whole, the whole is not a conjunction!
 
 val pre_eq_0 = proved_th $
 e0
-(strip_tac >> assume_tac pred_def >> cases_on “n = z” >> arw[] >>
+(strip_tac >> assume_tac pre_def >> cases_on “n = z” >> arw[] >>
  dimp_tac >> strip_tac (* 2 *) >--
  (assume_tac z_xor_s >> first_x_assum (qspecl_then ["n"] assume_tac) >>
  rfs[] >> fs[GSYM o_assoc,idL] >> rfs[idL] >> arw[] >> arw[GSYM o_assoc,idL]) >>
  arw[GSYM o_assoc,idL])
 (form_goal
-“!n:1->N. p o n = z <=> (n = z | n = s o z)”)
-
-(*
-val pre_eq_0 = proved_th $
-e0
-(strip_tac >> assume_tac pred_def >> cases_on “n = z” >> arw[] >>
- dimp_tac >> strip_tac (* 2 *) >--
- (assume_tac z_xor_s >> first_x_assum (qspecl_then ["n"] assume_tac) >>
- rfs[] >> fs[GSYM o_assoc,idL] >> assume_tac Thm2_2 >> drule ismono_property >>
- dimp_tac >> strip_tac >> arw[] >> first_x_assum irule >> arw[]))
-(form_goal
-“!n:1->N. p o n = z <=> (n = z | n = s o z)”)
-*)
+“!n:1->N. pre o n = z <=> (n = z | n = s o z)”)
 
 val lt_succ_le = proved_th $
 e0
@@ -6542,7 +6448,7 @@ e0
  strip_tac >> once_arw[] >> assume_tac (GSYM sub_eq_0) >>
  first_x_assum drule >> arw[] >>
  assume_tac sub_elements >> arw[] >> cases_on “sub o pa(Nn,nN,n0:1->N,n) = z” 
- >-- (arw[] >> assume_tac pred_def >> arw[] >>
+ >-- (arw[] >> assume_tac pre_def >> arw[] >>
       assume_tac (GSYM sub_diff_1) >> once_arw[] >>
       pop_assum (K all_tac) >> ccontra_tac >> fs[] >>
       fs[Thm2_1]) >>
@@ -6581,7 +6487,7 @@ rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
  arw[] >> rpt strip_tac >> first_x_assum irule >>
  drule le_z_z >> first_x_assum drule >> arw[] >>
  suffices_tac 
- “!n0:1->N. ~char(i1,i2:1->two,lt) o pa(Nn,nN,n0,z) = i2”
+ “!n0:1->N. ~(char(i1,i2:1->two,lt) o pa(Nn,nN,n0,z) = i2)”
  >-- (strip_tac >> arw[]) >>
  drule not_lt_z >> first_x_assum accept_tac) >>
  rpt strip_tac >> 
@@ -6630,7 +6536,7 @@ e0
 TODO
 *)
 
-
+(*
 val prsym_def = ex2fsym "*" ["A","B"] (iffRL $ eqT_intro $ spec_all pr_ex)
                         |> C mp (trueI []) |> gen_all
 
@@ -6650,6 +6556,7 @@ val p1_def = ex2fsym "p1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
 val p2_def = ex2fsym "p2" ["A","B"] (iffRL $ eqT_intro $ spec_all p1_def)
                         |> C mp (trueI []) |> gen_all
 
+*)
 
 (*TODO: parser cannot parse "r:A*B->A"*)
 
@@ -6707,6 +6614,8 @@ fun occurs_f' f1 f2 =
       | (_,_) => false
 
 
+
+
 fun cause_loop_dimp' th = 
     let val (l,r) = dest_dimp(concl th)
     in if occurs_f' l r then true else false
@@ -6748,10 +6657,12 @@ if forget the pa, then
       origin_structure = "Lib"} raised
 
 *)
-
+(*
 val ax7'= 
  ax7 |> strip_all_and_imp |> gen_all |>
  split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
+do not know why have it twice...
+*)
 
 (*TODO: should eliminate the x0:
 
@@ -6910,20 +6821,12 @@ e0
  once_rw[o_assoc_middle] >> once_arw[] >> 
  qby_tac 
  ‘Uq o tp(p1, p2, ev, Xy, xY, (neg o pxy)) o y = i1 <=>
-  ~Uq o tp(p1, p2, ev, Xy, xY, (neg o pxy)) o y = i2’ >--
+  ~(Uq o tp(p1, p2, ev, Xy, xY, (neg o pxy)) o y = i2)’ >--
  (drule i1_xor_i2 >> arw[]) >>
  once_arw[] >> pop_assum (K all_tac) >> once_arw[] >>
  pop_assum (K all_tac) >> pop_assum (K all_tac) >>
  arw[o_assoc] >> drule i1_xor_i2 >> once_arw[] >>
- once_rw[exists_forall0] >> rw[]
-(* dimp_tac >> rpt strip_tac (* 2 *) >--
- (ccontra_tac >> 
-  qsuff_tac
-  ‘!x : 1 -> X. ~pxy o pa(Xy, xY, x, y) = i2’ >-- fs[] >>
-  strip_tac >> ccontra_tac >>
-  qsuff_tac 
-  ‘?(x : 1 -> X). pxy o pa(Xy, xY, x, y) = i2’ >-- fs[] >>
-  ) *))
+ once_rw[exists_forall0] >> rw[])
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !X eps ps p1:eps->X p2:eps ->ps ev:eps->two.isexp(p1,p2,ev) ==>
@@ -6932,6 +6835,337 @@ e0
  !pxy:XY->two y:1->Y. 
  (Exq o tp(p1,p2,ev,Xy,xY,pxy) o y = i2  <=> 
   ?x:1->X. pxy o pa(Xy,xY,x,y) = i2)”)
+
+(*
+Exq(X) : 2 ^ X -> 2
+
+!P: X * Y -> 2. tp(P): Y -> 2^X -> Exq(X)
+
+!y. ?x. P o <x,y> = true <=> 
+ Exq o tp(P) o y = true
+
+
+*)
+
+fun is_ar t = 
+    case view_sort (sort_of t) of 
+        vo => false | _ => true
+
+fun is_ar_ss (n,s) = is_ar (var (n,s))
+
+(*
+
+eg pb_ex
+
+it should work for 
+
+!X Z (f : X# -> Z#)  Y (g : Y# -> Z#).
+        ?P (p : P# -> X#)  (q : P# -> Y#). ispb(f#, g#, p#, q#): thm
+
+if only need to work as above, then easy, but in practice also want it wo work for 
+
+!X Z Y (f : X# -> Z#) (g : Y# -> Z#).
+        ?P (p : P# -> X#)  (q : P# -> Y#). ispb(f#, g#, p#, q#): thm
+
+X Z Y (f : X# -> Z#) (g : Y# -> Z#)
+
+ [(f : X# -> Z#) (g : Y# -> Z#)]
+
+[f':X0 -> Z0 g':Y0 -> Z0]
+
+
+
+
+or
+!X Z (f : X# -> Z#) (g : Y# -> Z#).
+        ?P (p : P# -> X#)  (q : P# -> Y#). ispb(f#, g#, p#, q#): thm
+
+or
+
+!Z (f : X# -> Z#)  Y (g : Y# -> Z#).
+        ?P (p : P# -> X#)  (q : P# -> Y#). ispb(f#, g#, p#, q#): thm
+...
+
+val sspec tl th = 
+    let val (b,qvs) = strip_forall (concl th)
+        val qars = List.filter is_ar_ss qvs
+
+*)
+
+
+
+val const2_def = copr_ex |> allE one |> allE one |> eqT_intro
+                      |> iffRL |> ex2fsym "2" [] |> C mp (trueI [])
+
+val two = mk_fun "2" []
+
+
+
+val _ = new_fun "To1" (ar_sort (mk_ob "X") one,
+                       [("X",ob_sort)])
+
+
+val _ = new_fun "*" (ob_sort,[("A",ob_sort),("B",ob_sort)])
+
+fun po t1 t2 = mk_fun "*" [t1,t2]
+
+
+val _ = new_fun "P1" (ar_sort (po (mk_ob "A") (mk_ob "B")) (mk_ob "A"),[("A",ob_sort),("B",ob_sort)])
+
+val _ = new_fun "P2" (ar_sort (po (mk_ob "A") (mk_ob "B")) (mk_ob "B"),[("A",ob_sort),("B",ob_sort)])
+
+val _ = new_fun "PROD" (ar_sort (mk_ob "X") (po (mk_ob "A") (mk_ob "B")),
+[("f",ar_sort (mk_ob "X") (mk_ob "A")),("g",ar_sort (mk_ob "X") (mk_ob "B"))])
+
+
+val prsym_def = ex2fsym "*" ["A","B"] (iffRL $ eqT_intro $ spec_all pr_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val P1_def = ex2fsym "P1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
+                        |> C mp (trueI []) |> gen_all
+
+val P2_def = ex2fsym "P2" ["A","B"] (iffRL $ eqT_intro $ spec_all P1_def)
+                     |> C mp (trueI []) |> gen_all
+
+
+
+fun po A B = mk_fun "*" [A,B]
+
+val _ = new_fun "diag"
+        (ar_sort (mk_ob "X")
+                 (po (mk_ob "X") (mk_ob "X")),
+         [("X",ob_sort)])
+
+(*AQ, ideally, should have a function symbol that *)
+
+
+
+val _ = new_fun "EQ" 
+(ar_sort (po (mk_ob "A") (mk_ob "A")) two,
+ [("A",ob_sort)])
+
+
+val _ = new_fun "True" 
+(ar_sort (mk_ob "A") two, [("A",ob_sort)])
+
+
+val True_def = proved_th $
+e0
+cheat
+(form_goal
+“!A.True(A) = true o To1(A)”)
+
+(*smart spec*)
+(*
+fun sspec tl th = 
+    let val (b,qvs) = strip_quants (concl th)
+*)
+
+fun mk_o a1 a2 = mk_fun "o" [a1,a2]
+
+val false_def = const2_def |> eqT_intro |> iffRL 
+                           |> ex2fsym "false" [] |> C mp (trueI [])
+
+val true_def = false_def |> eqT_intro |> iffRL 
+                    |> ex2fsym "true" [] |> C mp (trueI [])
+
+
+
+val pred_subset_ex = proved_th $
+e0
+cheat
+(form_goal
+“!X pred:X->2.?A ss:A ->X.
+ (!x:1->X. pred o x = true <=> ?x0:1->A. x = ss o x0)”)
+
+val coprsym_def = ex2fsym "+" ["A","B"] (iffRL $ eqT_intro $ spec_all copr_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val I1_def = ex2fsym "I1" ["A","B"] (iffRL $ eqT_intro $ spec_all coprsym_def)
+                        |> C mp (trueI []) |> gen_all
+
+val I2_def = ex2fsym "I2" ["A","B"] (iffRL $ eqT_intro $ spec_all I1_def)
+                        |> C mp (trueI []) |> gen_all
+
+(*maybe nice to have a tool that realise which component, and just assign maps to components, how can I do this?*)
+
+val ob_sort = mk_ob_sort
+val ar_sort = mk_ar_sort
+
+
+fun check_wffv fvs = 
+    case fvs of 
+        [] => true
+      | h :: t => if ill_formed_fv h then
+                      raise ERR ("ill-formed free variable",[snd h],[var h],[])
+                  else check_wffv t
+
+fun wffv_ok f = check_wffv (HOLset.listItems (fvf f))
+  
+
+fun new_ax f = 
+    let val _ = wffv_ok f orelse
+                raise ERR ("formula contains ill-formed free variable(s)",[],[],[])
+        val _ = HOLset.equal(fvf f,essps) orelse
+                raise simple_fail"formula has free variables"
+    in
+        mk_thm essps [] f
+    end
+
+
+
+
+
+val _ = new_fun "ADD" (ar_sort (po N N) N,[])
+
+
+
+
+val ZRel_subset_ex = 
+    pred_subset_ex |> allE $ rastt "(N * N) * (N * N)"
+                   |> allE $ rastt $ q2str
+‘EQ(N) o PROD(ADD o 
+     PROD(P1(N,N) o P1(N * N,N * N),
+          P2(N,N) o P2(N * N,N * N)),
+     ADD o 
+     PROD(P2(N,N) o P1(N * N,N * N), 
+          P1(N,N) o P2(N * N,N * N)))’
+
+val ZRel_subset_def = ex2fsym "ZRel" [] (iffRL $ eqT_intro $ spec_all ZRel_subset_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val ZRel_inc_def = 
+ex2fsym "ZRinc" [] (iffRL $ eqT_intro $ spec_all ZRel_subset_def)
+                        |> C mp (trueI []) |> gen_all
+
+val intZ_ex = 
+    coeq_ex |> allE $ rastt "ZRel" 
+            |> allE $ rastt "N * N"
+            |> allE $ rastt "P1(N * N, N * N) o ZRinc"
+            |> allE $ rastt "P2(N * N, N * N) o ZRinc"
+
+val intZ_def = ex2fsym "intZ" [] (iffRL $ eqT_intro $ spec_all intZ_ex)
+                        |> C mp (trueI []) |> gen_all
+
+val toZ_def = ex2fsym "toZ" [] (iffRL $ eqT_intro $ spec_all intZ_def)
+                        |> C mp (trueI []) |> gen_all
+
+
+val _ = new_pred "isGrp" 
+        [("G",ob_sort),("e",ar_sort one (mk_ob "G")),
+         ("m",ar_sort (po (mk_ob "G") (mk_ob "G")) 
+                      (mk_ob "G")),
+         ("i",ar_sort (mk_ob "G") (mk_ob "G"))]
+
+
+
+val isGrp_def = new_ax
+“!G e m i.isGrp(G,e,m,i) <=> 
+ m o PROD (m o P1(G * G,G),id(G) o P2(G * G,G)) = 
+ m o PROD (id(G) o P1(G,G * G),m o P2(G,G * G)) o 
+ PROD(P1(G,G) o P1(G * G,G),
+      PROD(P1(G,G) o P1(G * G,G),P2(G * G,G))) &
+ m o PROD(id(G),e o To1(G)) = id(G) & 
+ m o PROD(e o To1(G),id(G)) = id(G) &
+ m o PROD(id(G),i) = id(G) &
+ m o PROD(i,id(G)) = id(G)”
+
+val _ = new_pred "isAb" [("G",ob_sort),("e",ar_sort one (mk_ob "G")),
+         ("m",ar_sort (po (mk_ob "G") (mk_ob "G")) 
+                      (mk_ob "G")),
+         ("i",ar_sort (mk_ob "G") (mk_ob "G"))]
+
+val _ = new_fun "swap" (ar_sort (po (mk_ob "X") (mk_ob "X")) (po (mk_ob "X") (mk_ob "X")),[("X",ob_sort)])
+
+
+val isAb_def = new_ax
+“!G e m i. isAb(G,e,m,i) <=> isGrp(G,e,m,i) &
+ m = m o swap(G)”
+
+
+val Add_ex = proved_th $
+e0
+cheat
+(form_goal
+“!n1:1->N n2:1->N. ?a. a = add o pa(Nn,nN,n1,n2)”)
+
+val Add_def = 
+   ex2fsym "Add" ["n1","n2"] (iffRL $ eqT_intro $ spec_all Add_ex)
+                        |> C mp (trueI []) |> gen_all
+
+(*
+
+!G. ?n. .... 
+
+ex2fsym
+
+FINITE({}) & 
+!X. FINITE X ==> FINITE (X U {x}) 
+
+2^X --> 1 + 1
+
+ss = {} | ? ss0. FINITE ss0 /\ 
+
+take the set of s
+
+BIGINTER { s | s SUBSET 2^X /\ {} IN s /\ !e. a IN s ==> a UNION {e} IN s } (SUBSET of 2^X)
+
+{ s | ({},0) IN s /\ !e a m. (a,m) IN s /\ e NOTIN a ==> (a UNION {e}, m + 1) IN s}
+
+val _ = new_pred "Card" [X,s:A->X,("n",1->N)]
+
+for every set X, take the empty subset of it.
+
+card(s, SUC n) <=> ?e s0. s = s0 UNION {e} /\ card (s0, n) /\ e NOTIN s0
+
+N  * 2 ^ X -> 2 
+
+N -> 2 ^ (2 ^ X)
+
+new_ax 
+“Card(X,EMPTY(X),0) &
+ !ss.Card(X,ss,n) & 
+ ”
+
+
+
+
+*)
+
+(*Exp (G,e,m,i,int:1->Z,a:1->G) need a group to define,so take so many parameters, can hide some of them or other way to make it better? defined as
+
+prove
+
+
+
+!G e m i. isGrp(G,e,m,i) ==>
+ ?EXP: N * G ->G. 
+ EXP o PROD(z,g) = g & 
+ EXP o PROD(SUC o n, g) = m o PROD(g,EXP o PROD(n,g))
+
+and get fun sym
+
+Exp(G,e,m,i,n,a) = a
+
+2^G * G * (G^ (G * G)) * (G^ G)
+
+type of groups
+
+Exp(g:1->group type,n,a:group member) = a
+
+Exp(G,e,m,i,z,a) = a
+
+Exp(G,e,m,i,SUC n,a) = m o PROD(a,Exp(G,e,m,i,n,a) )
+
+using UMP of N, define map N -> G ^ G and transpose to get EXP
+
+parsing B^A as Exp A B? just treat it specially?
+*)
+
+
+
+(*enable the user to define infix, why is it tricky for parsing? *)
+
 
 
 fun fl_diff fl1 fl2 = 

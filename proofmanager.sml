@@ -1,3 +1,8 @@
+fun readfq [QUOTE s] = rapf s
+
+structure Parse = struct val Term=readfq end
+
+
 structure proofmanager = 
 struct
 open goalstack
@@ -9,6 +14,7 @@ open abbrev History
 type tactic = abbrev.tactic
 datatype proof = GOALSTACK of goalstack.gstk history
 datatype proofs = PRFS of proof list;
+
 
 fun initial_proofs() = PRFS[];
 
@@ -123,6 +129,8 @@ fun new_goalstack g =
 
 fun set_goal g:proofmanager.proofs = new_goalstack g;
 
+
+
 fun g q = set_goal(fvf (Parse.Term q),[],Parse.Term q);
 
 fun restart() =
@@ -175,3 +183,5 @@ fun PPproof printdepth _ (prf:proofmanager.proof) =
 val _ = PolyML.addPrettyPrinter PPproof
 
 end
+
+

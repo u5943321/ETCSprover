@@ -290,20 +290,12 @@ todo list:
 
 TO-DO: huge ppbug!*)
 
-(*TODO: parser bug rapg "!i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x:1->AB. (?x0:1->A. i1 o x0 = x) | (?x0:1->B. i2 o x0 = x)" need () around  (?x0:1->B. i2 o x0 = x)*)
 
 (*TODO: if in exists, feed "copa(i1,i2,i2:1->two o to1(A,1),i1:1->two o to1(A',1)) o f':X->AA'", is wrong ,but get wrong error message*)
 
 (*TODO, if input of f' o x is f o x, which is wrong , the error message is err find, not the q parsing*)
 
 
-(*qby_tac ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’
-example of qby does not response.
-TODO!!!: parser problem:
-
-pwcfq ct  ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’; looping
-
-*)
 
 (*TODO: irule bug!
 qsuff_tac ‘m o e o r' =
@@ -324,10 +316,7 @@ pexistsl_tac ["tp(p1:AA2->A,p2:AA2->A2,ev:AA2->two,pA1:AA->A,pA2:AA->A,char(i1,i
 match_term.unexpected term constructor
 *)
 
-(*TODO: ppbug |-
-   ?(p1 : NN -> N)  (p2 : NN -> N). ispr(p1#, p2): thm*)
 
-form_goal “?(p1 : NN -> N)  (p2 : NN -> N). ispr(p1, p2)”
 
 AQ: view_form (rapf "?(p1 : NN -> N)  (p2 : NN -> N). ispr(p1, p2)"); reason  to discard view_form stuff?
 
@@ -381,21 +370,8 @@ in  suffices_tac “isiso(q:Q->N)”, can use irule o_epi_imp_epi, but give the 
 (*TODO: a version of GSYM top-down*)
 
 
-(*TODO:ppbug:
-
- ~p o sub o pa(Nn, nN, n0, n) = z & ~n0 = s o n
-
-the not on the outmost is for the whole, the whole is not a conjunction!
-
-*)
-
-(*TODO: parser cannot parse "r:A*B->A"*)
-
 (*TODO: a tool su we can only inst the arrows once the sorts are correct, to avoid one by one for pb_ex*)
 
-(*TO-DO: wrong error message:
-
- Exception- ERR ("not an infix operator: str", [], [], [])*)
 
 
 (*TODO: should eliminate the x0:
@@ -405,20 +381,6 @@ the not on the outmost is for the whole, the whole is not a conjunction!
 AQ: tactic for this? can have a rw thm that 
 
 (?f:A->A. P(a) <=> Q(a)) <=> P(a) <=> Q(a), if f is not mentioned in P and Q
-*)
-
-
-
-(*BUG: TODO: should not allow this to happen:
-
-
- mk_forall "x" (mk_ar_sort one N) $ mk_eq
- (rastt 
- "pa(Tt:TT->two, tT:TT->two, char(i1:1->two, i2:1->two, le), (char(i1, i2, p0:P->N) o Nn)) o pa(Nn, nN, x, n:1->N)")
- (rastt 
- "pa(Tt:TT->two,tT:TT->two, char(i1:1->two, i2:1->two, le) o pa(Nn, nN, x:1->N, n:1->N),p0 o n)")
-second p0 is of different type of the first one, it is two->N
-AQ
 *)
 
 
@@ -433,13 +395,6 @@ qspecl_then ["A","R2"] (x_choosel_then ["AR2","Ar2","aR2"] assume_tac) pr_ex >>
 abbrev_tac (rapf "pa(Ar2:AR2->A,aR2:AR2->R2,h:R->A o p1':RR2->R,p2':RR2->R2) = h2R") >>
 qspecl_then ["R'","AR2","h2R o Psi"] (x_choosel_then ["M","m","e"] assume_tac) mono_epi_fac >>
 abbrev_tac (rapf "char(i1:1->two,i2:1->two,m:M->AR2) = phi") >> 
-(*qby_tac ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’
-example of qby does not response.
-TODO!!!: parser problem:
-
-pwcfq ct  ‘!x:1->AR2. (?x0:1->M. m o x0 = x) <=> phi o x = i2’; looping
-
-*)
 by_tac (rapf "!x:1->AR2. (?x0:1->M. m:M->AR2 o x0 = x) <=> phi:AR2->two o x = i2:1->two")
 
 )
@@ -656,3 +611,463 @@ tland_conv & fland_conv eq_fsym for tland.
 TODO: pp goals just like pp thms (avoid add newlines if possible. )
 
 TODO: ppbug:  ev o pa(p1, p2, p1, (tp(p1, p2, ev, p1, p2, (neg o ev)) o p2)) o
+
+
+
+
+
+val nt_def = const2_def |> eqT_intro |> iffRL 
+                       |> ex2fsym "nt" [] |> C mp (trueI [])
+
+val t_def = nt_def |> eqT_intro |> iffRL 
+                    |> ex2fsym "t" [] |> C mp (trueI [])
+
+val t = mk_fun "t" []
+
+val Chi_ex = proved_th $
+e0
+(rpt strip_tac >> assume_tac t_def >>
+ drule char_def >> first_x_assum drule >>
+ qexists_tac "char(nt,t,a)" >> arw[])
+(form_goal
+“!A X a:A->X. ismono(a) ==>
+ ?chi.!x:1->X.(?x0:1->A.a o x0 = x) <=> 
+  (chi o x = t)”)
+
+val two = mk_fun "2" []
+
+val _ = new_fun "Chi" (mk_ar_sort (mk_ob "X") two,[("a",mk_ar_sort (mk_ob "A") (mk_ob "X"))])
+
+val Chi_def = read_axiom
+"!A X a:A->X. ismono(a) ==>!x:1->X.(?x0:1->A.a o x0 = x) <=> (Chi(a) o x = t)"
+
+fun dest_o t = 
+    case (view_term t) of
+        vFun("o",s,[t1,t2]) => (t1,t2)
+      | _ => raise ERR ("not a composition: ",[],[t],[])
+
+fun is_el t = 
+    case (view_sort (sort_of t)) of
+        va(d,c) => if eq_term(d,one) then true else false
+      | _ => false
+
+fun is_chi t = 
+    case view_term t of
+        vFun("chi",s,tl) => true
+      | _ => false
+
+fun chi_eqn f = 
+    let val (l,r) = dest_eq f 
+        val _ = eq_term(r,t) orelse
+                raise ERR ("RHS is not t",[sort_of r],[r],[])
+        val (a1,a2) = dest_o l
+        val _ = is_el a2 orelse 
+                raise ERR ("pred not applied to an element",[sort_of a2],[a2],[])
+    in is_chi t
+    end
+
+AQ: should I write like this?
+
+AQ: while proving the iff between the built predicate and the 
+
+fun chi_of_chi_eqn f = 
+    let val (l,r) = dest_eq f
+    in fst (dest_o l)
+    end
+
+val twotwo_def = pr_ex |> allE two |> allE two |> eqT_intro
+                      |> iffRL |> ex2fsym "twotwo" [] |> C mp (trueI [])
+
+
+val two1_def = twotwo_def |> eqT_intro
+              |> iffRL |> ex2fsym "two1" [] |> C mp (trueI [])
+
+val two2_def = two1_def |> eqT_intro
+              |> iffRL |> ex2fsym "two2" [] |> C mp (trueI [])
+
+val two1 = mk_fun "two1" []
+val two2 = mk_fun "two2" []
+
+val cj_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“?cj. !p1 p2.cj o pa(two1,two2,p1,p2) = t <=> 
+ p1 = t & p2 = t”)
+
+val cj_def = cj_ex |> eqT_intro
+             |> iffRL |> ex2fsym "cj" [] |> C mp (trueI [])
+
+val cj = mk_fun "cj" []
+
+
+val dj_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“?dj. !p1 p2.dj o pa(two1,two2,p1,p2) = t <=> 
+ p1 = t | p2 = t”)
+
+val dj_def = dj_ex |> eqT_intro
+             |> iffRL |> ex2fsym "dj" [] |> C mp (trueI [])
+
+val dj = mk_fun "dj" []
+
+
+
+val ip_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“?ip. !p1 p2.ip o pa(two1,two2,p1,p2) = t <=> 
+ p1 = t ==> p2 = t”)
+
+val ip_def = ip_ex |> eqT_intro
+             |> iffRL |> ex2fsym "ip" [] |> C mp (trueI [])
+
+val ip = mk_fun "ip" []
+
+
+val dimp_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“?dimp. !p1 p2.dimp o pa(two1,two2,p1,p2) = t <=> 
+ (p1 = t <=> p2 = t)”)
+
+val dimp_def = dimp_ex |> eqT_intro
+             |> iffRL |> ex2fsym "dimp" [] |> C mp (trueI [])
+
+val dimp = mk_fun "dimp" []
+
+val _ = new_fun "Chi" (mk_ar_sort (mk_ob "X") two,[("a",mk_ar_sort (mk_ob "A") (mk_ob "X"))])
+
+val Chi_def = read_axiom
+"!A X a:A->X. ismono(a) ==>!x:1->X.(?x0:1->A.a o x0 = x) <=> (Chi(a) o x = t)"
+
+fun is_pred_ar a = 
+    eq_term(snd $ dest_ar (sort_of a),two)
+
+
+
+fun extract_pred f = 
+    let val (l,r) = dest_eq f 
+        val _ = eq_term(r,t) orelse
+                raise ERR ("RHS is not t",[sort_of r],[r],[])
+        val (a1,a2) = dest_o l
+        val _ = is_el a2 orelse 
+                raise ERR ("pred not applied to an element",[sort_of a2],[a2],[])
+        val _ = is_pred_ar a1 orelse 
+                raise ERR ("not an application of a pred",[sort_of a1],[a1],[])
+    in a1
+    end
+
+val _ = new_fun "pr1" (mk_ar_sort (mk_ob "A") (mk_ob "B"),[("A",ob),("B",ob)]
+
+
+
+fun mk_pa p1 p2 a1 a2 = mk_fun "pa" [p1,p2,a1,a2] 
+
+
+
+val U_ex = proved_th $
+e0
+cheat
+(form_goal
+“!X.?U : exp(X,2)  -> 2.
+ !Y.!pxy : X * Y -> 2 y:1->Y.
+  Uq o tp(pxy) o y = t <=>
+ !x : 1 -> X. pxy o pa(x,y) = t”)
+
+
+fun split_input longp x = 
+(*dj o pa(two1,two2,p1 o <m,n>,p2 o <n,m>) = 
+  dj o pa(two1,two2,p1 o <nN,Nn>, p2) o <n,m>
+conj o <dj o pa(two1,two2,p1 o <m,n>,p2 o <n,m>),
+        imp o pa(two1,two2,p3 o <m,n>,p4 o <n,m>)>
+
+takes a map 1->2 and an element x, and split it so it is an application of a pred on the pair (x,y), where y may br a tuple itself
+*)
+
+input : !m n. char(lt) o (m,n) = t | char(le) o (n,m) = t
+output: (pred, |- !m. (pred o m = t <=> !n. char(lt) o (m,n) = t | char(le) o (n,m) = t))
+
+fun pred_of f = 
+    case (view_form f) of
+        vPred(_,_) =>
+        (fst $ dest_eq f,frefl f)
+      | vConn("&",[f1,f2]) =>
+        let val (p1,th1) = pred_of f1
+            val (p2,th2) = pred_of f2
+        in (mk_o cj (mk_pa two1 two2 p1 p2),cj_def |> allE p1 |> allE p2 |> GSYM)
+        end
+      | vConn("|",[f1,f2]) =>
+        let val (p1,th1) = pred_of f1
+            val (p2,th2) = pred_of f2
+        in (mk_o dj (mk_pa two1 two2 p1 p2),dj_def |> allE p1 |> allE p2 |> GSYM)
+        end
+      | vConn("==>",[f1,f2]) =>
+        let val (p1,th1) = pred_of f1
+            val (p2,th2) = pred_of f2
+        in (mk_o ip (mk_pa two1 two2 p1 p2),ip_def |> allE p1 |> allE p2 |> GSYM)
+        end
+      | vConn("<=>",[f1,f2]) =>
+        let val (p1,th1) = pred_of f1
+            val (p2,th2) = pred_of f2
+        in (mk_o dimp (mk_pa two1 two2 p1 p2),dimp_def |> allE p1 |> allE p2 |> GSYM)
+        end
+      | vQ("!",x,s0,b) =>
+        let val (p0,th0) = pred_of b 
+            val X = snd $ dest_ar s0
+            val (x,y,pxy) = split_input (x,s0) p0
+            val p = mk_o (Uq X) $ mk_o (tp pxy) y
+        in (p,U_ex |> allE pxy |> allE y)
+        end
+
+
+pxn:XN->2 o <x:1->X,n:1->N,y:1->Y>  = (pxn o <x o to1(N,1),id(N)>):N->2 o n:1->N
+
+exp(x,n)
+N * N -> N
+
+prove
+
+0 < n^n
+
+lt o exp 
+
+le o <n + 3,m> = t
+
+(le o <s o s o s,m o to1(N)>) o n
+
+f = f' o n 
+
+g = g' o n
+
+
+
+f o g = f' o n:1->N o g' o n
+
+<n:1->N,x:1->X> 
+
+P o Q
+
+UNBETA_CONV;
+
+
+fun f 
+
+(*pred_of f will output a pred such that
+
+pred_of ``p1:X->2 o x:1->X = t <=> p2:Y->2 o y:1->Y = t``;
+val it =
+   (dimp o pa(two1, two2, p1 o x, p2 o y),
+    {(X : ob), (Y : ob), (p1 : X -> 2), (p2 : Y -> 2), (x : 1 -> X),
+     (y : 1 -> Y)}, 
+    |- (p1 o x = t <=> p2 o y = t) <=>
+       dimp o pa(two1, two2, p1 o x, p2 o y) = t): term * thm
+
+output (dimp o pa(two1, two2, p1 o Nn, p2 o nN)) o 
+pa(n,m) 
+
+and (dimp o pa(two1, two2, p1 o Nn, p2 o nN)) o 
+pa(n,m) <=> p1(n) <=> 
+ *)
+
+
+(*take a formula f which corresponds a predicate about a variable n:1->N., return a pred such that for every argument n:1->N, pred o n = t <=> .../
+
+firstly, collect the only free variable m:1->N. to induct on.
+
+if f is char(even) o n = i2, then pred is just char(even) since
+!n. char(even) o n = i2 <=> char(even) o n = i2
+
+if f is !n. char(lt) o pa(m,n) = i2 | char(le) o pa(n,m) 
+return a pred such that 
+!m (!n. char(lt) o pa(m,n) = i2 | char(le) o pa(n,m)) <=>
+ pred o m
+
+case f of 
+Quant("!",n,s,f0) => 
+let val (pred0,th) = pred_of f0 
+Uq o tp(p1:N * Omega^N,p2,)
+
+ *)
+
+
+quick questions : () pp, slow pb.
+
+(*induct_tac procedure:
+want to prove by induction that
+!m n. char(lt) o (m,n) = t | char(le) o (n,m) = t
+
+should I have lt(m,n) instead? but anyway during the procedure it will be unwinded into the "= t"-form.
+
+Step 1:
+
+prove that 
+“!m. (!n. char(lt) o (m,n) = t | char(le) o (n,m) = t)
+ <=> pred o m = t” for some pred, where the pred is constructed from the pred_of (!n. char(lt) o (m,n) = t | char(le) o (n,m) = t)
+
+Step 2: 
+rw the goal with the thm produced in Step 1, in the example, the goal:
+!m n. char(lt) o (m,n) = t | char(le) o (n,m) = t
+is rw into:
+
+!m. pred o m = t.
+
+Step 3 (*not only for induction which does not involve othere variables, but the ones with other variables can just be turned into the one which does not consider x as an argument, but a constant.
+
+for instance, “pred:X * N -> 2 o <x,n>” can be turned into 
+pred o <x o to1(N), id(N)> o n
+
+any reference to HOL about normalisation in this flavor?
+
+rw the goal according to ind_principle_elements, so the goal, in this example, becomes:
+
+pred o z = t & (!m0. pred o m0 = t ==> pred o suc o m0 = t)
+
+Step 4: by the theorem produced in Step 1, with opposite direction, which is:
+“!m. pred o m = t <=> (!n. char(lt) o (m,n) = t | char(le) o (n,m) = t)”
+rw the goal back into:
+
+(!n.char(lt) o <z,n> = t) &
+(!m0. (!n.char(lt) o <m0,n> = t | char(le) o <m0,n> = t) ==>
+ (!n.char(lt) o <s o m0,n> = t | char(le) o <s o m0,n> = t) )
+
+automatically strip or not?
+
+if rpt induct_tac, then in the first conjunct, the induction is for n, the second one is for m0.
+
+*): 
+
+induct_conv first, and fconv_tac with it.
+
+*)
+
+
+
+fun induct_tac (ct,asl,w) = 
+    let val ((n,s),f) = dest_forall w
+        val (p0,th0) = pred_of f
+        val th = allI (n,s) th0
+        (*th is of form !n. f (n) <=> pred o n = t*)
+    in rw_tac[th] >> 
+
+val _ = new_fun "*"(mk_ob_sort,[("A",mk_ob_sort), ("B",mk_ob_sort)])
+
+fun fxty i = 
+    case i of 
+       "<=>" => 100
+      | "==>" => 200
+      | "|" => 300
+      | "&" => 400
+      | "=" => 450
+      | "o" => 455
+      | ":" => 460 (*900*)
+      | "->" => 470 (*900*)
+      | "+" => 500
+      | "*" => 600
+      | "^" => 700
+      | "~" => 900
+      | _ => ~1
+
+form_goal
+“!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y. ispb(f, g, p, q) <=> f o p = g o q & !A u : A -> X v : A -> Y. f o u = g o v ==> ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==> a1 = a2”
+
+parse_ast $ lex "!X Z f:X -> Z Y g : Y -> Z  P p : P -> X q : P -> Y.\
+      \ ispb(f, g, p, q) <=> \
+      \  f o p = g o q & \
+      \  !A u : A -> X v : A -> Y. \
+      \        ?a : A -> P. p o a = u & q o a = v & !a1 : A -> P a2:A->P. p o a1 = u & q o a1 = v& p o a2 = u & q o a2 = v ==>
+ a1 = a2"
+
+rapf "!X P p : P -> X A u : A -> X a1 : A -> P. p o a1 = u"
+
+parse_ast $ lex
+ "!X P p : P -> X A u : A -> X a1 : A -> P. p o a1 = u"
+
+rapf
+ "!a1 : A -> P. p0 o a1 = u"
+
+
+
+P ->X A ->P
+
+
+ parse_ast $ lex "(f0x:0->X) o f:A->0";
+val it =
+   (aInfix
+     (aInfix
+       (aInfix
+         (aInfix (aInfix (aId "f0x", ":", aId "0"), "->", aId "X"), "o",
+          aId "f"), ":", aId "A"), "->", aId "0"), []): ast * token list
+
+if use the prec 900 instead, need to write f: (A * B) ->X. 
+
+f:A * B->X is not parsable
+
+
+val ax_2el = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~(x1 = x2)"
+
+need () around (x1 = x2), desired effect?
+
+cannot write (rastt "f':0->1 o f:1->0")
+
+
+if rapf "ce o f = ce:B->cE o (g:A->B)"
+
+# Exception-
+   TER
+     ("match_term.match_sort.cannot match ob with ar: ",
+      [ar (Var ("B", ob), Var ("C", ob)), ob],
+      [Var ("f", ar (Var ("B", ob), Var ("C", ob))), Var ("cE", ob)]) raised
+
+need
+rapf "ce o f = (ce:B->cE) o g:A->B"
+
+previously, can write "s o pN':NB'->N", now cannot
+
+previously can write “!n:1->N. ~ s o n = z”
+
+now cannot
+
+“a:bool /\ P (c:β ->γ o b:α ->β)”
+
+works in HOL. but not in mine,
+
+tired of fixing it, want to do it as HOL.
+
+TODO: ppbug:  ev o pa(p1, p2, p1, (tp(p1, p2, ev, p1, p2, (neg o ev)) o p2))
+
+``A = A``;
+val it = A = A: form
+> dest_eq it;
+val it = (A, A): term * term
+> fst it;
+val it = A: term
+> sort_of it;
+val it = ob: sort
+
+
+
+rastt " pa(p1, p2, p1, (tp(p1, p2, ev, p1, p2, (neg o ev)) o p2))";
+val it = pa(p1, p2, p1, tp(p1, p2, ev, p1, p2, (neg o ev)) o p2): term
+> rastt " tp(p1, p2, ev, p1, p2, (neg o ev))";
+val it = tp(p1, p2, ev, p1, p2, neg o ev): term
+similar a qexists tac such that deal with:
+
+ ?A' AX (p1' : AX# -> A'#)  (p2' : AX# -> 1)  B' efs' (ev' : efs'# -> B'#)
+             (p1' : efs'# -> A'#)  (p2' : efs'# -> A2B).
+               ev'# o
+                 pa(p1'#, p2'#, p1'#, (tp(p1, p2, ev, pA, pN, f) o z) o p2'#) =
+                 ev'# o
+                 pa(p1'#, p2'#, p1'#, tp(p1, p2, ev, pA', pone, (g o pA')) o
+                  p2'#) & isexp(p1'#, p2'#, ev'#) & ispr(p1'#, p2'#)
+
+Thm1_comm_eq_left is above
+
+
+ev_eq_eq in the proof of f0g_eq_f1g
+
+Thm6_first_sentence in Thm6
