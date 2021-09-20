@@ -261,7 +261,7 @@ and unify_pt env pt1 pt2: env=
                   end
                 | _ => raise UNIFY ("term list cannot be unified",[term_from_pt env pt1,term_from_pt env pt2])
               end)
-        else raise UNIFY ("different functions",[])
+        else raise UNIFY ("different functions:"^ f ^ ", " ^ g ,[])
       | (pAnno(pt,ps),t) => unify_pt env pt t
       | (t,pAnno(pt,ps)) => unify_pt env pt t
       | _ => raise UNIFY ("terms cannot be unified",[term_from_pt env pt1,term_from_pt env pt2])
