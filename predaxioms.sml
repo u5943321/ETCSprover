@@ -87,7 +87,7 @@ val _ = new_fun "SUC" (ar_sort N N,[])
 
 val _ = new_fun "ZERO" (ar_sort one N,[])
 
-val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.(x o ZERO = x0 & x o s = t o x) <=> x = Nind(x0,t)"
+val constN_def = read_axiom "!X x0:1->X t:X ->X x:N->X.(x o ZERO = x0 & x o SUC = t o x) <=> x = Nind(x0,t)"
 
 (*to be edited, switch the ordrr of s0 and z0*)
 val ax3 = constN_def
@@ -461,14 +461,14 @@ exists_tac (rastt "pP:PQ->P")>>
 
 (*id N = N_ind z s*)
 
-val N_ind_Z_s_id = constN_def |> specl (List.map rastt ["N","ZERO","s","id(N)"])
+val N_ind_Z_s_id = constN_def |> specl (List.map rastt ["N","ZERO","SUC","id(N)"])
                               |> rewr_rule [idL,idR]
 
 
 (*∀f. f∶ N → N ∧ f o z = z ∧ f o s = s o f ⇒ f = id N*)
 
 val comm_with_s_id = 
-    constN_def |> specl (List.map rastt ["N","ZERO","s","f:N->N"])
+    constN_def |> specl (List.map rastt ["N","ZERO","SUC","f:N->N"])
                |> iffLR |> undisch |> GSYM |> trans N_ind_Z_s_id |> disch_all |> gen_all
 
 (*∀A B f g. f∶ A → B ∧ g∶ A → B ∧ ⟨id A,f⟩ = ⟨id A,g⟩ ⇒ f = g*)
@@ -854,6 +854,7 @@ e0
  pop_assum (strip_assume_tac o GSYM) >> arw_tac[GSYM o_assoc])
 (rapg "!A B f:A->B. (!b:1->B. ?b0:1->A. f o b0 = b) ==> isepi(f)")
 
+(*edited SUC ...*)
 (*∀A B. A ≅ B ⇔ ∃f. f∶ A → B ∧ is_iso f*)
 
 val _ = new_pred "areiso" [("A",mk_ob_sort),("B",mk_ob_sort)]
@@ -1594,10 +1595,10 @@ e0
 (repeat strip_tac >> dimp_tac >> strip_tac
  >-- (drule to_p_eq >> first_x_assum match_mp_tac >> 
      drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR]) >>
- drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB","s o (pN:NB->N)","h:NB->B"]) (assume_tac o GSYM)) >> 
+ drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB","SUC o (pN:NB->N)","h:NB->B"]) (assume_tac o GSYM)) >> 
 first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) (assume_tac o GSYM)) >> pop_assum mp_tac >> once_arw_tac[] >> rw_tac[o_assoc] >>
 strip_tac >> drule p2_of_pa >> once_arw[] >> rw[o_assoc])
-(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N),f) = f o s <=> pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s")
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B. h o pa(pN,pB,id(N),f) = f o SUC <=> pa(pN,pB,SUC o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o SUC")
 
 
 
@@ -1607,11 +1608,11 @@ e0
  >-- (rev_drule to_p_eq >> first_x_assum match_mp_tac >> 
      rev_drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc,idL,idR] >>
      drule p1_of_pa >> arw[idR]) >>
- rev_drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB'","s o (pN':NB'->N)","h:NB'->B"]) (assume_tac o GSYM)) >> once_arw[] >> 
+ rev_drule p2_of_pa >> first_assum (specl_then (List.map rastt ["NB'","SUC o (pN':NB'->N)","h:NB'->B"]) (assume_tac o GSYM)) >> once_arw[] >> 
  rw[o_assoc] >> once_arw[] >> once_arw[]>> 
 first_x_assum (specl_then (List.map rastt ["N","id(N)","f:N->B"]) assume_tac) >>
 rw[GSYM o_assoc] >> once_arw[] >> rw[])
-(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !NB' pN':NB'->N pB':NB'->B. ispr(pN',pB') ==> !f:N->B h:NB'->B. h o pa(pN',pB',id(N),f) = f o s <=> pa(pN,pB,s o pN',h) o pa(pN',pB',id(N),f) = pa(pN,pB,id(N),f) o s")
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !NB' pN':NB'->N pB':NB'->B. ispr(pN',pB') ==> !f:N->B h:NB'->B. h o pa(pN',pB',id(N),f) = f o SUC <=> pa(pN,pB,SUC o pN',h) o pa(pN',pB',id(N),f) = pa(pN,pB,id(N),f) o SUC")
 
 
 (* "(f0 o z = g & f0 o s = h o <id(N),f0>) <=> (<id(N),f0> o z = <z,g> & <s o p1(N,B),h> o <id(N),f0> = <id(N),f0> o s)" *)
@@ -1643,9 +1644,9 @@ TO-DO: rw does not do anything to this *)
 val Thm1_case1_comm_condition_right'' = 
 dimpI
 (Thm1_case1_comm_condition_right |> strip_all_and_imp |> dimpl2r 
-|> undisch |> prove_hyp (sym (assume (rapf "f o s = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)"))) |> disch (rapf "f o s = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)")) 
+|> undisch |> prove_hyp (sym (assume (rapf "f o SUC = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)"))) |> disch (rapf "f o SUC = h o pa(pN:NB->N, pB:NB->B, id(N), f:N->B)")) 
 (Thm1_case1_comm_condition_right |> strip_all_and_imp |> dimpr2l 
-|> undisch |> sym |> disch (rapf "pa(pN, pB, (s o pN), h:NB->B) o pa(pN, pB, id(N), f) = pa(pN:NB->N, pB:NB->B, id(N), f:N->B) o s"))|> gen_all |> disch_all
+|> undisch |> sym |> disch (rapf "pa(pN, pB, (SUC o pN), h:NB->B) o pa(pN, pB, id(N), f) = pa(pN:NB->N, pB:NB->B, id(N), f:N->B) o SUC"))|> gen_all |> disch_all
 |> gen_all
 
 
@@ -1657,7 +1658,7 @@ e0
  arw[] >> rw_tac[] >> drule Thm1_case1_comm_condition_right'' >>
  first_x_assum (specl_then (List.map rastt ["f:N->B","h:NB->B"]) assume_tac) >>
  arw[])
-(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B g:1->B. f o ZERO = g & f o s = h o pa(pN,pB,id(N),f) <=> pa(pN,pB,id(N),f) o ZERO = pa(pN,pB,ZERO,g) & pa(pN,pB,s o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o s")
+(rapg "!B NB pN:NB->N pB:NB->B.ispr(pN,pB) ==> !f:N->B h:NB->B g:1->B. f o ZERO = g & f o SUC = h o pa(pN,pB,id(N),f) <=> pa(pN,pB,id(N),f) o ZERO = pa(pN,pB,ZERO,g) & pa(pN,pB,SUC o pN,h) o pa(pN,pB,id(N),f) = pa(pN,pB,id(N),f) o SUC")
 
 
 (*∀B g h. g∶ one → B ∧ h∶ po N B → B ⇒
@@ -1693,20 +1694,23 @@ B , NB ,
    : gstk
 *)
 
-val longf' = rastt "Nind(pa(pN:NB->N,pB:NB->B,ZERO,g:1->B),pa(pN,pB,s o pN,h:NB->B))" 
+val longf' = rastt "Nind(pa(pN:NB->N,pB:NB->B,ZERO,g:1->B),pa(pN,pB,SUC o pN,h:NB->B))" 
 
 val longf = mk_fun "o" [rastt "pB:NB->B",longf']
 
 val ZERO = mk_fun "ZERO" []
 
+val SUC = mk_fun "SUC" []
+
+
 val Thm1_case_1 = proved_th $
 e0
 (repeat strip_tac >> 
- abbrev_tac (rapf "Nind(pa(pN:NB->N,pB:NB->B,ZERO,g:1->B),pa(pN,pB,s o pN,h:NB->B)) = f'") >> 
+ abbrev_tac (rapf "Nind(pa(pN:NB->N,pB:NB->B,ZERO,g:1->B),pa(pN,pB,SUC o pN,h:NB->B)) = f'") >> 
  by_tac (rapf "(pN: NB->N) o (f':N->NB) = id(N)")
  >-- (match_mp_tac (GSYM comm_with_s_id) >> pop_assum (assume_tac o GSYM) >>
       assume_tac
-      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, s o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, ZERO, g:1->B)"])) >>
+      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, SUC o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, ZERO, g:1->B)"])) >>
       pop_assum strip_assume_tac >> rw_tac[o_assoc] >> 
       arw[] >> drule p1_of_pa >> arw[GSYM o_assoc]) >>
  abbrev_tac (rapf "(pB:NB->B) o (f':N->NB) = f") >>
@@ -1714,14 +1718,14 @@ e0
  by_tac (rapf "f' = pa(pN:NB->N,pB:NB->B,id(N),f:N->B)")
  >-- (drule to_p_eq >> first_x_assum match_mp_tac >>
       drule p12_of_pa >> arw[]) >>
- by_tac (rapf "(f:N->B) o ZERO = g & f o s = h o pa(pN:NB->N,pB:NB->B,id(N),f)")
+ by_tac (rapf "(f:N->B) o ZERO = g & f o SUC = h o pa(pN:NB->N,pB:NB->B,id(N),f)")
  >-- (suffices_tac (mk_conj (mk_eq (mk_fun "o" [longf,ZERO]) (rastt "g:1->B")) 
-                 (mk_eq (mk_fun "o" [longf,s]) 
+                 (mk_eq (mk_fun "o" [longf,SUC]) 
                         (mk_fun "o" [rastt "h:NB->B",mk_fun "pa" ((List.map rastt ["pN:NB->N","pB:NB->B","id(N)"]) @ [longf])])))
       >-- (once_arw[] >> once_arw[] >> disch_tac >> 
           first_x_assum accept_tac) >>
       assume_tac
-      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, s o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, ZERO, g:1->B)"])) >>
+      (Neqn_zs |> specl (List.map rastt ["NB","pa(pN:NB->N, pB:NB->B, SUC o pN, h:NB->B)","pa(pN:NB->N, pB:NB->B, ZERO, g:1->B)"])) >>
       pop_assum strip_assume_tac >> rw_tac[o_assoc] >>
       once_arw[] >> drule p2_of_pa >> once_arw[] >>
       rw_tac[GSYM o_assoc] >> once_arw[] >> rw[]) >> 
@@ -1732,7 +1736,7 @@ e0
  suffices_tac (mk_eq (rastt "pa(pN:NB->N, pB:NB->B, id(N), f0:N->B)") longf') 
  >-- (once_arw[] >> rw[]) >> 
  match_mp_tac (constN_def |> iffLR) >> once_arw[] >> rw[])
-(rapg "!NB pN:NB->N B pB:NB->B. ispr(pN,pB) ==> !g:1->B h:NB->B. ?f:N->B.!f0. (f0 o ZERO = g & f0 o s = h o pa(pN,pB,id(N),f0)) <=> f0 = f")
+(rapg "!NB pN:NB->N B pB:NB->B. ispr(pN,pB) ==> !g:1->B h:NB->B. ?f:N->B.!f0. (f0 o ZERO = g & f0 o SUC = h o pa(pN,pB,id(N),f0)) <=> f0 = f")
 
 
 
@@ -1833,10 +1837,10 @@ val Thm1_comm_eq_right_lemma_short = proved_th $
  by_tac 
  “ispr(pA, pN) & ispr(pA:AN->A, pN:AN->N) & ispr(p1:AA2B->A, p2:AA2B->A2B)” >> 
  arw[] >> drule parallel_p_one_side >> 
- first_x_assum (pspecl_then ["s","tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA:AN->A,pN:AN->N,f:AN->B)"] assume_tac) >>
+ first_x_assum (pspecl_then ["SUC","tp(p1:AA2B->A,p2:AA2B->A2B,ev:AA2B->B,pA:AN->A,pN:AN->N,f:AN->B)"] assume_tac) >>
  arw[o_assoc] >> drule ev_of_tp >> first_x_assum rev_drule >>
  arw[GSYM o_assoc])
-(rapg "!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. isexp(p1,p2,ev) ==> !AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !f:AN->B.tp(p1,p2,ev,pA,pN,f o pa(pA,pN,pA,s o pN)) = tp(p1,p2,ev,pA,pN,f) o s")
+(rapg "!A B A2B AA2B p1:AA2B->A p2:AA2B->A2B ev:AA2B->B. isexp(p1,p2,ev) ==> !AN pA:AN->A pN:AN->N. ispr(pA,pN) ==> !f:AN->B.tp(p1,p2,ev,pA,pN,f o pa(pA,pN,pA,SUC o pN)) = tp(p1,p2,ev,pA,pN,f) o SUC")
 
 
 
@@ -1981,9 +1985,9 @@ e0
                          ispr(Ap,aP) ==>
 !l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
  !f:AN->B h:ANB->B.
- h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,s o pN) <=>
+ h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,SUC o pN) <=>
  tp(p1,p2,ev,Ap,aP,h o l) o pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f)) = 
- tp(p1,p2,ev,pA,pN,f) o s”
+ tp(p1,p2,ev,pA,pN,f) o SUC”
 )
 
 
@@ -2024,12 +2028,12 @@ e0
 !A1 pA':A1 -> A  pone : A1 -> 1. ispr(pA', pone) ==> 
  !f:AN->B g:A->B h:ANB->B.
    f o pa(pA, pN, pA', ZERO o pone) = g o pA' & 
-   h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,s o pN) <=>
+   h o pa(pAN,pB,id(AN),f) = f o pa(pA,pN,pA,SUC o pN) <=>
 (tp(p1, p2, ev, pA, pN, f) o ZERO =
 tp(p1, p2, ev, pA', pone, g o pA') &
 (!l. l = pa(pAN,pB,pa(pA,pN,Ap,Na2b o aP),ev o pa(p1,p2,Ap,nA2B o aP)) ==>
  tp(p1,p2,ev,Ap,aP,h o l) o pa(Na2b,nA2B,id(N),tp(p1,p2,ev,pA,pN,f)) = 
- tp(p1,p2,ev,pA,pN,f) o s))”)
+ tp(p1,p2,ev,pA,pN,f) o SUC))”)
 
 fun pick_nth_assum n ttac = fn (ct,asl, w) => ttac (assume (List.nth(rev asl,Int.-(n,1)))) (ct,asl, w)
 
@@ -2077,7 +2081,7 @@ val Thm1 = proved_th $
       >-- first_x_assum (accept_tac o GSYM)) >>
  suffices_tac
  “tp(p1:AA2B->A, p2:AA2B->A2B, ev:AA2B->B, pA:AN->A, pN:AN->N, f':AN->B) o ZERO = tp(p1, p2, ev, pA':A1->A, pone:A1->1, (g:A->B) o pA') & 
-  tp(p1, p2, ev, pA, pN, f') o s = 
+  tp(p1, p2, ev, pA, pN, f') o SUC = 
   tp(p1, p2, ev, Ap:AP->A, aP:AP->P, ((h:ANB->B) o (l:AP->ANB))) o pa(Na2b, nA2B, id(N), tp(p1, p2, ev, pA, pN, f'))” 
  >-- (strip_tac >> once_arw[] >> rw[] >> repeat strip_tac >>
      by_tac “l' = l:AP->ANB” >-- (once_arw[] >> rw[]) >>
@@ -2094,7 +2098,7 @@ val Thm1 = proved_th $
   !A1 pA':A1 -> A pone:A1 -> 1. ispr(pA', pone) ==> 
   !g:A->B h:ANB->B.
   ?f:AN->B. !f'. (f' o pa(pA,pN,pA',ZERO o pone) = g o pA' &
-            h o pa(pAN,pB,id(AN),f') = f' o pa(pA,pN,pA,s o pN)) <=> f' = f”)
+            h o pa(pAN,pB,id(AN),f') = f' o pa(pA,pN,pA,SUC o pN)) <=> f' = f”)
 
 (*∃p. p∶ N → N ∧ p o z = z ∧ p o s = id N*)
 
@@ -2107,7 +2111,7 @@ e0
  pexistsl_tac ["p:N->N"] >>
  first_x_assum (pspecl_then ["p:N->N"] assume_tac) >>
  drule p1_of_pa >> full_simp_tac[])
-(form_goal “?p:N->N. p o ZERO = ZERO & p o s = id(N)”)
+(form_goal “?p:N->N. p o ZERO = ZERO & p o SUC = id(N)”)
 
 (*∀n. n∶ one → N ⇒ (s o n) ≠ z*)
 
@@ -2129,8 +2133,8 @@ e0
 (strip_tac >> ccontra_tac >> match_mp_tac distinct_endo_exists' >>
  repeat strip_tac >> rw[] >> 
  strip_assume_tac pred_exists >>
- by_tac “s o ZERO = ZERO”
- >-- (by_tac “p o s o n = (p:N->N) o ZERO” 
+ by_tac “SUC o ZERO = ZERO”
+ >-- (by_tac “p o SUC o n = (p:N->N) o ZERO” 
       >-- arw[] >>
       pop_assum mp_tac >> rw[GSYM o_assoc]>> arw[idL] >> 
       strip_tac >> full_simp_tac[]) >>
@@ -2140,18 +2144,18 @@ e0
  >-- (strip_assume_tac 
      (Neqn_zs |> pspecl ["X","e1:X->X","a:1->X"] |> GSYM) >>
      once_arw[] >> rw[GSYM o_assoc] >>
-     suffices_tac “(Nind(a, e1) o s)  o ZERO = Nind(a:1->X, e1:X->X) o ZERO”
+     suffices_tac “(Nind(a, e1) o SUC)  o ZERO = Nind(a:1->X, e1:X->X) o ZERO”
      >-- (strip_tac >> pick_xnth_assum 5 mp_tac >> rev_full_simp_tac[]) >>
      rw[o_assoc] >> once_arw[] >> rw[]
      ) >>
 strip_assume_tac 
  (Neqn_zs |> pspecl ["X","e1':X->X","a:1->X"] |> GSYM) >>
      once_arw[] >> rw[GSYM o_assoc] >>
-     suffices_tac “(Nind(a, e1') o s)  o ZERO = Nind(a:1->X, e1':X->X) o ZERO”
+     suffices_tac “(Nind(a, e1') o SUC)  o ZERO = Nind(a:1->X, e1':X->X) o ZERO”
      >-- (strip_tac >> pick_xnth_assum 5 mp_tac >> rev_full_simp_tac[]) >>
      rw[o_assoc] >> once_arw[] >> rw[]
  )
-(form_goal “!n:1->N. ~ (s o n = ZERO)”)
+(form_goal “!n:1->N. ~ (SUC o n = ZERO)”)
 
 (*is_mono s*)
 
@@ -2159,7 +2163,7 @@ val Thm2_2 = proved_th $
 e0
 (match_mp_tac post_inv_mono >> strip_assume_tac pred_exists >>
  pexistsl_tac ["p:N->N"] >> arw[])
-(form_goal “ismono(s)”)
+(form_goal “ismono(SUC)”)
 
 (*∀A a s' z'. a∶ A → N ∧ is_mono a ∧ s'∶ A → A ∧ z'∶ one → A ∧
             a o s' = s o a ∧ a o z' = z ⇒ A ≅ N*)
@@ -2178,7 +2182,7 @@ e0
  once_arw[] >> rw[])
 (form_goal 
 “!A a:A->N. ismono(a) ==> 
-  !s':A->A z':1->A. (a o s' = s o a & a o z' = ZERO ==> areiso(A,N))”)
+  !s':A->A z':1->A. (a o s' = SUC o a & a o z' = ZERO ==> areiso(A,N))”)
 
 val Thm2_3_alt' = proved_th $ 
 e0
@@ -2191,7 +2195,7 @@ e0
  once_arw[] >> rw[])
 (form_goal 
 “!A a:A->N. ismono(a) ==> 
-  !s':A->A z':1->A. (a o s' = s o a & a o z' = ZERO ==> isiso(a))”)
+  !s':A->A z':1->A. (a o s' = SUC o a & a o z' = ZERO ==> isiso(a))”)
 (*Thm2_3_alt/' slow*)
 
 (*∀A a. a∶ A → N ∧ is_mono a ∧ (∀n. is_mem n a N ⇒ is_mem (s ∘ n) a N) ⇒
@@ -2200,7 +2204,7 @@ e0
 val ind_fac = proved_th $
  e0
 (rpt strip_tac >> 
- strip_assume_tac (pb_exists |> pspecl ["A","N","s o (a:A->N)","A","a:A->N"]) >>
+ strip_assume_tac (pb_exists |> pspecl ["A","N","SUC o (a:A->N)","A","a:A->N"]) >>
  drule pb_equality >>
  suffices_tac “isiso(p:P->A)”
  >-- (rw[isiso_def] >> strip_tac >> pexistsl_tac ["(q:P->A) o (f':A->P)"] >>
@@ -2209,7 +2213,7 @@ val ind_fac = proved_th $
  match_mp_tac mono_epi_is_iso >> strip_tac
  >-- (drule pb_mono_mono >> first_x_assum drule >> first_x_assum accept_tac) >>
  match_mp_tac surj_is_epi >> strip_tac >> 
- by_tac “ismem(s o (a:A->N) o (b:1->A),a)”
+ by_tac “ismem(SUC o (a:A->N) o (b:1->A),a)”
  >-- (first_x_assum match_mp_tac >> arw[ismem_def] >>
       pexistsl_tac ["b:1->A"] >> rw[]) >>
  full_simp_tac[ismem_def] >> pop_assum (assume_tac o GSYM) >> 
@@ -2217,8 +2221,8 @@ val ind_fac = proved_th $
  pop_assum strip_assume_tac >> full_simp_tac[GSYM o_assoc] >>
  first_x_assum drule >> pop_assum strip_assume_tac >>
  pexistsl_tac ["a':1->P"] >> arw[])
-(form_goal “!A a:A->N. ismono(a) ==> (!n:1->N. ismem(n,a) ==> ismem(s o n,a)) ==>
- ?t:A->A. a o t = s o a”)
+(form_goal “!A a:A->N. ismono(a) ==> (!n:1->N. ismem(n,a) ==> ismem(SUC o n,a)) ==>
+ ?t:A->A. a o t = SUC o a”)
 
 (*Theorem Thm2_3:        
 ∀A a. is_subset a N ∧ (∀n. is_mem n a N ⇒ is_mem (s o n) a N) ∧
@@ -2231,17 +2235,17 @@ e0
  drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
  full_simp_tac[ismem_def] >> 
  pexistsl_tac ["a:A->N","t:A->A","x0:1->A"] >> arw[])
-(form_goal “!A a:A->N. (ismono(a) & (!n:1->N. ismem(n,a) ==> ismem(s o n,a)) & ismem(ZERO,a)) ==>
+(form_goal “!A a:A->N. (ismono(a) & (!n:1->N. ismem(n,a) ==> ismem(SUC o n,a)) & ismem(ZERO,a)) ==>
            areiso(A,N)”)
 
 val Thm2_3' = proved_th $
-e0
-(repeat strip_tac >> irule Thm2_3_alt' >> 
- drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
- full_simp_tac[ismem_def] >> strip_tac
- >-- (qexistsl_tac ["x0"] >> arw[]) >>
- qexistsl_tac ["t"] >> arw[])
-(form_goal “!A a:A->N. (ismono(a) & (!n:1->N. ismem(n,a) ==> ismem(s o n,a)) & ismem(ZERO,a)) ==> isiso(a)”)
+                        e0
+                        (repeat strip_tac >> irule Thm2_3_alt' >> 
+                                drule ind_fac >> first_x_assum drule >> pop_assum strip_assume_tac >>
+                                full_simp_tac[ismem_def] >> strip_tac
+                                >-- (qexistsl_tac ["x0"] >> arw[]) >>
+                                qexistsl_tac ["t"] >> arw[])
+                        (form_goal “!A a:A->N. (ismono(a) & (!n:1->N. ismem(n,a) ==> ismem(SUC o n,a)) & ismem(ZERO,a)) ==> isiso(a)”)
 
 
 (*MaybeTODO: machinary of prove isN from areiso(A,0)*)
@@ -4264,7 +4268,7 @@ e0
  !NNN NNn:NNN->NN nnN:NNN->N.ispr(NNn,nnN) ==>
  !N1 pN':N1->N pone:N1-> 1. ispr(pN',pone) ==>
  ?sub:NN->N.!sub':NN->N.sub' o pa(Nn,nN,pN',ZERO o pone) = pN' & 
- PRE o nnN o pa(NNn,nnN,id(NN),sub') = sub' o pa(Nn,nN,Nn,s o nN) <=> sub' = sub”)
+ PRE o nnN o pa(NNn,nnN,id(NN),sub') = sub' o pa(Nn,nN,Nn,SUC o nN) <=> sub' = sub”)
 
 
 
@@ -4280,7 +4284,7 @@ e0
  !N1 pN':N1->N pone:N1-> 1. ispr(pN',pone) ==>
  ?sub:NN->N.
  sub o pa(Nn,nN,pN',ZERO o pone) = pN' &
- PRE o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,s o nN)”)
+ PRE o nnN o pa(NNn,nnN,id(NN),sub) = sub o pa(Nn,nN,Nn,SUC o nN)”)
 
 
 (*TODO: ppbug |-
@@ -4395,9 +4399,15 @@ val ltle_def = LT_def |> eqT_intro |> iffRL |> ex2fsym "ltle" []
 val ltne_def = ltle_def |> eqT_intro |> iffRL |> ex2fsym "ltne" []
                       |> C mp (trueI [])
 
-(*TOdO:AQ slow!!!!!*)
+(*TOdO:AQ slow!!!!!
+rpt gen_tac >> rw[ispb_def]*)
 
-val pb_reorder = proved_th $
+(*forall_fconv(forall_fconv (forall_fconv (forall_fconv (forall_fconv (forall_fconv(imp_fconv (rewr_fconv (spec_all ispb_def)))))))) ``!A B f:A->B g h i.ispb(f,g,h,i) ==> ispb(g,f,i,h)``;
+*)
+
+fun readf f = (fvf f,[]:form list,f)
+
+val pb_reorder = proved_th $ 
 e0
 (rw[ispb_def] >> rpt strip_tac 
  >-- (pop_assum (K all_tac) >> once_arw[] >> rw[]) >>
@@ -4850,38 +4860,38 @@ e0
  drule p12_of_pa >> fs[])
 (form_goal 
 “sub o pa(Nn, nN, id(N), ZERO o to1(N, 1)) = id(N) &
- PRE o sub = sub o pa(Nn, nN, Nn, s o nN)”)
+ PRE o sub = sub o pa(Nn, nN, Nn, SUC o nN)”)
 
 
 val SoE_lemma_2_5_5 = proved_th $
 e0
 (rw[iscopr_def] >> rpt strip_tac >>
  qspecl_then ["N","X"] (x_choosel_then ["NX","Nx","nX"] assume_tac) pr_ex >> 
- qspecl_then ["NX","pa(Nx,nX,ZERO,f)","pa(Nx,nX,s,g) o Nx"] assume_tac constN_def >>
- qexists_tac "nX o Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, s, g) o Nx)" >>
- first_assum (qspecl_then ["Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, s, g) o Nx)"] assume_tac) >>
+ qspecl_then ["NX","pa(Nx,nX,ZERO,f)","pa(Nx,nX,SUC,g) o Nx"] assume_tac constN_def >>
+ qexists_tac "nX o Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, SUC, g) o Nx)" >>
+ first_assum (qspecl_then ["Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, SUC, g) o Nx)"] assume_tac) >>
  fs[] >>
  by_tac 
- “Nx o Nind(pa(Nx:NX->N, nX:NX->X, ZERO, f), pa(Nx, nX, s, g) o Nx) = id(N)”
+ “Nx o Nind(pa(Nx:NX->N, nX:NX->X, ZERO, f), pa(Nx, nX, SUC, g) o Nx) = id(N)”
  >-- (sym_tac >> irule comm_with_s_id >>
       qby_tac 
-      ‘Nx o Nind(pa(Nx, nX, ZERO, f), (pa(Nx, nX, s, g) o Nx)) o s
-       = Nx o (pa(Nx, nX, s, g) o Nx) o
-       Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, s, g) o Nx)’ >-- arw[] >>
+      ‘Nx o Nind(pa(Nx, nX, ZERO, f), (pa(Nx, nX, SUC, g) o Nx)) o SUC
+       = Nx o (pa(Nx, nX, SUC, g) o Nx) o
+       Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, SUC, g) o Nx)’ >-- arw[] >>
       arw[o_assoc] >> drule p12_of_pa >>
       arw[GSYM o_assoc]) >> 
  fs[o_assoc,idR] >> 
  by_tac 
- “nX o Nind(pa(Nx:NX->N, nX:NX->X, ZERO, f), (pa(Nx, nX, s, g:N->X) o Nx)) o ZERO = nX o pa(Nx, nX, ZERO, f)”
+ “nX o Nind(pa(Nx:NX->N, nX:NX->X, ZERO, f), (pa(Nx, nX, SUC, g:N->X) o Nx)) o ZERO = nX o pa(Nx, nX, ZERO, f)”
  >-- arw[] >> 
  drule p2_of_pa >> arw[] >> 
  suffices_tac 
-“!fg:N->X. fg o ZERO = f:1->X & fg o s = g:N->X ==>
- pa(Nx:NX->N,nX:NX->X,id(N),fg) = Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, s, g) o Nx)” >-- 
+“!fg:N->X. fg o ZERO = f:1->X & fg o SUC = g:N->X ==>
+ pa(Nx:NX->N,nX:NX->X,id(N),fg) = Nind(pa(Nx, nX, ZERO, f), pa(Nx, nX, SUC, g) o Nx)” >-- 
  (strip_tac >> gen_tac >> disch_tac >>
  first_assum drule >>
  by_tac 
- “nX o pa(Nx:NX->N, nX:NX->X, id(N), fg':N->X) = nX o Nind(pa(Nx, nX, ZERO, f:1->X), pa(Nx, nX, s, g:N->X) o Nx)”
+ “nX o pa(Nx:NX->N, nX:NX->X, id(N), fg':N->X) = nX o Nind(pa(Nx, nX, ZERO, f:1->X), pa(Nx, nX, SUC, g:N->X) o Nx)”
  >-- (pop_assum mp_tac >> pop_assum_list (map_every (K all_tac)) >> strip_tac >> arw[]) >>
  pop_assum mp_tac >> drule p2_of_pa >> arw[]) >>
  rpt strip_tac >> 
@@ -4892,7 +4902,7 @@ e0
  drule to_p_eq >> first_assum irule >>
  drule p12_of_pa >> arw[GSYM o_assoc] >>
  arw[o_assoc,idL,idR])
-(form_goal “iscopr(ZERO,s)”)
+(form_goal “iscopr(ZERO,SUC)”)
 
 val z_xor_s = proved_th $
 e0
@@ -4907,7 +4917,7 @@ e0
  arw[idR] >> qexists_tac "id(1)" >> rw[]
  )
 (form_goal
-“!n:1->N. ~(n = ZERO) <=> ?n0:1->N. n = s o n0”)
+“!n:1->N. ~(n = ZERO) <=> ?n0:1->N. n = SUC o n0”)
  
 
 
@@ -5008,13 +5018,13 @@ e0
  rpt strip_tac (* 2 *)
  >-- (first_x_assum (qspecl_then ["ZERO"] assume_tac) >> 
       rfs[idL] >> once_rw[one_to_one_id] >> rw[idR]) >>
- first_x_assum (qspecl_then ["s o n"] assume_tac) >> 
+ first_x_assum (qspecl_then ["SUC o n"] assume_tac) >> 
  rfs[idL] >> once_rw[one_to_one_id] >> rw[idR]) >>
  irule Thm2_3' >> arw[ismem_def])
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !pred:N->two. pred = i2 o to1(N,1) <=>
- (pred o ZERO = i2 & (!n:1->N. pred o n = i2 ==> pred o s o n = i2))”)
+ (pred o ZERO = i2 & (!n:1->N. pred o n = i2 ==> pred o SUC o n = i2))”)
 
 
 val ind_principle_elements = proved_th $
@@ -5028,7 +5038,7 @@ e0
 (form_goal
 “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !pred:N->two. (!n.pred o n = i2) <=>
- (pred o ZERO = i2 & (!n:1->N. pred o n = i2 ==> pred o s o n = i2))”)
+ (pred o ZERO = i2 & (!n:1->N. pred o n = i2 ==> pred o SUC o n = i2))”)
 
 
 val equality_ind = proved_th $ 
@@ -5077,7 +5087,7 @@ first_x_assum (qspecl_then [" (char(i1, i2, pa(Aa, aA, id(A), id(A))) o pa(Aa, a
  !x:1->X y:1->Y.(!n.f o pa(Xn,xN,x,n) = g o pa(Yn,yN,y,n)) <=>
  f o pa(Xn,xN,x,ZERO) = g o pa(Yn,yN,y,ZERO) & 
  !n0:1->N. f o pa(Xn,xN,x,n0) = g o pa(Yn,yN,y,n0) ==> 
- f o pa(Xn,xN,x,s o n0) = g o pa(Yn,yN,y,s o n0)”)
+ f o pa(Xn,xN,x,SUC o n0) = g o pa(Yn,yN,y,SUC o n0)”)
 
 
 val ind_one_component = proved_th $
@@ -5090,7 +5100,7 @@ e0
  !n0.(!n.f o pa(Nn,nN,n0,n) = g o pa(Nn,nN,n0,n)) <=>
  f o pa(Nn,nN,n0,ZERO) = g o pa(Nn,nN,n0,ZERO) & 
  !n:1->N. f o pa(Nn,nN,n0,n) = g o pa(Nn,nN,n0,n) ==> 
- f o pa(Nn,nN,n0,s o n) = g o pa(Nn,nN,n0,s o n)”)
+ f o pa(Nn,nN,n0,SUC o n) = g o pa(Nn,nN,n0,SUC o n)”)
 
 
 val add_ex = proved_th $
@@ -5098,13 +5108,13 @@ e0
 (assume_tac nN_def >> assume_tac nnN_def >> assume_tac pr_with_one >>
  first_x_assum (qspecl_then ["N"] assume_tac) >>
  rev_drule Thm1 >> first_x_assum drule >> first_x_assum drule >>
- first_x_assum (qspecl_then ["id(N)","s o nnN"] assume_tac) >>
+ first_x_assum (qspecl_then ["id(N)","SUC o nnN"] assume_tac) >>
  pop_assum strip_assume_tac  >>
  first_x_assum (qspecl_then ["f"] assume_tac) >> fs[] >>
  qexists_tac "f" >> fs[o_assoc,idL])
 (form_goal 
 “?add:NN->N.add o pa(Nn,nN,id(N),ZERO o to1(N,1)) = id(N) & 
- add o pa(Nn,nN,Nn,s o nN) = s o nnN o pa(NNn,nnN,id(NN),add)”)
+ add o pa(Nn,nN,Nn,SUC o nN) = SUC o nnN o pa(NNn,nnN,id(NN),add)”)
 
 
 val add_def0 = add_ex |> eqT_intro |> iffRL |> ex2fsym "add" []
@@ -5118,7 +5128,7 @@ e0
  fs[])
 (form_goal
 “add o pa(Nn,nN,id(N),ZERO o to1(N,1)) = id(N) & 
- add o pa(Nn,nN,Nn,s o nN) = s o add”)
+ add o pa(Nn,nN,Nn,SUC o nN) = SUC o add”)
 
 
 val add_elements = proved_th $
@@ -5131,12 +5141,12 @@ e0
       pick_x_assum “add o pa(Nn, nN, id(N) o n:1->N, (ZERO o to1(N, 1)) o n) = 
       id(N) o n” mp_tac >>
       rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR]) >>
- by_tac “add o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, n, n0:1->N) = s o add o pa(Nn, nN, n, n0)” >-- arw[GSYM o_assoc] >>
+ by_tac “add o pa(Nn, nN, Nn, SUC o nN) o pa(Nn, nN, n, n0:1->N) = SUC o add o pa(Nn, nN, n, n0)” >-- arw[GSYM o_assoc] >>
  assume_tac nN_def >> drule distr_to_pa' >> fs[o_assoc] >>
  drule p12_of_pa >> fs[])
 (form_goal 
 “!n:1->N. add o pa(Nn,nN,n,ZERO) = n &
- !n0:1->N. add o pa(Nn,nN,n, s o n0) = s o add o pa(Nn,nN,n,n0)”)
+ !n0:1->N. add o pa(Nn,nN,n, SUC o n0) = SUC o add o pa(Nn,nN,n,n0)”)
 
 
 val sub_elements = proved_th $
@@ -5150,13 +5160,13 @@ e0
  pop_assum mp_tac >> rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) >>
  by_tac 
  “PRE o sub o pa(Nn, nN, n:1->N, n0) = 
-  sub o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, n, n0)”
+  sub o pa(Nn, nN, Nn, SUC o nN) o pa(Nn, nN, n, n0)”
  >-- arw[GSYM o_assoc] >>
  arw[] >> assume_tac nN_def >> drule distr_to_pa >> arw[] >>
  drule p12_of_pa >> arw[o_assoc])
 (form_goal
 “!n:1->N. sub o pa(Nn,nN,n,ZERO) = n & 
- !n0.sub o pa(Nn,nN,n,s o n0) = PRE o sub o pa(Nn,nN,n,n0)”)
+ !n0.sub o pa(Nn,nN,n,SUC o n0) = PRE o sub o pa(Nn,nN,n,n0)”)
 
 
 val pxy_true = proved_th $
@@ -5299,7 +5309,7 @@ e0
  !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !pred:XN->two. pred = i2 o to1(XN,1) <=>
  (!x:1->X. pred o pa(Xn,xN,x,ZERO) = i2 & 
-  (!n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, s o n) = i2))”)
+  (!n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, SUC o n) = i2))”)
 
 
 
@@ -5319,7 +5329,7 @@ e0
  !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !pred:XN->two. pred = i2 o to1(XN,1) <=>
  (!x:1->X. pred o pa(Xn,xN,x,ZERO) = i2) & 
- (!x n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, s o n) = i2)”)
+ (!x n:1->N. pred o pa(Xn,xN,x,n) = i2 ==> pred o pa(Xn,xN,x, SUC o n) = i2)”)
 
 val sub_mono_eq = proved_th $
 e0
@@ -5332,23 +5342,23 @@ e0
  last_x_assum drule >>
  suffices_tac
  “char(i1,i2,pa(Nn, nN, id(N), id(N))) o 
-  pa(Nn, nN, sub o pa(Nn, nN, s o Nn, s o nN), sub) = i2:1->two o to1(NN,1)” >-- (rpt strip_tac >> 
+  pa(Nn, nN, sub o pa(Nn, nN, SUC o Nn, SUC o nN), sub) = i2:1->two o to1(NN,1)” >-- (rpt strip_tac >> 
   by_tac 
   “char(i1, i2, pa(Nn, nN, id(N), id(N))) o
-   pa(Nn, nN, sub o pa(Nn, nN, s o Nn, s o nN), sub) o 
+   pa(Nn, nN, sub o pa(Nn, nN, SUC o Nn, SUC o nN), sub) o 
    pa(Nn,nN,m:1->N,n) =
    i2:1->two o to1(NN, 1) o pa(Nn,nN,m,n)”
   >-- (rw[GSYM o_assoc] >> arw[]) >>
   pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR] >>
   by_tac 
-  “pa(Nn, nN, (sub o pa(Nn, nN, s o Nn, s o nN)), sub) o pa(Nn, nN, m, n) =
-   pa(Nn, nN, sub o pa(Nn, nN, s o m:1->N, s o n), sub o pa(Nn, nN, m, n))” >--
+  “pa(Nn, nN, (sub o pa(Nn, nN, SUC o Nn, SUC o nN)), sub) o pa(Nn, nN, m, n) =
+   pa(Nn, nN, sub o pa(Nn, nN, SUC o m:1->N, SUC o n), sub o pa(Nn, nN, m, n))” >--
   (drule to_p_eq >> first_x_assum irule >> rw[GSYM o_assoc] >>
   drule p12_of_pa >> pop_assum mp_tac >>
   pop_assum_list (map_every (K all_tac)) >> strip_tac >> arw[] >>
   rw[o_assoc] >>
-  suffices_tac “pa(Nn, nN, (s o Nn), (s o nN)) o pa(Nn, nN, m, n) =
-  pa(Nn, nN, s o m, s o n:1->N)”
+  suffices_tac “pa(Nn, nN, (SUC o Nn), (SUC o nN)) o pa(Nn, nN, m, n) =
+  pa(Nn, nN, SUC o m, SUC o n:1->N)”
   >-- (strip_tac >> arw[]) >>
   assume_tac nN_def >> drule to_p_eq >> first_x_assum irule >>
   drule p12_of_pa >> arw[GSYM o_assoc] >> arw[o_assoc]) >>
@@ -5366,7 +5376,7 @@ e0
  )
 (form_goal 
 “!m:1->N n:1->N. 
- sub o pa(Nn,nN,s o m, s o n) = sub o pa(Nn,nN,m,n)”) 
+ sub o pa(Nn,nN,SUC o m, SUC o n) = sub o pa(Nn,nN,m,n)”) 
 
 val add_sub0 = proved_th $
 e0
@@ -5405,7 +5415,7 @@ e0
 (form_goal
 “!f:N->N g:N->N. (!n:1->N.f o n = g o n) <=>
   f o ZERO = g o ZERO & 
-  !n:1->N. f o n = g o n ==> f o s o n = g o s o n”)
+  !n:1->N. f o n = g o n ==> f o SUC o n = g o SUC o n”)
 
 
 val add_z_n0 = proved_th $
@@ -5510,19 +5520,19 @@ e0
 (rpt strip_tac >> assume_tac sub_def' >>
  by_tac
  “PRE o sub o pa(Nn, nN, a:1->N, b:1->N) = 
- sub o pa(Nn, nN, Nn, s o nN) o pa(Nn, nN, a, b)”
+ sub o pa(Nn, nN, Nn, SUC o nN) o pa(Nn, nN, a, b)”
  >-- arw[GSYM o_assoc] >>
  assume_tac nN_def >> drule p12_of_pa >>
  arw[] >> 
  suffices_tac
- “pa(Nn, nN, a:1->N, s o b:1->N) = 
- pa(Nn, nN, Nn, (s o nN)) o pa(Nn, nN, a, b)”
+ “pa(Nn, nN, a:1->N, SUC o b:1->N) = 
+ pa(Nn, nN, Nn, (SUC o nN)) o pa(Nn, nN, a, b)”
  >-- (strip_tac >> arw[]) >>
  drule to_p_eq >> first_x_assum irule >>
  arw[GSYM o_assoc] >>
  arw[o_assoc])
 (form_goal
-“!a:1->N b:1->N.sub o pa(Nn,nN,a,s o b) = 
+“!a:1->N b:1->N.sub o pa(Nn,nN,a,SUC o b) = 
  PRE o sub o pa(Nn,nN,a,b)”)
 
 (*TODO: prec parser bug! need () around <=> *)
@@ -5541,21 +5551,21 @@ e0
  once_arw[] >>
  rw[GSYM o_assoc] >> once_arw[] >>
  suffices_tac
- “(!n:1->N. (Uq o tp(p1:nps->N, p2:nps-> Nt2, ev:nps->two, Nn, nN, pred)) o n = i2 ==> (Uq o tp(p1, p2, ev, Nn, nN, pred:NN->two)) o s o n = i2)
+ “(!n:1->N. (Uq o tp(p1:nps->N, p2:nps-> Nt2, ev:nps->two, Nn, nN, pred)) o n = i2 ==> (Uq o tp(p1, p2, ev, Nn, nN, pred:NN->two)) o SUC o n = i2)
    <=>
   !n:1->N. (Uq o tp(p1, p2, ev, Nn, nN, pred)) o n = i2 ==>
-   pred o pa(Nn, nN, ZERO, s o n) = i2 &
-  !(m : 1 -> N). pred o pa(Nn, nN, m, s o n) = i2 ==>
-    pred o pa(Nn, nN, s o m, s o n) = i2:1->two” >--
+   pred o pa(Nn, nN, ZERO, SUC o n) = i2 &
+  !(m : 1 -> N). pred o pa(Nn, nN, m, SUC o n) = i2 ==>
+    pred o pa(Nn, nN, SUC o m, SUC o n) = i2:1->two” >--
  (strip_tac >> dimp_tac (*2 *) >--
   (strip_tac >> arw[] >> fs[]) >> strip_tac >> arw[])
  (*TODO: why it is not automatic rw???*) >>
  suffices_tac
  “!n:1->N. (Uq o tp(p1:nps->N, p2:nps->Nt2, ev:nps->two, Nn, nN, pred)) o n = i2 ==>
-  ((Uq o tp(p1, p2, ev, Nn, nN, pred)) o s o n = i2 <=>
-   pred o pa(Nn, nN, ZERO, s o n) = i2 &
-   !m:1->N. pred o pa(Nn, nN, m, s o n) = i2 ==>
-   pred o pa(Nn, nN, s o m, s o n) = i2:1->two)” >--
+  ((Uq o tp(p1, p2, ev, Nn, nN, pred)) o SUC o n = i2 <=>
+   pred o pa(Nn, nN, ZERO, SUC o n) = i2 &
+   !m:1->N. pred o pa(Nn, nN, m, SUC o n) = i2 ==>
+   pred o pa(Nn, nN, SUC o m, SUC o n) = i2:1->two)” >--
  (strip_tac >> dimp_tac (* 2 *) >--
   (strip_tac >> strip_tac >> strip_tac >>
    last_x_assum drule >> pop_assum (assume_tac o GSYM) >>
@@ -5566,7 +5576,7 @@ e0
  rpt strip_tac >>
  pop_assum mp_tac >> pop_assum (assume_tac o GSYM) >>
  strip_tac >> fs[GSYM o_assoc] >>
- first_x_assum (qspecl_then ["pred o pa(Nn,nN,id(N),s o n o to1(N,1))"] assume_tac) >>
+ first_x_assum (qspecl_then ["pred o pa(Nn,nN,id(N),SUC o n o to1(N,1))"] assume_tac) >>
  fs[o_assoc] >> drule distr_to_pa' >> fs[o_assoc] >>
  pop_assum (K all_tac) >> pop_assum mp_tac >>
  once_rw[one_to_one_id] >> rw[idR,idL])
@@ -5576,8 +5586,8 @@ e0
  (!m.pred o pa(Nn,nN,m,ZERO) = i2) &
  (!n.(!m.pred o pa(Nn,nN,m,n) = i2) 
    ==>
-   pred o pa(Nn,nN,ZERO,s o n) = i2 & 
-   (!m.pred o pa(Nn,nN,m,s o n) = i2 ==> pred o pa(Nn,nN,s o m, s o n) = i2))”)
+   pred o pa(Nn,nN,ZERO,SUC o n) = i2 & 
+   (!m.pred o pa(Nn,nN,m,SUC o n) = i2 ==> pred o pa(Nn,nN,SUC o m, SUC o n) = i2))”)
 
 val triple_ind = proved_th $
 e0
@@ -5612,22 +5622,22 @@ e0
  once_arw[] >> rw[] >> 
  suffices_tac 
  “(!a:1->N. (Uq:NNt2->two o tp(p1:nnps->NN, p2:nnps->NNt2, ev:nnps->two, NNn, nnN, pred:NNN->two)) o a = i2
-   ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o s o a = i2)
+   ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o SUC o a = i2)
   <=> 
   !a : 1 -> N. (!m n. pred o pa(NNn, nnN, pa(Nn, nN, n, m), a) =
                   i2) ==>
-               (!n. pred o pa(NNn, nnN, pa(Nn, nN, n, ZERO), s o a)
+               (!n. pred o pa(NNn, nnN, pa(Nn, nN, n, ZERO), SUC o a)
                   = i2) &
                !m. (!n. pred o
-                      pa(NNn, nnN, pa(Nn, nN, n, m), s o a) = i2) ==>
-                 pred o pa(NNn, nnN, pa(Nn, nN, ZERO, s o m), s o a) = i2 &
+                      pa(NNn, nnN, pa(Nn, nN, n, m), SUC o a) = i2) ==>
+                 pred o pa(NNn, nnN, pa(Nn, nN, ZERO, SUC o m), SUC o a) = i2 &
                  !n. pred o
-                     pa(NNn, nnN, pa(Nn, nN, n, s o m), s o a) = i2 ==>
-                   pred o pa(NNn, nnN, pa(Nn, nN, s o n, s o m), s o a) =
+                     pa(NNn, nnN, pa(Nn, nN, n, SUC o m), SUC o a) = i2 ==>
+                   pred o pa(NNn, nnN, pa(Nn, nN, SUC o n, SUC o m), SUC o a) =
                    i2” >--
  (strip_tac >> dimp_tac >> strip_tac >> arw[] >--
   (suffices_tac
-  “(!(a : 1 -> N). (Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two)) o a = i2:1->two ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o s o a = i2)”
+  “(!(a : 1 -> N). (Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two)) o a = i2:1->two ==> (Uq o tp(p1, p2, ev, NNn, nnN, pred)) o SUC o a = i2)”
   >-- (once_arw[] >> strip_tac) >>
   strip_tac >> once_arw[] >> strip_tac >> 
   first_x_assum drule >> first_x_assum accept_tac) >>
@@ -5639,15 +5649,15 @@ e0
  suffices_tac
  “!a. (!m n. pred o pa(NNn, nnN, pa(Nn, nN, n, m), a) = i2)
   ==>
-  ((Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred)) o s o a = i2:1->two <=>
-   (!n. pred o pa(NNn, nnN, pa(Nn, nN, n, ZERO), s o a)
+  ((Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred)) o SUC o a = i2:1->two <=>
+   (!n. pred o pa(NNn, nnN, pa(Nn, nN, n, ZERO), SUC o a)
                   = i2) &
                !m. (!n. pred o
-                      pa(NNn, nnN, pa(Nn, nN, n, m), s o a) = i2) ==>
-                 pred o pa(NNn, nnN, pa(Nn, nN, ZERO, s o m), s o a) = i2 &
+                      pa(NNn, nnN, pa(Nn, nN, n, m), SUC o a) = i2) ==>
+                 pred o pa(NNn, nnN, pa(Nn, nN, ZERO, SUC o m),SUC o a) = i2 &
                  !n. pred o
-                     pa(NNn, nnN, pa(Nn, nN, n, s o m), s o a) = i2 ==>
-                   pred o pa(NNn, nnN, pa(Nn, nN, s o n, s o m), s o a) =
+                     pa(NNn, nnN, pa(Nn, nN, n, SUC o m), SUC o a) = i2 ==>
+                   pred o pa(NNn, nnN, pa(Nn, nN, SUC o n, SUC o m), SUC o a) =
                    i2) ” >-- 
  (strip_tac >> dimp_tac >> strip_tac (* 2 *)>--
   (strip_tac >> strip_tac >>
@@ -5659,14 +5669,14 @@ e0
  rpt strip_tac >> arw[o_assoc] >> 
  drule double_ind >>
  by_tac 
- “(!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),s o a) = i2) <=>
-  (!n m. pred o pa(NNn,nnN,id(NN), s o a o to1(NN,1)) o pa(Nn,nN,m,n) = i2:1->two)” >-- 
+ “(!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),SUC o a) = i2) <=>
+  (!n m. pred o pa(NNn,nnN,id(NN), SUC o a o to1(NN,1)) o pa(Nn,nN,m,n) = i2:1->two)” >-- 
  (pop_assum_list (map_every (K all_tac)) >>
   assume_tac nnN_def >> drule distr_to_pa' >>
   arw[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR]) >>
  arw[GSYM o_assoc] >> 
  first_x_assum 
- (qspecl_then ["pred o pa(NNn, nnN, id(NN), (s o a) o to1(NN, 1))"] assume_tac) >> once_arw[] >>
+ (qspecl_then ["pred o pa(NNn, nnN, id(NN), (SUC o a) o to1(NN, 1))"] assume_tac) >> once_arw[] >>
  rw[o_assoc] >>
  pop_assum_list (map_every (K all_tac)) >>
  assume_tac nnN_def >> drule distr_to_pa' >>
@@ -5679,11 +5689,11 @@ e0
    (!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),ZERO) = i2) &
    (!a:1->N. 
      (!m:1->N n. pred o pa(NNn,nnN,pa(Nn,nN,n,m),a) = i2)==>
-     (!n.pred o pa(NNn,nnN,pa(Nn,nN,n,ZERO),s o a) = i2) & 
-     (!m.(!n.pred o pa(NNn,nnN,pa(Nn,nN,n,m),s o a) = i2) ==>
-         pred o pa(NNn,nnN,pa(Nn,nN,ZERO,s o m),s o a) = i2 &
-         (!n. pred o pa(NNn,nnN,pa(Nn,nN,n,s o m),s o a) = i2              ==> 
-              pred o pa(NNn,nnN,pa(Nn,nN,s o n,s o m),s o a) = i2)))”)
+     (!n.pred o pa(NNn,nnN,pa(Nn,nN,n,ZERO),SUC o a) = i2) & 
+     (!m.(!n.pred o pa(NNn,nnN,pa(Nn,nN,n,m),SUC o a) = i2) ==>
+         pred o pa(NNn,nnN,pa(Nn,nN,ZERO,SUC o m),SUC o a) = i2 &
+         (!n. pred o pa(NNn,nnN,pa(Nn,nN,n,SUC o m),SUC o a) = i2              ==> 
+              pred o pa(NNn,nnN,pa(Nn,nN,SUC o n,SUC o m),SUC o a) = i2)))”)
 
 val le_sub = proved_th $
 e0
@@ -5705,7 +5715,7 @@ e0
  (first_x_assum irule >> arw[]) >>
  arw[])
 (form_goal 
-“!m n:1->N. s o m = s o n <=> m = n”)
+“!m n:1->N. SUC o m = SUC o n <=> m = n”)
 
 (*TODO: this thm:
 
@@ -5992,7 +6002,7 @@ e0
  )
 (form_goal
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==> 
-  (!m n.char(i1, i2, le) o pa(Nn, nN, s o m, s o n) = i2 <=>
+  (!m n.char(i1, i2, le) o pa(Nn, nN, SUC o m, SUC o n) = i2 <=>
        char(i1, i2, le) o pa(Nn, nN, m, n) = i2)”)
 
 val lt_char_LT = proved_th $
@@ -6032,7 +6042,7 @@ e0
  assume_tac lt_iff_le_ne >> once_arw[] >>
  assume_tac Thm2_1 >>
  first_x_assum (qspecl_then ["n"] assume_tac) >>
- by_tac “~(ZERO = s o n)” >--
+ by_tac “~(ZERO = SUC o n)” >--
  (ccontra_tac >> fs[]) >>
  arw[] >> pop_assum (K all_tac) >> pop_assum (K all_tac) >>
  drule le_char_LE >> arw[] >>
@@ -6040,7 +6050,7 @@ e0
  )
 (form_goal
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==> 
-  !n. char(i1, i2, lt) o pa(Nn, nN, ZERO, s o n) = i2”)
+  !n. char(i1, i2, lt) o pa(Nn, nN, ZERO, SUC o n) = i2”)
 
 val less_mono_eq = proved_th $
 e0
@@ -6055,7 +6065,7 @@ e0
  rw[inv_suc_eq])
 (form_goal
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==> 
-  (!m n.char(i1, i2, lt) o pa(Nn, nN, s o m, s o n) = i2 <=>
+  (!m n.char(i1, i2, lt) o pa(Nn, nN, SUC o m, SUC o n) = i2 <=>
        char(i1, i2, lt) o pa(Nn, nN, m, n) = i2)”)
 
 val or_ex = proved_th $
@@ -6238,7 +6248,7 @@ e0
  !m:1->N.(!n.f o pa(Nn,nN,m,n) = g o pa(Nn,nN,m,n)) <=>
  f o pa(Nn,nN,m,ZERO) = g o pa(Nn,nN,m,ZERO) & 
  !n0:1->N. f o pa(Nn,nN,m,n0) = g o pa(Nn,nN,m,n0) ==> 
- f o pa(Nn,nN,m,s o n0) = g o pa(Nn,nN,m,s o n0)”)
+ f o pa(Nn,nN,m,SUC o n0) = g o pa(Nn,nN,m,SUC o n0)”)
 
 
 val add_suc0 = proved_th $
@@ -6248,7 +6258,7 @@ e0
  arw[o_assoc,idL,add_elements] >> rpt strip_tac >>
  arw[])
 (form_goal
-“!n m:1->N.(add o pa(Nn,nN,s o Nn,id(N) o nN)) o pa(Nn,nN,n,m) = (s o add) o pa(Nn,nN,n,m)”)
+“!n m:1->N.(add o pa(Nn,nN,SUC o Nn,id(N) o nN)) o pa(Nn,nN,n,m) = (SUC o add) o pa(Nn,nN,n,m)”)
 
 val add_suc = proved_th $
 e0
@@ -6256,7 +6266,7 @@ e0
  assume_tac nN_def >> drule distr_to_pa' >>
  fs[] >> drule p12_of_pa >> fs[o_assoc])
 (form_goal 
-“!n:1->N m:1->N. add o pa(Nn,nN,s o n,m) = s o add o pa(Nn,nN,n,m)”)
+“!n:1->N m:1->N. add o pa(Nn,nN,SUC o n,m) = SUC o add o pa(Nn,nN,n,m)”)
 
 val add_sym0 = proved_th $
 e0
@@ -6278,13 +6288,13 @@ e0
 val suc_sub = proved_th $
 e0
 (assume_tac add_sub >> strip_tac >>
- first_x_assum (qspecl_then ["s o ZERO","n"] assume_tac) >>
+ first_x_assum (qspecl_then ["SUC o ZERO","n"] assume_tac) >>
  suffices_tac
- “add o pa(Nn, nN, s o ZERO, n) = s o n:1->N”
+ “add o pa(Nn, nN, SUC o ZERO, n) = SUC o n:1->N”
  >-- (strip_tac >> fs[]) >>
  once_rw[add_sym] >> rw[add_elements])
 (form_goal
- “!n:1->N. sub o pa(Nn,nN,s o n,n) = s o ZERO”)
+ “!n:1->N. sub o pa(Nn,nN,SUC o n,n) = SUC o ZERO”)
 
 val sub_diff_1 = proved_th $
 e0
@@ -6293,7 +6303,7 @@ e0
  assume_tac suc_sub >> once_arw[] >> arw[Thm2_1]) >>
  rpt strip_tac >> arw[suc_sub])
 (form_goal 
-“!a:1->N b. sub o pa(Nn,nN,a,b) = s o ZERO <=> a = s o b”)
+“!a:1->N b. sub o pa(Nn,nN,a,b) = SUC o ZERO <=> a = SUC o b”)
 
 
 val s_eq_iff_eq = proved_th $
@@ -6302,7 +6312,7 @@ e0
  assume_tac Thm2_2 >> drule ismono_property >>
  first_x_assum drule >> arw[])
 (form_goal 
-“!n1:1->N n2. s o n1 = s o n2 <=> n1 = n2”)
+“!n1:1->N n2. SUC o n1 = SUC o n2 <=> n1 = n2”)
 
 val p_z_cases = proved_th $
 e0
@@ -6313,22 +6323,22 @@ e0
  rfs[] >> arw[GSYM o_assoc,idL] >>
  assume_tac s_eq_iff_eq >> arw[])
 (form_goal
-“!n:1->N. PRE o n = ZERO <=> (n = ZERO | n = s o ZERO)”)
+“!n:1->N. PRE o n = ZERO <=> (n = ZERO | n = SUC o ZERO)”)
 
 (*correct thm wrong proof*)
 val sub_s_z_cases = proved_th $
 e0
 (rpt strip_tac >> assume_tac sub_s >> fs[] >>
  by_tac “sub o pa(Nn, nN, a, b) = ZERO | 
-         sub o pa(Nn, nN, a, b) = s o ZERO”
+         sub o pa(Nn, nN, a, b) = SUC o ZERO”
  >-- (drule $ iffLR p_z_cases >> arw[])>>
  pop_assum strip_assume_tac >-- arw[] >>
  disj1_tac >>
  fs[sub_diff_1] 
  )
 (form_goal 
-“!a:1->N b:1->N. sub o pa(Nn,nN,a,s o b) = ZERO ==>
- a = s o b | sub o pa(Nn,nN,a,b) = ZERO”)
+“!a:1->N b:1->N. sub o pa(Nn,nN,a,SUC o b) = ZERO ==>
+ a = SUC o b | sub o pa(Nn,nN,a,b) = ZERO”)
 
 
 (*TODO: aQ:
@@ -6400,7 +6410,7 @@ e0
  rfs[] >> fs[GSYM o_assoc,idL] >> rfs[idL] >> arw[] >> arw[GSYM o_assoc,idL]) >>
  arw[GSYM o_assoc,idL])
 (form_goal
-“!n:1->N. PRE o n = ZERO <=> (n = ZERO | n = s o ZERO)”)
+“!n:1->N. PRE o n = ZERO <=> (n = ZERO | n = SUC o ZERO)”)
 
 val lt_succ_le = proved_th $
 e0
@@ -6408,10 +6418,10 @@ e0
  pop_assum (K all_tac) >> assume_tac le_mono >>
  drule char_def >> first_x_assum drule >>
  drule le_cases_iff >> 
- first_x_assum (qspecl_then ["pa(Nn, nN, n0, s o n)"] assume_tac) >>
+ first_x_assum (qspecl_then ["pa(Nn, nN, n0, SUC o n)"] assume_tac) >>
  by_tac 
- “(?le0 : 1 -> LE. pa(Nn, nN, n0:1->N, s o n:1->N) = le o le0) <=> 
-  (?x0 : 1 -> LE. le o x0 = pa(Nn, nN, n0, s o n))”
+ “(?le0 : 1 -> LE. pa(Nn, nN, n0:1->N, SUC o n:1->N) = le o le0) <=> 
+  (?x0 : 1 -> LE. le o x0 = pa(Nn, nN, n0, SUC o n))”
  >-- (dimp_tac >> strip_tac
       >-- (qexists_tac "le0" >> arw[]) >>
       qexists_tac "x0" >> arw[]) >> arw[] >> 
@@ -6429,7 +6439,7 @@ e0
  once_arw[] >> once_arw[] >> rw[] >> pop_assum (K all_tac) >> 
  assume_tac PRE_eq_0 >> fs[])
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
- !n0:1->N n:1->N. char(i1, i2, lt) o pa(Nn, nN, n0, s o n) = i2 <=> char(i1,i2,le) o pa(Nn, nN, n0, n) = i2”)
+ !n0:1->N n:1->N. char(i1, i2, lt) o pa(Nn, nN, n0, SUC o n) = i2 <=> char(i1,i2,le) o pa(Nn, nN, n0, n) = i2”)
 
 
 
@@ -6463,7 +6473,7 @@ rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
  >-- (strip_tac >> arw[]) >>
  drule not_lt_z >> first_x_assum accept_tac) >>
  rpt strip_tac >> 
- suffices_tac “?(x0 : 1 -> Q). s o n = q:Q->N o x0”
+ suffices_tac “?(x0 : 1 -> Q). SUC o n = q:Q->N o x0”
  >-- (strip_tac >> qexistsl_tac ["x0'"] >> arw[]) >>
  arw[] >> pop_assum mp_tac >> pop_assum mp_tac >>
  pop_assum (pspecl_then ["n:1->N"] assume_tac) >> 
@@ -6986,6 +6996,10 @@ cheat
 “!X.?to1X:X->1. to1X = to1X”)
 
 
+
+
+
+
 (*current version of ex2fsym cannot produce To1,except for as this...*)
 val To1_def = To1_ex |> spec_all |> eqT_intro 
                      |> iffRL |> ex2fsym "To1" ["X"] |> C mp (trueI []) |> gen_all
@@ -7321,6 +7335,30 @@ mk_o (mk_o (rastt "Ev(Exp(X,2),2)")
 char_diag equality_ind double_ind triple_ind 
 cancel_sub_pred iff_ex
 
+Po3(A,B,C) = A * B * C 
+
+(A * (B * C))
+
+π2(B,C) o π2(A, B * C)  = 
+
+π3(A,B,C)
+
+
+
+! A B C. ? ABC pA pB pC. 
+
+pred :X -> 2. 
+
+mono a: A >--> X.  char(a) = pred
+
+
+ex 2 fsym 
+
+“!X pred:X->2. ?A a:A->X. Char(a) = pred”
+
+
+
+
 2.tools of writing 3,4ary products, without having equality of objects. tools like π_2,4, to take the 2th and 4th component of a product and send it to a binary predicate.
 
 (and have notfigured out the way of doing subscripts)
@@ -7334,14 +7372,48 @@ one symbol.
 
 5.write !x.1-> Grouptype as wf formula, where Grouptype is as discussed before, without have equality Grouptype = G * ...
 
+Po(A,B,C)
+
+val Grouptype = mk_Po G ...
+
+ex 2 fsym 
+
+G * ... = Grouptype(G)
+
+"!x:1->Grouptype(X). " x : 1-> G * G ...
+
+
+
 Similarly. when the second argument of Exp is 2, say, Exp X 2, write Pow(X)
 
 6.treatment of Reorder map? 
 
+
+A * C * B -> A * B -> 2
+
+
+Pa(π1, π2)
+
+
 7.current version of ex2fsym cannot produce To1,except for as this above.
+
+
+
 
 8.How to allow writing 1,2,3,4,5, instead of SUC SUC SUC...
 express "group of order 6"
+
+parse 1 = BIT .....
+parse 2 = BIT ....
+
+
+parse n = 
+case n of 0 => BIT ...
+ SUC n0 => BIT ...
+
+
+
+
 
 *)
 

@@ -33,7 +33,15 @@ fun getN s n =
              in
                  (cs::css, s'')
              end
-(*string list * string -> token * string*)
+
+(*
+
+(* abcde*) P(a) <=> Q(c)
+
+PQ(A) 
+
+
+*)(*string list * string -> token * string*)
 
 fun scan_symbol s = 
     let 
