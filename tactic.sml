@@ -901,8 +901,8 @@ end
 
 fun rewr_rule thl =
     let 
-        val c = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_canon thl)))
-        val fc = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_canon thl)))
+        val c = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
+        val fc = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_fcanon thl)))
     in
         conv_rule (basic_fconv c fc)
     end
