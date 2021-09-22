@@ -501,6 +501,10 @@ okay to let rw_conv loop, but do check here, and discard the thm after inst rais
 
 
 
+
+
+
+
 fun occurs_tt t1 t2 = 
     eq_term(t1,t2) orelse
     case (view_term t1,view_term t2) of 
@@ -517,6 +521,7 @@ and occurs_ts t s =
         vo => false
       | va(d,c) => occurs_tt t d orelse occurs_tt t c
 
+(*
 fun occurs_f f1 f2 = 
     case (view_form f1,view_form f2) of
         (vPred _,vPred _) => eq_form(f1,f2)
@@ -526,15 +531,22 @@ fun occurs_f f1 f2 =
       | (_,vConn(co,fl)) => List.exists (occurs_f f1) fl
       | (_,vQ(_,_,_,b)) => occurs_f f1 b
       | (_,_) => false
+*)
 
-(*specl [rastt "id(1)"] one_to_one_id;
-val it =
-   
-   
-   |-
-   id(1) = id(1): thm
-> cause_loop_eq it;
-val it = false: bool*)
+(*below is new*)
+fun occurs_f f1 f2 = 
+    case (view_form f1,view_form f2) of
+        (vPred _,vPred _) => eq_form(f1,f2)
+      | (vQ(q1,n1,s1,b1) ,vQ(q2,n2,s2,b2)) => 
+        eq_form(f1,f2) orelse occurs_f f1 b2
+      | (vfVar _, vfVar _) => eq_form(f1,f2)
+      | (_,vConn(co,fl)) => List.exists (occurs_f f1) fl
+      | (_,vQ(_,_,_,b)) => occurs_f f1 b
+      | (_,_) => false
+
+
+
+
 
 fun cause_loop_eq th = 
     let val (l,r) = dest_eq(concl th)

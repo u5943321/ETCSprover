@@ -1,3 +1,7 @@
+
+
+
+
 fun form_goal f = new_goal (fvf f,[]:form list,f)
 val irule = match_mp_tac o irule_canon
 
@@ -2120,6 +2124,7 @@ e0
 rapf' "~!X e1 : X -> X  e2 : X -> X. ~~e1 = e2" basic_fconv can do it
 
 *)
+
 
 val distinct_endo_exists' = 
  distinct_endo_exists |>
