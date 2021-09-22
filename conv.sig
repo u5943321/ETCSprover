@@ -38,16 +38,19 @@ val imp_fconv: fconv -> fconv
 val no_fconv: fconv
 val orelsefc: fconv * fconv -> fconv
 val pred_fconv: conv -> fconv
+val neg_fconv: fconv -> fconv
+val forall_fconv: fconv -> fconv
+val exists_fconv: fconv -> fconv
 val redepth_fconv: conv -> fconv -> fconv
 val refl_fconv: fconv
 val repeatfc: fconv -> fconv
 val sub_fconv: conv -> fconv -> fconv
 val taut_conj_fconv: fconv
-val taut_dimp_fconv: fconv
 val taut_disj_fconv: fconv
 val taut_exists_fconv: fconv
 val taut_forall_fconv: fconv
 val taut_imp_fconv: fconv
+val taut_dimp_fconv: fconv
 val top_depth_fconv: conv -> fconv -> fconv
 val once_depth_fconv: conv -> fconv -> fconv
 val basic_once_fconv: conv -> fconv -> fconv
@@ -57,5 +60,6 @@ val conv_rule: fconv -> thm -> thm
 val GSYM: thm -> thm
 val right_imp_forall_fconv: fconv
 val sym_fconv: fconv
+val double_neg_fconv: fconv
 val neg_neg_elim: thm -> thm
 end

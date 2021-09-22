@@ -19,75 +19,8 @@ fun part_tmatch partfn th t =
         inst_thm env th
     end
 
-(*parttern matcher without loop*)
-
-(*
-
-fun part_tmatch_norf partfn th t = 
-    let 
-        val env = match_term (fvfl (ant th)) (partfn th) t mempty
-        val th' = inst_thm env th
-        val (l,r) = dest_eq (concl th')
-    in 
-        if l = r then raise unchanged ("part_tmatch_norf",[t],[concl th])
-        else th'
-    end
-
-fun occurs_tt t1 t2 = 
-    case (t1,t2) of 
-        (Var (n1,s1),Var (n2,s2)) => 
-        if n1 = n2 andalso s1 = s2 then 
-            true 
-        else if occurs_ts t1 s2 then true 
-        else false
-      | (Var(n,s1),Fun(f,s2,l)) => 
-        occurs_ts t1 s2 orelse List.exists (occurs_tt t1) l
-      | _ => false
-and occurs_ts t s = 
-    case s of 
-        ob => false
-      | ar(d,c) => occurs_tt t d orelse occurs_tt t c
-
-
-(*P(a) (P(a) | P(b)) & Q(c)*)
-
-
-fun occurs_f f1 f2 = 
-    case (f1,f2) of
-        (Pred _,Pred _) => eq_form(f1,f2)
-      | (Quant _ ,Quant _) => eq_form(f1,f2)
-      | (fVar _, fVar _) => eq_form(f1,f2)
-      | (_,Conn(co,fl)) => List.exists (occurs_f f1) fl
-      | (_,Quant(_,_,_,b)) => occurs_f f1 b
-      | (_,_) => false
-
-
-fun cause_loop_teq th = 
-    let val (l,r) = dest_eq(concl th)
-    in if occurs_tt l r then true else false
-    end
-
-
-fun cause_loop_dimp th = 
-    let val (l,r) = dest_dimp(concl th)
-    in if occurs_f l r then true else false
-    end
-
-fun part_tmatch_nolp partfn th t = 
-    let 
-        val env = match_term (fvfl (ant th)) (partfn th) t mempty
-        val th' = inst_thm env th
-    in 
-        if cause_loop_teq th' then raise ERR ("part_tmatch_nolp.the result of term matching causes loop",[],[],[concl th'])
-        else th'
-    end
-*)
-
 val rewr_conv = part_tmatch (fst o dest_eq o concl)
 
-(*
-val rewr_conv' = part_tmatch_nolp (fst o dest_eq o concl)
-*)
 
 
 (*operations on conv*)
@@ -122,11 +55,6 @@ fun first_conv cl =
 (*conv on subterms*)
 
 
-(*
-
-"f" ["g" [a,b],c]
-
-*)
 fun arg_conv c t = 
     case (view_term t) of 
         vFun (f,s,l) => EQ_fsym f (List.map c l)
@@ -152,31 +80,11 @@ fun top_depth_conv conv tm =
               try_conv (conv thenc top_depth_conv conv))) tm
 
 
-(*
-fun top_depth_conv c t =
-    (repeatc c thenc
-             (sub_conv (top_depth_conv c)) thenc
-             ((c thenc (top_depth_conv c)) 
-                  orelsec all_conv))
-             t
-*)
  
 
 (*fconvs*)
 
 val simp_trace = ref false
-(*
-fun part_fmatch partfn th f = 
-    let 
-        val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
-        val th' = inst_thm fvd th
-        val (l,r) = dest_dimp (concl th')
-       (* val _ = if !simp_trace then Lib.say (printth th') else ()*)
-    in 
-        if l = r then raise unchanged ("part_fmatch.the result of form matching is a refl",[],[concl th'])
-        else th' 
-    end
-*)
 
 
 fun part_fmatch partfn th f = 
@@ -186,23 +94,11 @@ fun part_fmatch partfn th f =
         inst_thm fvd th
     end
 
-(*        
-fun part_fmatch_nolp partfn th f = 
-    let 
-        val fvd = match_form (fvfl (ant th)) (partfn th) f mempty
-        val th' = inst_thm fvd th
-       (* val _ = if !simp_trace then Lib.say (printth th') else ()*)
-    in 
-        if cause_loop_dimp th' then raise ERR ("part_fmatch_nolp.the result of form matching causes loop",[],[],[concl th'])
-        else th' 
-    end
-*)
+
  
 val rewr_fconv = part_fmatch (fst o dest_dimp o concl)
 
-(*
-val rewr_fconv_nolp = part_fmatch_nolp (fst o dest_dimp o concl)
-*)
+
 
 (*TODO: let rewr_fconv check the imput thm is an iff, so it raises err before the conv is applied*)
 (*operation on fconvs*)
