@@ -67,7 +67,8 @@ val last_x_assum: thm_tactic -> tactic
 val pick_assum: form.form -> thm_tactic -> tactic
 val pick_x_assum: form.form -> thm_tactic -> tactic
 
-val rw_canon: logic.thm -> logic.thm list
+val rw_tcanon: logic.thm -> logic.thm list
+val rw_fcanon: logic.thm -> logic.thm list
 
 val cases_on: form.form -> tactic
 val specl_then: term.term list -> thm_tactic -> thm_tactic

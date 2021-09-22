@@ -1086,4 +1086,20 @@ val pe_ob_cl3 = pe_cl3 ("A",mk_ob_sort)
 val pe_ar_cl3 = pe_cl3 ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
 
 
+fun split_assum0 f th = 
+    if fmem f (ant th) then
+        case view_form f of (vConn("&",[f1,f2])) => 
+                  th |> disch f |> (C mp) (conjI (assume f1) (assume f2))
+                | _ =>  raise ERR ("split_assum0.not a conjunction: ",[],[],[f])
+    else raise ERR ("split_assum0.formula not in assumption list",[],[],[f])
+
+fun split_assum th = 
+    let fun f _ f0 = if is_conj f0 then SOME f0 else NONE
+    in
+        case first_opt f (ant th) of
+            NONE => raise simple_fail "split_assum.no conjunction"
+          | SOME cj0 => split_assum0 cj0 th
+    end
+
+
 end

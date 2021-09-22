@@ -95,13 +95,11 @@ val conj_all_assum: thm -> thm
 val nF2T: thm
 val nT2F: thm
 val double_neg_elim: thm
-(*
-val imp_canon: thm -> thm list
-val fconv_canon: thm -> thm list
-*)
-(*type thm*)
-(*rules for inference*) 
+
+
 val strip_all_and_imp: thm -> thm
 val F_imp2: form -> thm
 val contrapos: thm -> thm
+val split_assum: thm -> thm
+
 end

@@ -3,7 +3,6 @@
 
 
 fun form_goal f = new_goal (fvf f,[]:form list,f)
-val irule = match_mp_tac o irule_canon
 
 
 val ob_sort = mk_ob_sort
@@ -1750,25 +1749,10 @@ e0
 
 
 
-fun split_assum f th = 
-    if fmem f (ant th) then
-        case view_form f of (vConn("&",[f1,f2])) => 
-                  th |> disch f |> (C mp) (conjI (assume f1) (assume f2))
-                | _ =>  raise ERR ("split_assum.not a conjunction: ",[],[],[f])
-    else raise ERR ("split_assum.formula not in assumption list",[],[],[f])
-
-fun split_assum' th = 
-    let fun f _ f0 = if is_conj f0 then SOME f0 else NONE
-    in
-        case first_opt f (ant th) of
-            NONE => raise simple_fail "split_assum'.no conjunction"
-          | SOME cj0 => split_assum cj0 th
-    end
-
 
 val parallel_p_one_side_split = 
  parallel_p_one_side |> strip_all_and_imp
-                     |> split_assum' |> split_assum' |> disch_all'' |> gen_all
+                     |> split_assum |> split_assum |> disch_all'' |> gen_all
 
 val f0 = rastt "(f:AN->B) o pa(pA:AN->A, pN:AN->N, pA':A1->A, ZERO o (pone:A1->1))"
 val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o ZERO o (pone:A1->1))"
@@ -2630,9 +2614,7 @@ suffices_tac
  !two i1:1->two i2:1->two.iscopr(i1,i2) ==>
  ?phi:X->two. phi o x = i2 & phi o a = i1 o to1(A,1)”)
 
-(*AQ list*)
 (*
-AQ0:set backup stuff! Do we need GOALSTACK and GOALTREE? I only have goalstack but not goaltree.sml.
 
 
 AQ1: example:
@@ -2645,17 +2627,12 @@ rapg "!a.ismono(a) & ismono(a)"
 
 should I introduce a constaint so it never happens?
 
-AQ2: parser: how to use fixity of "~" aApp ~? with the ast approach, infix and ~ are treated by app and ainfix, always need (~(...) & P(a))
 
-AQ3: the occurence of B(0) in error message has nothing to do with the dest_all stuff, so even if I edit dest of quant it will happen, but edit dest to replace variables may need renaming, and so cause pain in definition of the rules and tactics.
 
 AQ4. pick_assum / pick_xnth_assum okay (like it anyway...)? would like qpat assum, how basically does it work? (have not make attempt to look at its code though, any key thing to know about it? guess it is parsing & matching, but how far does the parsing go/ how to parse the partial formulas like a = _, another special parser other than pwc?)  how would we allow qpick assum? cannot think of a higher order function for it.
 
 first_x_assume with (fn => which can match the given formula which is obtaibed by parsing in cont, or use _ )
 
-AQ5. possible to use quotation for both usual parser and pwc, seems like HOL only has one parser, and the usual parse has the ct empty. but the current parser very different from the old one, nothing to do with unification. show the treatment of bounded variables.
-
-AQ6. pp bug, missing many #, and ugly printted context, anything obvious for improvement?
 
 AQ7. talked about "do not allow more free variables on RHS", but if the variables are in the context and it is once arw then it is okay, say once arw using GSYM p12_of_pa. discussed before for things like “?x:A->B <=>T” maybe give the conv access to the cont. should the restriction on rw be "no free var outside the cont" in conv, instead of no more fv on RHS? or how else should we once rw with GSYM p12_of_pa?
 
@@ -2668,10 +2645,6 @@ P(f)
 f (f# = p1# o pa(p1#, p2#, f#, g#) |> )= f' 
 
 
-
-AQ8. show the uex stuff, do not have ?! and just use ? to test now, any obvious improvement?
-
-AQ9. Jim replyed and prefers having equality on objects.
 
 *)
 
@@ -2699,19 +2672,6 @@ e0
  ?ub:XL->two. ev' o pa(p1',p2',pX,u o pL) = ub & 
  !E k:E->XL.iseq(k,ub,i2 o to1(XL,1)) ==>
  ?A' a':A'->X q:E->A'.isepi(q) & ismono(a') & pX o k = a' o q”)
-
-(*
-val Thm5_existences = proved_th $
-e0
-(rpt strip_tac)
-(form_goal 
-“!A X. 
- ?A1 pA:A1->A pone:A1->1. ispr(pA,pone) &
- ?two i1:1->two i2:1->two. iscopr(i1,i2) &
- ?AA2 p1:AA2 -> A A2 p2:AA2 -> A2 ev:AA2 -> two. isexp(p1,p2,ev) &
- ?XX2 p1':XX2->X X2 p2':XX2->X2 ev':XX2->two. isexp(p1',p2',ev') &
- ?AX2 Ax2:AX2->A aX2:AX2->X2.ispr(Ax2,aX2)”)
-*)
 
 
 val Thm5_epi_ex_xp_a2phi0 = proved_th $
@@ -2880,8 +2840,6 @@ pop_assum (assume_tac o GSYM) >> once_arw[] >> rw[o_assoc]
  !A' a':A'->X q:E->A'.isepi(q) & ismono(a') & pX o k = a' o q ==>
         !AA' iA:A->AA' iA':A'->AA'. iscopr(iA,iA') ==> isepi(copa(iA,iA',a,a'))”)
 
-
-(*TO-DO: rpt strip can create variables whose name clashes with existing variables belive it is done by editing strip.*)
 
 val Thm5_mono = proved_th $ 
 e0
@@ -3259,17 +3217,14 @@ arw[])
  (psi o r = i2 <=> ?r':1->E. e o r' = pa(p1,p2,r,tp(p1,p2,ev,pR,pone,psi o pR)))”)
 
 
-(*Theorem char_thm:
+(* char_thm:
 ∀a A X.
     is_mono a ∧ a∶ A → X ⇒
          char a∶ X → one + one ∧
          ∀x.
              x∶one → X ⇒
              ((∃x0. x0∶one → A ∧ a ∘ x0 = x) ⇔ char a ∘ x = i2 one one)
-Proof
-strip_tac >> strip_tac >> strip_tac >> strip_tac >>
-fs[hom_def] >> metis_tac[char_def,hom_def]
-QED*)
+*)
 
 (*TODO: if in exists, feed "copa(i1,i2,i2:1->two o to1(A,1),i1:1->two o to1(A',1)) o f':X->AA'", is wrong ,but get wrong error message*)
 
@@ -3359,12 +3314,12 @@ e0
  !Y AY Ay:AY->A aY:AY->Y. ispr(Ay,aY) ==>
  !f:X->A g:X->Y. pa(Ay,aY,Ax,g o aX) o pa(Ax,aX,f,id(X)) = pa(Ay,aY,f,g)”)
 
-(*do not understand why do not response if use qby*)
+
 
 val compose_partial_ev = proved_th $
 e0
 (rpt strip_tac >> 
- by_tac (rapf "pa(pA,pone,id(A),to1(A,1)) o x = pa(pA:A1->A,pone:A1->1,x:1->A,id(1))") >-- (rev_drule compose_with_id_to1 >> once_arw[] >> rw[]) >>
+ qby_tac ‘pa(pA,pone,id(A),to1(A,1)) o x = pa(pA:A1->A,pone:A1->1,x:1->A,id(1))’ >-- (rev_drule compose_with_id_to1 >> once_arw[] >> rw[]) >>
 drule ev_compose_split' >> qpick_x_assum ‘ispr(pA, pone)’ assume_tac >>
 first_x_assum drule >> first_x_assum rev_drule >> once_arw[] >>
 first_x_assum 
@@ -3438,7 +3393,6 @@ rw[])
 “!A A1 pA:A1->A pone:A1->1. ispr(pA,pone) ==> 
  !a:1->A1.?a0:1->A. a = pa(pA,pone,a0,id(1))”)
 
-(*WHY do we not have once fs in HOL?*)
 
 val one_to_two_cases = proved_th $
  e0
@@ -3493,15 +3447,10 @@ val fac_char_via_any_map = proved_th $
  !b:1->B.char(i1,i2,m) o b = i2 ==>
  ?a:1->A. f o a = b”)
 
-(*
-val char_exists' = 
-
-char_exists |> strip_all_and_imp |> conj_all_assum
-|> disch_all |> gen_all *)
 
 
 
-(*irule_canon char_exists is wrong*)
+(*ir_canon char_exists is wrong*)
 
 (*
 ∀h R A. h∶ R → A ⇒
@@ -3750,8 +3699,8 @@ qread_ax ‘!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
 
 
 val parallel_p_one_side_three' = 
-parallel_p_one_side_three |> strip_all_and_imp |> split_assum' |>
-split_assum' |> split_assum' |> gen_all |> disch_first |> gen_all
+parallel_p_one_side_three |> strip_all_and_imp |> split_assum |>
+split_assum |> split_assum |> gen_all |> disch_first |> gen_all
  |> disch_nth 1 |> gen_all |> disch_first |> gen_all
  |> disch_last |> gen_all
 
@@ -4472,7 +4421,7 @@ e0
 
 val ax7'= 
  ax7 |> strip_all_and_imp |> gen_all |>
- split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
+ split_assum |> disch_last |> gen_all |> disch_all |> gen_all
 
 
 val ax7_const1 = proved_th $
@@ -4677,56 +4626,6 @@ e0
 “!n0:1->N a:1->LE. pa(Nn,nN,n0,ZERO) = le o a ==>
  n0 = ZERO”)
 
-(*TODO:
-(?(x0 : 1 -> LT). (ne o ltne) o x0# = x)
-             <=>
-             ?(x0 : 1 -> LT). (le o ltle) o x0# = x
-
-?
-*)
-(*
-val not_lt_z = proved_th $
-e0
-(rpt strip_tac >> assume_tac lt_mono >>
- assume_tac lt_def >> drule char_def >>
- first_x_assum drule >> arw[] >>
- pop_assum (assume_tac o GSYM) >> arw[] >>
- assume_tac ne_property >>
- first_x_assum 
- (qspecl_then ["pa(Nn, nN, n0, z)"] assume_tac) >>
- ccontra_tac >> pop_assum strip_assume_tac >> fs[o_assoc] >>
- by_tac 
- “?nnb : 1 -> NE. ne o nnb = pa(Nn, nN, n0:1->N, z)”
- >-- (qexistsl_tac ["ltne o x0"] >> arw[]) >>
- pop_assum mp_tac >> arw[] >>
- ccontra_tac >> 
- assume_tac nN_def >> drule p12_of_pa >> fs[] >>
- assume_tac ltne_def >> drule $ iffLR ispb_def >>
- pop_assum strip_assume_tac >> fs[GSYM o_assoc] >>
- pick_x_assum “le o ltle = ne o ltne” (assume_tac o GSYM) >>
- fs[] >> rfs[] >>
- by_tac 
- “!x : 1 -> NN. char(i1:1->two, i2, (le o ltle)) o x = i2 <=>
-   (?(x0 : 1 -> LT). (le o ltle) o x0 = x)”
- (*this by should be automatic,TODO, AQ, why not?*)
- >-- (pop_assum (assume_tac o GSYM) >> once_arw[] >>
-     rpt strip_tac >> dimp_tac >> strip_tac
-     >-- (qexists_tac "x0'" >> arw[]) >>
-     qexists_tac "x0'" >> arw[] >> 
-     pop_assum mp_tac >> arw[]) >>
- first_x_assum
- (qspecl_then ["pa(Nn, nN, n0, z)"] (assume_tac)) >>
- by_tac “char(i1:1->two, i2:1->two, (le o ltle)) o pa(Nn, nN, n0, z) = i2”
- >-- (arw[] >> qexists_tac "x0" >> arw[]) >>
- 
- 
-
- )
-(form_goal 
-“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
-      !n0:1->N. ~char(i1,i2:1->two,lt) o 
-      pa(Nn,nN,n0,z) = i2”)
-*)
 
 val lt_le = proved_th $
 e0
@@ -5202,8 +5101,7 @@ e0
  rpt strip_tac >>
  drule char_def >> first_x_assum drule >> 
  pop_assum (assume_tac o GSYM) >> arw[] >> 
- (*qby does not work here*)
- by_tac “(?(x0 : 1 -> 1). tXb:1->ps o x0 = tp(p1:eps->X, p2:eps->ps, ev:eps->two, Xy:XY->X, xY:XY->Y, pxy:XY->two) o y) <=> tXb = tp(p1, p2, ev, Xy, xY, pxy) o y”
+ qby_tac ‘(?(x0 : 1 -> 1). tXb:1->ps o x0 = tp(p1:eps->X, p2:eps->ps, ev:eps->two, Xy:XY->X, xY:XY->Y, pxy:XY->two) o y) <=> tXb = tp(p1, p2, ev, Xy, xY, pxy) o y’
  >-- (dimp_tac >> rpt strip_tac (* 2 *)
      >-- (pop_assum mp_tac >> once_rw[one_to_one_id] >>
           rw[idR]) >>
@@ -5216,8 +5114,7 @@ e0
   by_tac 
   “ev:eps->two o 
    pa(p1:eps->X,p2:eps->ps,x,tXb:1->ps) = i2”
-  >-- (pop_assum (K all_tac)(* >>
-       once_arw[] >> drule ev_of_tp >> first_x_assum rev_drule >>*) >>
+  >-- (pop_assum (K all_tac) >>
        by_tac “pa(p1:eps->X,p2:eps->ps,x,tXb:1->ps) = pa(p1,p2,pX:X1->X,tXb o pone:X1->1) o pa(pX,pone,x,id(1))”
        >-- (drule exp_ispr >> 
             drule to_p_eq >> first_x_assum irule >>
@@ -5295,10 +5192,11 @@ e0
  once_arw[] >>
  suffices_tac 
  “ Uq :Xt2->two o tp(p1:efs->X, p2:efs->Xt2, ev:efs->two, Xn:XN->X, xN, pred) = i2:1->two o to1(N,1)”
- >-- (strip_tac >> (*seems loop here: todo*) 
-      pick_x_assum
-      “!y : 1 -> N. Uq o tp(p1:efs->X, p2:efs->Xt2, ev, Xn:XN->X, xN:XN->N, pred:XN->two) o y = i2 <=>
-       !x : 1 -> X. pred o pa(Xn, xN, x, y) = i2” (K all_tac) >>
+ >-- (strip_tac >>
+      qpick_x_assum
+‘!y : 1 -> N. Uq o tp(p1:efs->X, p2:efs->Xt2, ev, Xn:XN->X, xN:XN->N, pred:XN->two) o y = i2 <=>
+       !x : 1 -> X. pred o pa(Xn, xN, x, y) = i2’
+       (K all_tac) >>
       arw[GSYM o_assoc] >> rw[o_assoc] >>
       once_rw[one_to_one_id] >> rw[idR]) >>
  drule ind_principle >> arw[] >>
@@ -5385,7 +5283,7 @@ e0
 
 val add_sub0 = proved_th $
 e0
-(once_rw[ind_one_component] (* TODO: test here should be able to rw *) >>
+(rw[ind_one_component] >>
  assume_tac nN_def >> drule distr_to_pa' >> fs[o_assoc] >>
  drule p12_of_pa >> fs[] >>
  assume_tac add_elements >> arw[] >> rpt strip_tac >--
@@ -5507,18 +5405,6 @@ e0
 (form_goal “!two i1:1->two i2:1->two.iscopr(i1,i2) ==> 
  !n0:1->N n:1->N. char(i1, i2, le) o pa(Nn, nN, n0, n) = i2 ==> char(i1,i2,lt) o  pa(Nn, nN, n0, n) = i2 | n0 = n”)
 
-(*
-
-  
-   (n : 1 -> N)
-   1.~n = z
-   2.~?(n0 : 1 -> N). n = s o n0#
-   ----------------------------------------------------------------------
-   F
-   : proof
-
-let fs do this: TODO
-*)
 
 val sub_s = proved_th $
 e0
@@ -5614,7 +5500,7 @@ e0
   once_arw[] >> pop_assum (K all_tac) >> 
   once_arw[]) >> arw[]) >>
  once_arw[] >> rw[GSYM o_assoc] >> 
- pick_xnth_assum 2 (pspecl_then ["(Uq:NNt2->two o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two))"] assume_tac) >> (* TODO: bug, qparser loop here *)
+ pick_xnth_assum 2 (pspecl_then ["(Uq:NNt2->two o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two))"] assume_tac) >> 
  once_arw[] >>
  by_tac 
  “!a:1->N.(Uq o tp(p1:nnps->NN, p2:nnps->NNt2, ev, NNn, nnN, pred:NNN->two)) o a = i2:1->two <=> 
@@ -5722,11 +5608,7 @@ e0
 (form_goal 
 “!m n:1->N. SUC o m = SUC o n <=> m = n”)
 
-(*TODO: this thm:
 
-pa(Tt, tT, i2, i2) = pa(Tt, tT, p1, p2)
-
-<=> i2 = p1 & i2 = p2*)
 
 val pa_eq = proved_th $
 e0
@@ -5786,7 +5668,6 @@ e0
  pop_assum (assume_tac o GSYM) >> arw[] >>
  qspecl_then ["1","M"] (x_choosel_then ["W","ione","iM"] assume_tac) copr_ex >>
  first_x_assum drule >>
- (*by_tac “iscopr(pa(Tt, tT, i2, i1),imp0)” >>*)
  fs[ismem_def] >> 
  drule inc_ismono >> fs[] >>
  drule iso_copr_copr >> first_x_assum drule >>
@@ -5949,7 +5830,7 @@ char(i1,i2,le) o pa(Nn,nN,a,m) = i2 ==>
  (rpt strip_tac >> 
  drule le_sub >> fs[] >> 
  pop_assum mp_tac >> pop_assum mp_tac >>
- rw[sub_zero_id] (* 2 do not understand why it can be solved by fs[sub_zero_id],ahh eight*) >> rpt strip_tac >>
+ rw[sub_zero_id] (* 2 *) >> rpt strip_tac >>
  fs[Thm2_1]) >> 
  strip_tac >> strip_tac >> strip_tac (* 2 *) >--
  (rpt strip_tac >> drule le_sub >> fs[] >>
@@ -5984,7 +5865,7 @@ e0
  (rpt strip_tac >> assume_tac nN_def >> drule distr_to_pa' >>
  fs[o_assoc] >> last_x_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR,idL] >>
  strip_tac >> arw[]) >>
- rw[GSYM o_assoc] >> once_rw[ind_N_element] (* TODO: occurs check definitely wrong, bug!!!!!!!!!!*) >>
+ rw[GSYM o_assoc] >> once_rw[ind_N_element] >>
  assume_tac sub_elements >> assume_tac nN_def >>
  drule distr_to_pa' >> fs[o_assoc] >> once_rw[one_to_one_id] >> rw[idL,idR] >>
  arw[] >> rpt strip_tac >> arw[] >> assume_tac PRE_def >> arw[])
@@ -6086,7 +5967,6 @@ e0
  pop_assum (assume_tac o GSYM) >> arw[] >>
  qspecl_then ["1","O"] (x_choosel_then ["W","ione","iO"] assume_tac) copr_ex >>
  first_x_assum drule >>
- (*by_tac “iscopr(pa(Tt, tT, i2, i1),imp0)” >>*)
  fs[ismem_def] >> 
  drule inc_ismono >> fs[] >>
  drule iso_copr_copr >> first_x_assum drule >>
@@ -6217,7 +6097,6 @@ e0
  “?lt0:1->LT. pa(Nn,nN,n,m) = lt o lt0”
  >-- (qexists_tac "x0" >> arw[]) >>
  rfs[] >> qexists_tac "le0" >> rw[]
- (*>-- (qexists_tac "x0" >> arw[])*)
  )
 (form_goal
  “!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
@@ -6378,12 +6257,6 @@ e0
  !n0:1->N n:1->N. char(i1, i2, le) o pa(Nn, nN, n0, n) = i2 <=> char(i1,i2,lt) o  pa(Nn, nN, n0, n) = i2 | n0 = n”)
 
 
-(*parser loop for:
-| 
- qby_tac 
- ‘(?(le0 : 1 -> LE). pa(Nn, nN, n0, s o n) = le o le0) <=> 
-  (?(x0 : 1 -> LE). le o x0 = pa(Nn, nN, n0, s o n))’
-*)
 
 val sub_eq_0 = proved_th $
 e0
@@ -6397,13 +6270,6 @@ e0
 (!m:1->N n:1->N. sub o pa(Nn,nN,m,n) = ZERO <=> char(i1,i2,le) o pa(Nn,nN,m,n) = i2)”)
 
 
-(*TODO:ppbug:
-
- ~p o sub o pa(Nn, nN, n0, n) = z & ~n0 = s o n
-
-the not on the outmost is for the whole, the whole is not a conjunction!
-
-*)
 
 
 
@@ -6481,8 +6347,7 @@ rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
  suffices_tac “?(x0 : 1 -> Q). SUC o n = q:Q->N o x0”
  >-- (strip_tac >> qexistsl_tac ["x0'"] >> arw[]) >>
  arw[] >> pop_assum mp_tac >> pop_assum mp_tac >>
- pop_assum (pspecl_then ["n:1->N"] assume_tac) >> 
- (*qspecl does not work here*)
+ pop_assum (qspecl_then ["n"] assume_tac) >> 
  rpt strip_tac >> drule le_cases >>
  first_x_assum drule >> 
  first_x_assum strip_assume_tac (* 2 *) >-- 
@@ -6491,8 +6356,7 @@ rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
        first_x_assum accept_tac) >>
   pop_assum mp_tac >> arw[] >> strip_tac >> 
   first_x_assum irule >>
-  (*qpick_x_assum ‘q o x0 = n’ (assume_tac o GSYM) >> 
-  arw[] >>*) drule lt_succ_le >> 
+  drule lt_succ_le >> 
   pop_assum (assume_tac o GSYM) >> once_arw[] >>
   first_x_assum accept_tac) >> 
 first_x_assum irule >> 
@@ -6514,51 +6378,6 @@ first_x_assum irule >> drule lt_succ_le >> fs[])
   (!n0:1->N. 
     char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
 
-(*
-val in_total_ss = proved_th $
-e0
-
-(form_goal
- “!eps”)
-TODO
-*)
-
-(*
-val prsym_def = ex2fsym "*" ["A","B"] (iffRL $ eqT_intro $ spec_all pr_ex)
-                        |> C mp (trueI []) |> gen_all
-
-val p1_def = ex2fsym "p1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
-                        |> C mp (trueI []) |> gen_all
-
-val p2_def = ex2fsym "p2" ["A","B"] (iffRL $ eqT_intro $ spec_all p1_def)
-                        |> C mp (trueI []) |> gen_all
-
-
-val coprsym_def = ex2fsym "+" ["A","B"] (iffRL $ eqT_intro $ spec_all copr_ex)
-                        |> C mp (trueI []) |> gen_all
-
-val p1_def = ex2fsym "p1" ["A","B"] (iffRL $ eqT_intro $ spec_all prsym_def)
-                        |> C mp (trueI []) |> gen_all
-
-val p2_def = ex2fsym "p2" ["A","B"] (iffRL $ eqT_intro $ spec_all p1_def)
-                        |> C mp (trueI []) |> gen_all
-
-*)
-
-(*TODO: parser cannot parse "r:A*B->A"*)
-
-(*
-val char2mono_ex = proved_th $
-e0
-..
-(form_goal 
-“!two i1:1->two i2:1->two. ispr(i1,i2) ==> 
- !pred: X->two. ispb
- ”)
-
-*)
-
-(*TODO: a tool su we can only inst the arrows once the sorts are correct, to avoid one by one for pb_ex*)
 
 
 
@@ -6584,51 +6403,6 @@ rw[idR] >> drule distr_to_pa >> arw[idR])
  !X a1:X->A a2:X->A. char(i1,i2,pa(Aa,aA,id(A),id(A))) o pa(Aa,aA,a1,a2) = i2 o to1(X,1) <=> a1 = a2”)
 
 
-(*TODO: wrong error message:
-
- Exception- ERR ("not an infix operator: str", [], [], [])*)
-
-(*
-
-fun occurs_f' f1 f2 = 
-    case (view_form f1,view_form f2) of
-        (vPred _,vPred _) => eq_form(f1,f2)
-      | (vQ(q1,n1,s1,b1) ,vQ(q2,n2,s2,b2)) => 
-        eq_form(f1,f2) orelse occurs_f f1 f2
-      | (vfVar _, vfVar _) => eq_form(f1,f2)
-      | (_,vConn(co,fl)) => List.exists (occurs_f f1) fl
-      | (_,vQ(_,_,_,b)) => occurs_f f1 b
-      | (_,_) => false
-
-
-
-
-fun cause_loop_dimp' th = 
-    let val (l,r) = dest_dimp(concl th)
-    in if occurs_f' l r then true else false
-    end
-
-
-fun rewr_no_loop_fconv' th f = 
-    let val th' = rewr_fconv th f
-    in if cause_loop_dimp' th' then
-           raise ERR ("rewr_no_loop_fconv.the result of form matching causes loop",[],[],[concl th'])
-       else th'
-    end
-
-
-fun rw_tac' thl:tactic = 
-    let 
-        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
-        val fconv = first_fconv (mapfilter rewr_no_loop_fconv' (flatten (mapfilter rw_fcanon thl)))
-    in fconv_tac (basic_fconv conv fconv) 
-    end
-*)
-
-
-(*TODO:!!!!!!! occurs check WRONG!!!!! as above*)
-
-
 
 
 
@@ -6644,12 +6418,7 @@ if forget the pa, then
       origin_structure = "Lib"} raised
 
 *)
-(*
-val ax7'= 
- ax7 |> strip_all_and_imp |> gen_all |>
- split_assum' |> disch_last |> gen_all |> disch_all |> gen_all
-do not know why have it twice...
-*)
+
 
 (*TODO: should eliminate the x0:
 
@@ -6657,17 +6426,7 @@ do not know why have it twice...
 
 
 
-(*BUG: TODO: should not allow this to happen:
 
-
- mk_forall "x" (mk_ar_sort one N) $ mk_eq
- (rastt 
- "pa(Tt:TT->two, tT:TT->two, char(i1:1->two, i2:1->two, le), (char(i1, i2, p0:P->N) o Nn)) o pa(Nn, nN, x, n:1->N)")
- (rastt 
- "pa(Tt:TT->two,tT:TT->two, char(i1:1->two, i2:1->two, le) o pa(Nn, nN, x:1->N, n:1->N),p0 o n)")
-second p0 is of different type of the first one, it is two->N
-
-*)
 
 val Q_ex = proved_th $
 e0
@@ -6723,9 +6482,7 @@ e0
   first_x_assum (qspecl_then ["n0"] assume_tac) >>
   first_x_assum (qspecl_then ["char(i1, i2, le) o pa(Nn, nN, n0, n)","char(i1, i2, p0) o n0"] assume_tac) >>
  pop_assum (assume_tac o iffLR) >> 
- first_x_assum drule >> strip_tac >> first_x_assum drule >>
- first_x_assum accept_tac
- (*TODO: okay, but why does irule fail?!!!*)) >>
+ strip_tac >> first_x_assum irule >> arw[]) >>
  rpt strip_tac >>  
  first_x_assum (irule o iffRL) >> arw[])
 (form_goal 
@@ -7530,8 +7287,6 @@ val tau2_def = ex2fsym "τ2" ["A","B"] (iffRL $ eqT_intro $ spec_all tau1_def)
 
 (*maybe nice to have a tool that realise which component, and just assign maps to components, how can I do this?*)
 
-val ob_sort = mk_ob_sort
-val ar_sort = mk_ar_sort
 
 
 fun check_wffv fvs = 
