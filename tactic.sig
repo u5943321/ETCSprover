@@ -8,6 +8,9 @@ val >> : (tactic * tactic) -> tactic
 val >-- : (tactic * tactic) -> tactic
 
 val empty: 'a -> 'b list -> 'a
+val sing: ('a -> 'b) -> 'a list -> 'b
+val pairths: ('a -> 'a -> 'b) -> 'a list -> 'b
+
 val accept_tac: thm_tactic
 val assume_tac: thm_tactic
 val conj_tac: tactic
@@ -17,6 +20,7 @@ val contra_tac: tactic
 val ccontra_tac: tactic
 val imp_tac: tactic
 val dimp_tac: tactic
+(*val exists_tac: term -> tactic*)
 val exists_tac: term -> tactic
 val gen_tac: tactic
 val then_tac: (tactic * tactic) -> tactic

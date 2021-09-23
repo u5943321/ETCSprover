@@ -21,9 +21,10 @@ val qabbrev_tac  = q_ftac abbrev_tac
 fun q_tltcl (tltcl:term list -> thm_tactic -> thm_tactic) strl thtac th :tactic = 
     fn (ct,asl,w) => tltcl (List.map (pwct ct) strl) thtac th (ct,asl,w)
 
+(*
 fun sing f [x] = f x
   | sing f _ = raise simple_fail "sing" 
-(*
+
 fun exists_tac' t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
@@ -37,6 +38,7 @@ fun exists_tac' t (G,fl,f) =
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 *)
 
+(*
 fun exists_tac' t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
@@ -49,10 +51,11 @@ fun exists_tac' t (G,fl,f) =
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
+*)
 
-val qexists_tac = q_ttac exists_tac'
+val qexists_tac = q_ttac exists_tac
 
-fun existsl_tac l = map_every (exists_tac') l
+fun existsl_tac l = map_every (exists_tac) l
 
 val qexistsl_tac = q_tltac existsl_tac
 

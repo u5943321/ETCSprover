@@ -1,4 +1,4 @@
-
+val exists_tac' = exists_tac
 
 (*ETCS axioms*)
 
