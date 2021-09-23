@@ -23,4 +23,5 @@ val rastt: string -> term.term
 val pwct: (string * sort) set -> string -> term
 val pwcf: (string * sort) set -> string -> form
 
+val readfq: 'a frag list -> form
 end

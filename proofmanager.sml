@@ -1,7 +1,7 @@
-fun readfq [QUOTE s] = rapf s
+(*fun readfq [QUOTE s] = rapf s
 
 structure Parse = struct val Term=readfq end
-
+*)
 
 structure proofmanager = 
 struct

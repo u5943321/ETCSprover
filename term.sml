@@ -633,4 +633,7 @@ fun ill_formed_fv (n,s) =
     case s of ob => false
             | ar(d,c) => is_bound d orelse is_bound c
 
+val ob_sort = mk_ob_sort
+val ar_sort = mk_ar_sort
+
 end

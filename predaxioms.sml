@@ -1,31 +1,10 @@
 
 
-
-
-fun form_goal f = new_goal (fvf f,[]:form list,f)
-
-
-val ob_sort = mk_ob_sort
-val ar_sort = mk_ar_sort
 (*ETCS axioms*)
-
-fun check_wffv fvs = 
-    case fvs of 
-        [] => true
-      | h :: t => if ill_formed_fv h then
-                      raise ERR ("ill-formed free variable",[snd h],[var h],[])
-                  else check_wffv t
-
-fun rapf' str = 
-    let val f = rapf str 
-        val fvs = HOLset.listItems (fvf f)
-        val _ = check_wffv fvs 
-    in f
-    end
 
 fun read_axiom thstr = 
     let
-        val f = rapf' thstr
+        val f = rapf thstr
         val _ = HOLset.equal(fvf f,essps) orelse
                 raise simple_fail"formula has free variables"
     in
@@ -126,19 +105,12 @@ val ax_2el = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~ (x1 = x2)"
 val ax8 = ax_2el
 
 
-fun dischl' l th = 
+fun gen_dischl l th = 
     case l of 
         [] => th
-      | h :: t => dischl' t (disch h th |> gen_all)
+      | h :: t => gen_dischl t (gen_all th |> disch h)
 
-fun dischl'' l th = 
-    case l of 
-        [] => th
-      | h :: t => dischl'' t (gen_all th |> disch h)
-
-fun disch_all' th = dischl' (ant th) th
-
-fun disch_all'' th = dischl'' (ant th) th
+fun gen_disch_all th = gen_dischl (ant th) th
 
 val eq_eqn = eqind_def |> strip_all_and_imp
                     |> conjE2 |> iffRL |> strip_all_and_imp
@@ -146,7 +118,7 @@ val eq_eqn = eqind_def |> strip_all_and_imp
                     |> gen_all 
                     |> allE (rastt "eqind(e:E->A, f:A->B, g, x:X->A)") 
                     |> C mp $ refl (rastt "eqind(e:E->A, f:A->B, g, x:X->A)")
-                    |> disch_all''
+                    |> gen_disch_all
  
 val coeq_eqn = coeqind_def |> strip_all_and_imp
                     |> conjE2 |> iffRL |> strip_all_and_imp
@@ -154,7 +126,7 @@ val coeq_eqn = coeqind_def |> strip_all_and_imp
                     |> gen_all 
                     |> allE (rastt "coeqind(ce:B->cE, f:A->B, g, x:B->X)") 
                     |> C mp $ refl (rastt "coeqind(ce:B->cE, f:A->B, g, x:B->X)")
-                    |> disch_all''
+                    |> gen_disch_all
  
 
 
@@ -171,7 +143,7 @@ tp_def |> strip_all_and_imp |> conjE2 |> strip_all_and_imp |> iffRL |>
 undisch |> arw_rule [] |> disch (rapf "h = tp(p1:efs->A, p2:efs->A2B, ev:efs->B, p1':AX->A, p2':AX->X, f)") |> allI ("h",mk_ar_sort (mk_ob "X") (mk_ob "A2B"))|>
 allE $ rastt "tp(p1:efs->A, p2:efs->A2B, ev:efs->B, p1':AX->A, p2':AX->X, f)"|>
 C mp $ refl $ rastt "tp(p1:efs->A, p2:efs->A2B, ev:efs->B, p1':AX->A, p2':AX->X, f)" |> 
-disch_all'' |> gen_all
+gen_disch_all |> gen_all
 
 
 
@@ -179,7 +151,7 @@ disch_all'' |> gen_all
 fun mp_canon th = 
     let val th0 = strip_all_and_imp th 
         val th1 = conj_all_assum th0
-    in th1 |> disch_all'' |> gen_all
+    in th1 |> gen_disch_all |> gen_all
     end
 
 
@@ -202,7 +174,7 @@ e0
             h = tp f
 *)
 val is_tp = tp_def |> strip_all_and_imp |> conjE2 |> iffLR
-                    |> disch_all'' |> gen_all
+                    |> gen_disch_all |> gen_all
 
 (*
 ∀A B X f. f∶ (po A X) → B ⇒
@@ -211,7 +183,7 @@ val is_tp = tp_def |> strip_all_and_imp |> conjE2 |> iffLR
                  h = tp f)
 *)
 
-val ax2_conj2 = tp_def |> strip_all_and_imp |> conjE2 |> disch_all'' |> gen_all
+val ax2_conj2 = tp_def |> strip_all_and_imp |> conjE2 |> gen_disch_all |> gen_all
 
 (*
 ∀X x0 t. x0∶ one → X ∧ t∶ X → X ⇒
@@ -577,9 +549,9 @@ e0
 
 (*∀A B f g. f∶ A → B ∧ g∶ A → B ⇒ is_mono (eqa f g)*)
 
-val is_eqind = eqind_def |> strip_all_and_imp |> conjE2 |> iffLR |> strip_all_and_imp |> disch_all'' 
+val is_eqind = eqind_def |> strip_all_and_imp |> conjE2 |> iffLR |> strip_all_and_imp |> gen_disch_all 
 
-val is_coeqind = coeqind_def |> strip_all_and_imp |> conjE2 |> iffLR |> strip_all_and_imp |> disch_all'' 
+val is_coeqind = coeqind_def |> strip_all_and_imp |> conjE2 |> iffLR |> strip_all_and_imp |> gen_disch_all 
 
 
 
@@ -1752,7 +1724,7 @@ e0
 
 val parallel_p_one_side_split = 
  parallel_p_one_side |> strip_all_and_imp
-                     |> split_assum |> split_assum |> disch_all'' |> gen_all
+                     |> split_assum |> split_assum |> gen_disch_all |> gen_all
 
 val f0 = rastt "(f:AN->B) o pa(pA:AN->A, pN:AN->N, pA':A1->A, ZERO o (pone:A1->1))"
 val f0' = rastt "ev o pa(p1:efs->A,p2:efs->A2B,pA':A1->A,tp(p1,p2,ev:efs->B,pA:AN->A,pN:AN->N,f:AN -> B) o ZERO o (pone:A1->1))"
@@ -2350,7 +2322,7 @@ e0
       by_tac
      “?w. (k:R->AA) o w = pa(p1:AA->A,p2:AA->A,(t:I'->A) o (h':X->I'), t o g)”
       >-- (drule
-           (fac_through_eq_iff |> undisch|> disch_all'' |> gen_all |> iffRL) >>
+           (fac_through_eq_iff |> undisch|> gen_disch_all |> gen_all |> iffRL) >>
            first_x_assum match_mp_tac >>
            rw[o_assoc] >> drule p12_of_pa >> arw[] >>
            pick_xnth_assum 8 (assume_tac o GSYM) >> once_arw[] >>
@@ -2379,7 +2351,7 @@ first_x_assum drule >>
 pop_assum (x_choose_then "qi" assume_tac) >>
 by_tac “?w.w o k':BB->R' = copa (i1:B->BB,i2:B->BB,f':I0->X o qi:B->I0,g o qi)”
 >-- (rev_drule
-           (fac_through_coeq_iff |> undisch|> disch_all'' |> gen_all |> iffRL) >>
+           (fac_through_coeq_iff |> undisch|> gen_disch_all |> gen_all |> iffRL) >>
      first_x_assum match_mp_tac >> 
      drule i12_of_copa >> arw[GSYM o_assoc] >>
      pick_xnth_assum 8 (assume_tac o GSYM) >>
@@ -3202,7 +3174,7 @@ val Thm6_first_sentence = proved_th $
 
 val mem_of_name_eqa = proved_th $
 e0
-(rpt strip_tac >> drule (fac_through_eq_iff |> undisch |> disch_all''
+(rpt strip_tac >> drule (fac_through_eq_iff |> undisch |> gen_disch_all
                                             |> gen_all) >>
  first_x_assum (qspecl_then ["1","pa(p1, p2, r, tp(p1, p2, ev, pR, pone, psi o pR))"] assume_tac) >> arw[] >>
 rw[o_assoc] >> once_arw[one_to_one_id] >> rw[idR] >>

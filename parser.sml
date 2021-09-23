@@ -1099,7 +1099,23 @@ fun pretty_form f =
 
 fun rpf f = pretty_form (readf f)
 
-fun rapf f = pretty_form (fst (read_ast_f f))
+
+fun check_wffv fvs = 
+    case fvs of 
+        [] => true
+      | h :: t => if ill_formed_fv h then
+                      raise ERR ("ill-formed free variable",[snd h],[var h],[])
+                  else check_wffv t
+
+
+fun rapf0 f = pretty_form (fst (read_ast_f f))
+
+fun rapf str = 
+    let val f = rapf0 str 
+        val fvs = HOLset.listItems (fvf f)
+        val _ = check_wffv fvs 
+    in f
+    end
 
 val rastt = fst o read_ast_t
 
@@ -1189,7 +1205,13 @@ fun pwcf ct fstr = cast2f ct (parse_ast_end (parse_ast (lex fstr)))
 
 cast2f ct (parse_ast_end (parse_ast (lex $ q2str fq)))*)
 
-
+fun readfq [QUOTE s] = rapf s
 
 
 end
+
+
+
+structure Parse = struct open parser val Term=readfq end
+
+
