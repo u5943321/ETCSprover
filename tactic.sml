@@ -1039,5 +1039,7 @@ val once_arw = once_arw_tac
 
 val fs = full_simp_tac
 val rpt = repeat  
+
+fun existsl_tac l = map_every (exists_tac) l
 end
     

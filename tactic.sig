@@ -97,5 +97,6 @@ val fs: thm list -> tactic
 
 val rpt: tactic -> tactic
 
+val existsl_tac: term list -> tactic
 end
 
