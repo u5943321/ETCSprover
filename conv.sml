@@ -61,6 +61,18 @@ fun arg_conv c t =
       | _ => raise ERR ("arg_conv.not a function term",[],[t],[])
 
 
+fun land_conv c t = 
+    case (view_term t) of 
+        vFun (f,s,[t1,t2]) => EQ_fsym f [c t1,refl t2]
+      | _ => raise ERR ("land_conv.not a function term",[],[t],[])
+
+
+fun rand_conv c t = 
+    case (view_term t) of 
+        vFun (f,s,[t1,t2]) => EQ_fsym f [refl t1,c t2]
+      | _ => raise ERR ("land_conv.not a function term",[],[t],[])
+
+
 fun depth_conv c t = 
     ((try_conv (arg_conv (depth_conv c))) thenc (repeatc c)) t
 
@@ -146,6 +158,17 @@ fun disj_fconv fc f =
         vConn("|",[p,q]) => disj_iff (fc p) (fc q)
       | _ => raise ERR ("disj_fconv.not a disjunction",[],[],[f])
 
+fun ldisj_fconv fc f = 
+    case view_form f of 
+        vConn("|",[p,q]) => disj_iff (fc p) (frefl q)
+      | _ => raise ERR ("ldisj_fconv.not a disjunction",[],[],[f])
+
+
+fun rdisj_fconv fc f = 
+    case view_form f of 
+        vConn("|",[p,q]) => disj_iff (frefl p) (fc q)
+      | _ => raise ERR ("rdisj_fconv.not a disjunction",[],[],[f])
+
 
 (*call fc on p, if throw unchanged exp, then call fc on q, 
 if fc q throws unchanged as well, throw unchanged on the conj_fconv 
@@ -160,19 +183,24 @@ fun conj_fconv fc f =
         vConn("&",[p,q]) => conj_iff (fc p) (fc q)
       | _ => raise ERR ("conj_fconv.not a conjunction",[],[],[f])
 
+
+fun lconj_fconv fc f = 
+    case view_form f of 
+        vConn("&",[p,q]) => conj_iff (fc p) (frefl q)
+      | _ => raise ERR ("lconj_fconv.not a conjunction",[],[],[f])
+
+
+fun rconj_fconv fc f = 
+    case view_form f of 
+        vConn("&",[p,q]) => conj_iff (frefl p) (fc q)
+      | _ => raise ERR ("rconj_fconv.not a conjunction",[],[],[f])
+
+
 fun neg_fconv fc f = 
     case view_form f of 
         vConn("~",[f0]) => neg_iff (fc f0)
       | _ => raise ERR ("neg_fconv.not a negation",[],[],[f])
 
-(*if needed, add try_conv on fc*)
-
-
-(*
-
-TODO: call dest_conj / dest_imp
-
-*)
 
 fun imp_fconv fc f = 
     case view_form f of
@@ -180,10 +208,35 @@ fun imp_fconv fc f =
       | _ => raise ERR ("imp_fconv.not an implication",[],[],[f])
 
 
+fun limp_fconv fc f = 
+    case view_form f of
+        vConn("==>",[p,q]) => imp_iff (fc p) (frefl q)       
+      | _ => raise ERR ("limp_fconv.not an implication",[],[],[f])
+
+
+fun rimp_fconv fc f = 
+    case view_form f of
+        vConn("==>",[p,q]) => imp_iff (frefl p) (fc q)       
+      | _ => raise ERR ("rimp_fconv.not an implication",[],[],[f])
+
+
 fun dimp_fconv fc f = 
     case view_form f of
         vConn("<=>",[p,q]) => dimp_iff (fc p) (fc q)
       | _ => raise ERR ("dimp_fconv.not an iff",[],[],[f])
+
+
+fun ldimp_fconv fc f = 
+    case view_form f of
+        vConn("<=>",[p,q]) => dimp_iff (fc p) (frefl q)
+      | _ => raise ERR ("ldimp_fconv.not an iff",[],[],[f])
+
+
+fun rdimp_fconv fc f = 
+    case view_form f of
+        vConn("<=>",[p,q]) => dimp_iff (frefl p) (fc q)
+      | _ => raise ERR ("rdimp_fconv.not an iff",[],[],[f])
+
 
 fun forall_fconv fc f = 
     case view_form f of
@@ -213,8 +266,6 @@ fun sub_fconv c fc =
                  forall_fconv fc,
                  exists_fconv fc,
                  pred_fconv c])
-
-(*TODO: neg_fconv*)
 
 
 
@@ -349,5 +400,44 @@ fun basic_fconv c fc =
                     (fc orelsefc (* basic_*)taut_fconv orelsefc refl_fconv orelsefc double_neg_fconv)
 
 val neg_neg_elim = conv_rule (once_depth_fconv no_conv double_neg_fconv)
+
+
+fun lpred_fconv c f = 
+    case view_form f of 
+        vPred (P,[t1,t2]) => EQ_psym P [c t1,refl t2]
+      | _ => raise ERR ("lpred_fconv.not a predicate",[],[],[f])
+
+
+fun rpred_fconv c f = 
+    case view_form f of 
+        vPred (P,[t1,t2]) => EQ_psym P [refl t1,c t2]
+      | _ => raise ERR ("rpred_fconv.not a predicate",[],[],[f])
+
+fun land_fconv c fc f = 
+    case view_form f of 
+        vConn(co,[f1,f2]) =>
+        if co = "&" then lconj_fconv fc f else
+        if co = "|" then ldisj_fconv fc f else
+        if co = "==>" then limp_fconv fc f else
+        if co = "<=>" then ldimp_fconv fc f else
+        raise simple_fail ("not a connective: " ^ co)
+      | vPred (p,[t1,t2]) => lpred_fconv c f
+      | _ => all_fconv f
+
+
+fun rand_fconv c fc f = 
+    case view_form f of 
+        vConn(co,[f1,f2]) =>
+        if co = "&" then rconj_fconv fc f else
+        if co = "|" then rdisj_fconv fc f else
+        if co = "==>" then rimp_fconv fc f else
+        if co = "<=>" then rdimp_fconv fc f else
+        raise simple_fail ("not a connective: " ^ co)
+      | vPred (p,[t1,t2]) => rpred_fconv c f
+      | _ => all_fconv f
+
+
+
+
 
 end

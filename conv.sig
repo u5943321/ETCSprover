@@ -62,4 +62,10 @@ val right_imp_forall_fconv: fconv
 val sym_fconv: fconv
 val double_neg_fconv: fconv
 val neg_neg_elim: thm -> thm
+
+val land_conv: conv -> conv
+val rand_conv: conv -> conv
+
+val land_fconv: conv -> fconv -> fconv
+val rand_fconv: conv -> fconv -> fconv
 end
