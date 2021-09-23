@@ -783,6 +783,15 @@ fun dischl l th =
 
 fun disch_all th = dischl (ant th) th
 
+
+fun gen_dischl l th = 
+    case l of 
+        [] => th
+      | h :: t => gen_dischl t (gen_all th |> disch h)
+
+fun gen_disch_all th = gen_dischl (ant th) th
+
+
 (*f1,f2 |- C maps to f1 /\ f2 |- C*)
 
 fun conj_assum f1 f2 th = 

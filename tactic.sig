@@ -80,6 +80,7 @@ val remove_asm_tac: form.form -> tactic
 val rev_pop_assum: thm_tactic -> tactic
 
 val rewr_rule: thm list -> thm -> thm
+val arw_rule: thm list -> thm -> thm
 
 val full_simp_tac: thm list -> tactic
 val rev_full_simp_tac: thm list -> tactic

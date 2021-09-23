@@ -102,4 +102,7 @@ val F_imp2: form -> thm
 val contrapos: thm -> thm
 val split_assum: thm -> thm
 
+val gen_dischl: form list -> thm -> thm
+val gen_disch_all: thm -> thm
+
 end

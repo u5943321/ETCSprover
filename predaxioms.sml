@@ -105,13 +105,6 @@ val ax_2el = read_axiom "?X x1: 1 -> X x2: 1 -> X. ~ (x1 = x2)"
 val ax8 = ax_2el
 
 
-fun gen_dischl l th = 
-    case l of 
-        [] => th
-      | h :: t => gen_dischl t (gen_all th |> disch h)
-
-fun gen_disch_all th = gen_dischl (ant th) th
-
 val eq_eqn = eqind_def |> strip_all_and_imp
                     |> conjE2 |> iffRL |> strip_all_and_imp
                     |> rewr_rule [assume (rapf "x0 = eqind(e:E->A, f:A->B, g, x:X->A)")] |> disch (rapf "x0 = eqind(e:E->A, f:A->B, g, x:X->A)")
@@ -128,12 +121,6 @@ val coeq_eqn = coeqind_def |> strip_all_and_imp
                     |> C mp $ refl (rastt "coeqind(ce:B->cE, f:A->B, g, x:B->X)")
                     |> gen_disch_all
  
-
-
-
-
-
-fun arw_rule thl th = rewr_rule ((List.map assume $ ant th) @ thl) th
 
 
 (*∀A B X f. f∶A × X → B ⇒ ev A B ∘ ⟨p1 A X, tp f ∘ p2 A X⟩ = f*)
@@ -202,7 +189,7 @@ ax3_conj2
 val exp_ispr = tp_def |> strip_all_and_imp |> conjE1 |> disch_all |> gen_all
 
 
-val irule = match_mp_tac o ir_canon
+
 
 val ev_eq_eq = proved_th $
 e0
@@ -240,14 +227,6 @@ arw_tac[])
 
 
 
-(*i1 one one ≠ i2 one one*)
-(*val i1_ne_i2 = proved_th $
-e0
-(repeat strip_tac >> ccontra_tac >> 
- x_choosel_then ["X","x1","x2"])
-(rapg "!one oneone i1:one -> oneone i2:one -> oneone. is1(one) & iscopr(i1,i2) ==> ~i1 = i2")
-*)
-
 (*∀A B X f g. f∶ A → X ∧ g∶ B → X ⇒ copa f g o i1 A B = f*)
 
 val i12_of_copa = copa_def |> iffRL |> spec_all |> undisch
@@ -272,13 +251,12 @@ e0
 (repeat strip_tac >> ccontra_tac >> 
  x_choosel_then ["X","x1","x2"] assume_tac ax8 >> 
  qby_tac ‘copa(i1,i2,x1,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2’
- (*by_tac (rapf "copa(i1:1->oneone,i2:1->oneone,x1:1->X,x2) o i1 = x1 &copa(i1,i2,x1,x2) o i2 = x2")*) >-- (drule i12_of_copa >> arw_tac[]) >>
+ >-- (drule i12_of_copa >> arw_tac[]) >>
  pop_assum (assume_tac o GSYM) >> 
- rev_full_simp_tac[] >> (*suffices_tac (rapf "x1:1->X = x2") *)
+ rev_full_simp_tac[] >> 
  qsuff_tac ‘x1 = x2’
  >-- (arw_tac[]) >>
- qpick_x_assum ‘~(x1 = x2)’ (K all_tac)
- (*pick_x_assum (rapf "~x1:1->X = x2") (K all_tac)*) >> once_arw_tac[] >> rw_tac[] >>
+ qpick_x_assum ‘~(x1 = x2)’ (K all_tac) >> once_arw_tac[] >> rw_tac[] >>
  rw_tac[])
 (rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~(i1 = i2)")
 
@@ -287,11 +265,7 @@ e0
                              i2 A B ∘ x0' = x))
 *)
 
-(* TO-DO:  i1_ne_i2|> spec_all |> undisch|> eqF_intro |> iffLR |> disch_all|> gen_all |> irule_canon solved
-# Exception- ERR ("the given variable occurs unexpectedly", [], [], []) raised
 
-
-*)
 
 val eq_to1 = mp (allE one to1_def) const1_def 
 

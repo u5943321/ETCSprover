@@ -890,6 +890,9 @@ fun rewr_rule thl =
         conv_rule (basic_fconv c fc)
     end
 
+
+fun arw_rule thl th = rewr_rule ((List.map assume $ ant th) @ thl) th
+
 fun abbrev_tac eq0:tactic = 
     fn (ct,asl,w) => 
        let 
