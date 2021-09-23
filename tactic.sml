@@ -161,9 +161,7 @@ fun match_mp_tac th (ct:cont,asl:form list,w) =
         ([(ct,asl,ant)], sing (mp (disch ant gth)))
     end
 
-(*
-fun match_mp_canon th = 
-    th |> undisch_all |> conj_all_assum *)
+
 (*
 
 A ==> !x. C x
@@ -249,61 +247,6 @@ fun conj_tac ((G,fl,f):goal):goal list * validation =
         ([(G,fl,f1), (G,fl,f2)], pairths conjI)
       | _ => raise ERR ("conj_tac.goal is not conjunction",[],[],[f])
 
-(*
-fun exists_tac t (G,fl,f) = 
-    case view_form f of 
-        vQ("?",n,s,b) =>
-        if eq_sort(sort_of t,s) then 
-            ([(G,fl,substf ((n,s),t) b)], 
-             sing (existsI (n,s) t (substf ((n,s),var(n,s)) b)))
-        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
-      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
-*)
-
-(*
-?a. P(a#,b,c) <=> Q(a)
-
-P(a0,b,c) <=> Q(a0)
-
-
-
-P(a0,b,c) <=> Q(a)
-
-view_form (rapf "?x:X->Y.ismono(x)");
-val it = vQ ("?", "x", X -> Y, Pred ("ismono", [B(0)])): form_view
- >
-
-*)
-
-
-(*
-fun exists_tac' t (G,fl,f) = 
-    case view_form f of 
-        vQ("?",n,s,b) =>
-        if eq_sort(sort_of t,s) then 
-            let val nv = pvariantt (fvf b) (var(n,s))
-            in
-            ([(G,fl,subst_bound t b)], 
-             sing (existsI (dest_var nv) t (subst_bound nv b)))
-            end
-        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
-      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
-*)
-
-(*
-fun exists_tac' t (G,fl,f) = 
-    case view_form f of 
-        vQ("?",n,s,b) =>
-        if eq_sort(sort_of t,s) then 
-            let val nv = (var(n,s))
-            in
-            ([(G,fl,substf ((n,s),t) b)], 
-             sing (existsI (dest_var nv) t (substf ((n,s),nv) b)))
-            end
-        else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
-      | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
-*)
-
 fun exists_tac t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
@@ -316,7 +259,7 @@ fun exists_tac t (G,fl,f) =
         else raise ERR ("exists_tac.inconsist sorts",[sort_of t,s],[t,var(n,s)],[])
       | _ => raise ERR ("exists_tac.goal is not an existential",[],[],[f])
 
-(*TODO: need to generate a var which is not in the body, so the var in the body with name n do not get substted*)
+
 
 fun spec_all_tac (G,fl,f) = 
     case view_form f of
