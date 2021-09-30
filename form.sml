@@ -559,4 +559,6 @@ fun view_form f =
 
 fun dest_forall0 f = case f of Quant Qi => Qi
 
+
+
 end

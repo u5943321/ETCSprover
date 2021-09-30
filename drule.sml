@@ -765,6 +765,8 @@ fun genl vsl th =
         abstl vl th
     end
 
+(*TOdO: a version of genl which allow user to order by hand*)
+
 fun gen_all th = 
     let 
         val vs = HOLset.difference
@@ -916,73 +918,6 @@ fun forall_exists (n,s) =
     in iff_swap th0'
     end
 
-(*iffLR*)
-(*
-fun eq_imp_rule th = (dimpl2r th,dimpr2l th)
-
-datatype AI = imp of form | fa of {orig:string * sort, new:string * sort}
-
-
-fun spec t = specl [t]
-
-fun AIdestAll th =
-    case total dest_forall (concl th) of
-        NONE => NONE
-      | SOME ((n,s),b) =>
-        let
-          val hfvs = fvfl (ant th)
-        in
-          if HOLset.member(hfvs, (n,s)) then
-            let val new = dest_var (pvariantt hfvs (var(n,s)))
-            in
-              SOME (fa{orig=(n,s),new=new}, spec (var new) th)
-            end
-          else
-            SOME (fa{orig=(n,s),new=(n,s)}, spec (var(n,s)) th)
-        end
-
-
-
-
-fun all_rename x f = 
-    case view_form f of
-        vQ("!",n,s,b) =>
-        let 
-            val l2r =  assume f |> allE (var(x,s)) |> allI (x,s) |> disch_all
-            val r2l =  assume (mk_forall x s b) |> allE (var(n,s)) |> allI (n,s) |> disch_all
-        in dimpI l2r r2l
-        end
-      | _ => raise ERR ("all_rename.not a forall",[],[],[f])
-
-
-fun restore hs (acs, th) =
-    case acs of
-        [] => rev_itlist add_assum hs th
-      | imp t :: rest => restore hs (rest, disch t th)
-      | fa{orig,new} :: rest =>
-        if fst orig = fst new andalso eq_sort(snd orig,snd new) then
-          restore hs (rest, allI orig th)
-        else
-          restore hs (rest, th |> allI new |> conv_rule (all_rename (fst orig)))
-
-
-fun underAIs f th =
-    let
-      fun getbase A th =
-          case AIdestAll th of
-              NONE => (case total dest_imp (concl th) of
-                           NONE => (A, f th)
-                         | SOME (l,r) => getbase (imp l :: A) (undisch th))
-            | SOME (act,th') => getbase (act::A) th'
-    in
-      restore (ant th) (getbase [] th)
-    end
-
-val iffLR = underAIs (#1 o eq_imp_rule)
-val iffRL = underAIs (#2 o eq_imp_rule)
-
-
-*)
 fun strip_all_and_imp th = 
     if is_forall (concl th) then 
         strip_all_and_imp (spec_all th)
@@ -1094,6 +1029,32 @@ val pe_ob_cl3 = pe_cl3 ("A",mk_ob_sort)
 
 val pe_ar_cl3 = pe_cl3 ("a",mk_ar_sort (mk_ob "A") (mk_ob "B"))
 
+fun mk_conjl fl = 
+    case fl of h :: t =>
+    if eq_forml t [] then h else 
+    mk_conj h (mk_conjl t)
+  | _ => raise simple_fail "mk_conjl.list is empty"
+
+
+fun mk_disjl fl = 
+    case fl of h :: t =>
+    if eq_forml t [] then h else 
+    mk_disj h (mk_disjl t)
+  | _ => raise simple_fail "mk_disjl.list is empty"
+
+fun conjIl thl = 
+    case thl of h :: t =>
+    if length t = 0 then h else 
+    conjI h (conjIl t)
+  | _ => raise simple_fail "mk_conjIl.list is empty"
+
+
+val pe_ob_clauses = conjIl [pe_ob_cl1,pe_ob_cl2,pe_ob_cl3]
+
+val pe_ar_clauses = conjIl [pe_ar_cl1,pe_ar_cl2,pe_ar_cl3]
+
+val PULL_EXISTS = conjIl [pe_ob_cl1,pe_ob_cl2,pe_ob_cl3,
+                          pe_ar_cl1,pe_ar_cl2,pe_ar_cl3]
 
 fun split_assum0 f th = 
     if fmem f (ant th) then

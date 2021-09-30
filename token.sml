@@ -17,10 +17,10 @@ end
 
 fun is_letter_or_digit c =
     is_char(ord #"A",c,ord #"Z") orelse is_char(ord #"a",c,ord #"z") orelse is_char(ord #"0",c,ord #"9") orelse
-    is_char(913,c,937) orelse is_char(945,c,969) orelse c = ord #"'";
+    is_char(913,c,937) orelse is_char(945,c,969) orelse c = ord #"'" orelse c = ord #"_";
 
 
-fun token_of a = if mem a ["ar","ob","o","!","?","==>","<=>",":","->","(*","*)"] then (Key a) else (Id a); 
+fun token_of a = if mem a ["ar","ob","o","!","?","==>","<=>",":","->","(*","*)","=="] then (Key a) else (Id a); 
 
 fun char_of a = case a of Key a0 => a0 | Id a0 => a0
 
@@ -60,6 +60,7 @@ fun scan_symbol s =
         if l2 = ["(","*"] then (Key "(*",s2) else
         if l2 = ["*",")"] then (Key "*)",s2) else
         if l2 = ["-",">"] then (Key "->",s2) else
+        if l2 = ["=","="] then (Key "==",s2) else
         if mem (List.hd l1) syml then (Key $ List.hd l1,s1) else
         (Id "",s)
     end
@@ -111,7 +112,9 @@ fun scan (front_toks, "") cd =
           | Key "<=>" =>
             scan(Key"<=>" :: front_toks,rest) 0 
           | Key "->" =>
-            scan(Key"->" :: front_toks,rest) 0
+            scan(Key"->" :: front_toks,rest) 0 
+          | Key "==" =>
+            scan(Key"==" :: front_toks,rest) 0 
           | Key ":" =>
             scan(Key":" :: front_toks,rest) 0
           | Key "(*" => 

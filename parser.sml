@@ -704,7 +704,7 @@ fun ast2pf ast (env:env) =
             in
                 (pConn(str,[pf1,pf2]),env2)
             end else 
-        if mem str ["="] then
+        if mem str ["=","=="] then
             let
                 val (pt1,env1) = ast2pt ast1 env
                 val (pt2,env2) = ast2pt ast2 env1
@@ -1174,7 +1174,7 @@ fun cast2f ct ast =
             in
                 mk_conn str [f1,f2]
             end else 
-        if mem str ["="] then
+        if mem str ["=","=="] then
             let
                 val t1 = cast2t ct ast1
                 val t2 = cast2t ct ast2

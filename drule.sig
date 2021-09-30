@@ -105,4 +105,8 @@ val split_assum: thm -> thm
 val gen_dischl: form list -> thm -> thm
 val gen_disch_all: thm -> thm
 
+val pe_ob_clauses: thm
+val pe_ar_clauses: thm
+val PULL_EXISTS: thm
+
 end

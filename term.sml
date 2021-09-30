@@ -8,12 +8,11 @@ and term =
     | Bound of int
     | Fun of string * sort * term list;
 
-(*
-datatype sterm = svar of string | sbound of int | sconst of string
+val mk_ob_sort = ob
 
-datatype sort' = ob 
-               | ar of sterm * sterm 
-*)
+val ob_sort = mk_ob_sort
+
+
 
 datatype term_view =
     vVar of string * sort
@@ -110,7 +109,7 @@ fun dest_fun' t =
 
 
 *)
-val mk_ob_sort = ob
+
 
 fun mk_ar_sort t1 t2 = ar(t1,t2)
 
@@ -344,38 +343,6 @@ and fvtl tl =
       | h :: t => HOLset.union (fvt h,fvtl t)
 
 
-(*
-fun fxty i = 
-    case i of 
-        ":" =>(* 460 *) 900
-      | "->" =>(* 470 *) 900
-      | "=" => 450
-      | "==>" => 200
-      | "<=>" => 100
-      | "~" => 900
-      | "&" => 400
-      | "|" => 300
-      | "o" => 800
-      | _ => ~1
-*)
-(*
-
-fun fxty i = 
-    case i of 
-        ":" =>(* 460 *) 900
-      | "->" =>(* 470 *) 900
-      | "=" => 450
-      | "==>" => 200
-      | "<=>" => 100
-      | "~" => 900
-      | "&" => 400
-      | "|" => 300
-      | "*" => 600
-      | "+" => 500
-      | "^" => 700
-      | "o" => 800
-      | _ => ~1
-*)
 
 
 fun fxty i = 
@@ -385,6 +352,7 @@ fun fxty i =
       | "|" => 300
       | "&" => 400
       | "=" => 450
+      | "==" => 450
       | "o" => 455
       | ":" => 460 (*900*)
       | "->" => 470 (*900*)
@@ -397,7 +365,6 @@ fun fxty i =
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
 type psymd = (string, (string * sort) list) Binarymap.dict
-
 
 fun lookup_pred (pd:psymd) p = Binarymap.peek (pd,p)
 
@@ -414,6 +381,7 @@ val psyms0:psymd =
                             ("inv",mk_ar_sort (mk_ob "G") (mk_ob "G"))]),
                 ("=",[("a",mk_ar_sort (mk_ob "A") (mk_ob "B")),
                       ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))]),
+                ("==",[("A",ob_sort),("B",ob_sort)]),
                 ("ispr",[("p1",ar(mk_ob "AB",mk_ob "A")),
                          ("p2",ar(mk_ob "AB",mk_ob "B"))]),
                 ("iscopr",[("i1",ar(mk_ob "A",mk_ob "AB")),
@@ -437,7 +405,7 @@ val psyms0:psymd =
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
 
-val ob_sort = mk_ob_sort
+
 
                   
 val fsyms0:fsymd =  

@@ -6532,9 +6532,32 @@ val pi1_def = ex2fsym "π1" ["A","B"] (iffRL $ eqT_intro $ spec_all Posym_def)
 
 val pi2_def = ex2fsym "π2" ["A","B"] (iffRL $ eqT_intro $ spec_all pi1_def) |> C mp (trueI []) |> gen_all
 
+val ispr_def = new_ax
+“!A B AB p1:AB->A p2:AB->B. ispr(p1,p2) <=>
+ !X f:X->A g:X->B. 
+ ?fg0:X->AB. !fg. p1 o fg = f  & p2 o fg = g <=> fg = fg0”
+
+val pa_def0 = 
+ex2fsym "pa" ["p1","p2","f","g"] 
+(iffLR $ spec_all ispr_def |> strip_all_and_imp |>
+ disch_all) 
+
+val pa_def = 
+    pa_def0 |> undisch 
+            |> allI ("g",ar_sort (mk_ob "X") (mk_ob "B"))
+            |> allI ("f",ar_sort (mk_ob "X") (mk_ob "A"))
+            |> allI ("X",ob_sort) |> disch_all
+            |> allI ("p2",ar_sort (mk_ob "AB") (mk_ob "B"))
+            |> allI ("p1",ar_sort (mk_ob "AB") (mk_ob "A"))
+            |> allI ("AB",ob_sort)
+            |> allI ("B",ob_sort)
+            |> allI ("A",ob_sort)
+
 val Pa_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> assume_tac pi2_def >>
+ first_x_assum (qspecl_then ["A","B"] assume_tac) >>
+ fs[ispr_def])
 (form_goal 
 “!X A f:X->A B g:X->B. ?fg:X->A * B. 
  !fg'. π1(A,B) o fg' = f & π2(A,B) o fg' = g <=> fg' = fg”)
@@ -6542,13 +6565,96 @@ e0
 val Pa_def = ex2fsym "Pa" ["f","g"] (iffRL $ eqT_intro $ spec_all Pa_ex) |> C mp (trueI []) |> gen_all
 
 
+val isexp_def = new_ax
+“!A B A2B efs p1:efs->A p2:efs-> A2B ev:efs -> B.
+ isexp(p1,p2,ev) <=> 
+ ispr(p1,p2) & 
+ !X AX p1':AX->A p2':AX->X.ispr(p1',p2') ==>
+ !f:AX->B.?h0:X-> A2B. !h. ev o pa(p1,p2,p1',h o p2') = f <=> h = h0”
+
+
+val tp_def0 = ex2fsym "tp" ["p1","p2","ev","p1'","p2'","f"] 
+(iffLR $ spec_all isexp_def |> strip_all_and_imp |>
+ conjE2 |> strip_all_and_imp |> conj_all_assum |> disch_all)
+
+
+val tp_def0' = 
+    tp_def0 |> undisch |> gen_all |> split_assum 
+            |> disch “ispr(p1':AX->A, p2':AX->X)”
+            |> allI ("p2'",ar_sort (mk_ob "AX") (mk_ob "X"))
+            |> allI ("p1'",ar_sort (mk_ob "AX") (mk_ob "A"))
+            |> allI ("AX",ob_sort)
+            |> allI ("X",ob_sort)
+            |> disch_all 
+            |> allI ("ev",ar_sort (mk_ob "efs") (mk_ob "B"))
+            |> allI ("p2",ar_sort (mk_ob "efs") (mk_ob "A2B"))
+            |> allI ("p1",ar_sort (mk_ob "efs") (mk_ob "A"))
+            |> genl [("efs",ob_sort),("A2B",ob_sort)]
+            |> allI ("B",ob_sort) |> allI ("A",ob_sort)
+
+val tp_def = proved_th $
+e0
+(rpt strip_tac >-- (drule $ iffLR isexp_def >> arw[]) >>
+ drule tp_def0' >> first_x_assum drule >> arw[])
+(form_goal
+ “!A B A2B efs p1: efs -> A p2 : efs -> A2B ev: efs -> B.
+        isexp(p1, p2, ev) ==>
+        ispr(p1,p2) &
+        !X AX p1': AX -> A p2': AX -> X.
+          ispr(p1', p2') ==>
+          !f : AX -> B h : X -> A2B.
+            ev o pa(p1, p2, p1', h o p2') = f <=>
+            h = tp(p1, p2, ev, p1', p2', f)”)
+
+
+val pa_iso = proved_th $
+e0
+(rpt strip_tac >> rw[isiso_def] >>
+ qexists_tac "pa(p1,p2,p1',p2')" >> 
+ strip_tac (* 2 *) >-- 
+ (rev_drule to_p_eq >> first_x_assum irule >>
+  rev_drule p12_of_pa >> arw[GSYM o_assoc] >>
+  drule p12_of_pa >> arw[idR]) >>
+ drule to_p_eq >> first_x_assum irule >>
+ drule p12_of_pa >> arw[GSYM o_assoc,idR] >>
+ rev_drule p12_of_pa >> arw[])
+(form_goal
+“!A B AB p1:AB->A p2:AB->B. ispr(p1,p2) ==>
+ !AB' p1':AB'->A p2':AB'->B. ispr(p1',p2') ==>
+ isiso(pa(p1',p2',p1,p2))”)
+
+
+
 val exp_ex' = proved_th $
 e0
-cheat
+(rpt strip_tac >> assume_tac exp_ex >>
+ first_x_assum (qspecl_then ["A","B"] strip_assume_tac) >>
+ qexists_tac "A2B" >> rpt strip_tac >>
+ drule exp_ispr >> 
+ rev_drule pa_iso >> first_x_assum drule >>
+ qexists_tac "ev o pa(p1, p2, p1', p2')" >>
+ fs[isexp_def] >> rpt strip_tac >>
+ first_x_assum drule >>
+ first_x_assum (qspecl_then ["f"] assume_tac) >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "h0" >> 
+ rw[o_assoc] >>
+ qby_tac 
+ ‘!h:X -> A2B.
+  pa(p1, p2, p1'', h o p2'') = 
+  pa(p1, p2, p1', p2') o pa(p1', p2', p1'', h o p2'')’ >--
+ (strip_tac >> 
+  qpick_x_assum ‘ispr(p1,p2)’ assume_tac >>
+  drule to_p_eq >> first_x_assum irule >>
+  drule p12_of_pa >> arw[GSYM o_assoc] >>
+  rev_drule p12_of_pa >> arw[]) >>
+ pop_assum (assume_tac o GSYM) >> arw[]
+ )
 (form_goal
 “!A B.?A2B.
  !efs p1:efs ->A p2:efs -> A2B. 
  ispr(p1,p2) ==> ?ev:efs ->B. isexp(p1,p2,ev)”)
+
 
 
 val Exp_def =  ex2fsym "Exp" ["A","B"] (iffRL $ eqT_intro $ spec_all exp_ex')
@@ -6556,20 +6662,56 @@ val Exp_def =  ex2fsym "Exp" ["A","B"] (iffRL $ eqT_intro $ spec_all exp_ex')
 
 val Ev_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> assume_tac pi2_def >>
+ first_x_assum (qspecl_then ["A","Exp(A,B)"] assume_tac) >>
+ drule Exp_def >> arw[])
 (form_goal
 “!A B.?ev: A * Exp(A,B) -> B.
  isexp(π1(A,Exp(A,B)),π2(A,Exp(A,B)),ev)”)
 
+val isexp_th = proved_th $
+e0
+cheat
+(form_goal
+“!A B A2B efs p1:efs->A p2:efs-> A2B ev:efs -> B.
+ isexp(p1,p2,ev) <=> 
+ ispr(p1,p2) & 
+ !X AX p1':AX->A p2':AX->X.ispr(p1',p2') ==>
+ !f:AX->B.?h0:X-> A2B. !h. ev o pa(p1,p2,p1',h o p2') = f <=> h = h0”)
+
 val Ev_def =  ex2fsym "Ev" ["A","B"] (iffRL $ eqT_intro $ spec_all Ev_ex)
                       |> C mp (trueI []) |> gen_all
 
+val pa2Pa = proved_th $
+e0
+(rpt strip_tac >> irule  $ iffLR Pa_def >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["A","B"] assume_tac) >>
+ drule p12_of_pa >> arw[]
+ )
+(form_goal
+“!A B X f:X->A g:X->B.pa(π1(A,B),π2(A,B),f,g) = Pa(f,g)”)
+
 val Tp_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> assume_tac Ev_def >>
+ fs[isexp_def] >> 
+ first_x_assum (qspecl_then ["A","B"] assume_tac) >>
+ pop_assum strip_assume_tac >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["A","X"] assume_tac) >>
+ first_x_assum drule >>
+ first_x_assum (qspecl_then ["f"] assume_tac) >>
+ qby_tac 
+ ‘!h:X->Exp(A,B). 
+  pa(π1(A, Exp(A, B)), π2(A, Exp(A, B)), π1(A, X), h o
+                    π2(A, X)) =
+  Pa(π1(A, X), h o π2(A, X))’ >-- rw[pa2Pa] >>
+ fs[] >> qexists_tac "h0" >> rw[]
+ )
 (form_goal
-“!A B X f: A * X -> B. ?fBar:X-> Exp(A,B).
- Ev(A,B) o Pa(π1(A,X),fBar o π2(A,X)) = f”)
+“!A B X f: A * X -> B. ?fBar0:X-> Exp(A,B).!fBar.
+ Ev(A,B) o Pa(π1(A,X),fBar o π2(A,X)) = f <=> fBar = fBar0”)
 
 val Tp_def =  ex2fsym "Tp" ["f"] (iffRL $ eqT_intro $ spec_all Tp_ex)
                       |> C mp (trueI []) |> gen_all
@@ -6588,21 +6730,55 @@ val FALSE_def = ex2fsym "FALSE" [] (iffRL $ eqT_intro $ spec_all const2_def)
 val TRUE_def = ex2fsym "TRUE" [] (iffRL $ eqT_intro $ spec_all FALSE_def)
                        |> C mp (trueI []) |> gen_all
 
+(*TODO: Char is_pb
+
+or the alternative way of defining char
+
+
+as below, or should add ismono(a) ==> ?Char? *)
+
 val Char_ex = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> qexists_tac "char(FALSE,TRUE,a)" >> rw[])
+(form_goal
+“!A X a:A->X.
+ ?ch. char(FALSE,TRUE,a) = ch”)
+
+val Char_def = ex2fsym "Char" ["a"]
+(iffRL $ eqT_intro $ spec_all Char_ex) |> C mp (trueI []) |> gen_all
+
+val char_ispb = 
+    char_is_pb |> strip_all_and_imp 
+               |> gen_disch_all |> gen_all
+
+
+
+val Char_property = proved_th $
+e0
+(rpt strip_tac >> 
+     assume_tac TRUE_def >>
+     drule char_ispb >>  
+ first_x_assum drule >> fs[Char_def,To1_def]
+ )
 (form_goal
 “!A X a:A->X. ismono(a) ==>
- ?phi:X->2. !x:1->X. (?x0:1->A. a o x0 = x) <=> phi o x = TRUE”)
+ ispb(Char(a),TRUE,a,To1(A))”)
 
-val Char_def = ex2fsym "Char" ["a"] Char_ex |> gen_all
+
 
 
 val CONJ_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule conj_ex >>
+ first_x_assum
+  (qspecl_then ["2 * 2","π1(2,2)","π2(2,2)"] assume_tac) >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["2","2"] assume_tac) >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "conj" >> fs[pa2Pa])
 (form_goal 
-“?CONJ.!pred1 pred2.CONJ o Pa(pred1,pred2) = TRUE <=> 
+“?CJ.!pred1 pred2.CJ o Pa(pred1,pred2) = TRUE <=> 
  pred1 = TRUE & pred2 = TRUE”)
 
 val CONJ_def =  CONJ_ex |> eqT_intro
@@ -6613,9 +6789,16 @@ val CONJ = mk_fun "CONJ" []
 
 val DISJ_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule or_ex >>
+ first_x_assum
+  (qspecl_then ["2 * 2","π1(2,2)","π2(2,2)"] assume_tac) >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["2","2"] assume_tac) >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "or" >> fs[pa2Pa])
 (form_goal 
-“?DISJ.!pred1 pred2.DISJ o Pa(pred1,pred2) = TRUE <=> 
+“?DJ.!pred1 pred2.DJ o Pa(pred1,pred2) = TRUE <=> 
  pred1 = TRUE | pred2 = TRUE”)
 
 val DISJ_def =  DISJ_ex |> eqT_intro
@@ -6626,9 +6809,16 @@ val DISJ = mk_fun "DISJ" []
 
 val IMP_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule imp_ex >>
+ first_x_assum
+  (qspecl_then ["2 * 2","π1(2,2)","π2(2,2)"] assume_tac) >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["2","2"] assume_tac) >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "imp" >> fs[pa2Pa])
 (form_goal 
-“?IMP.!pred1 pred2.IMP o Pa(pred1,pred2) = TRUE <=> 
+“?IP.!pred1 pred2.IP o Pa(pred1,pred2) = TRUE <=> 
  (pred1 = TRUE ==> pred2 = TRUE)”)
 
 val IMP_def =  IMP_ex |> eqT_intro
@@ -6639,9 +6829,16 @@ val IMP = mk_fun "IMP" []
 
 val IFF_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule iff_ex >>
+ first_x_assum
+  (qspecl_then ["2 * 2","π1(2,2)","π2(2,2)"] assume_tac) >>
+ assume_tac pi2_def >> 
+ first_x_assum (qspecl_then ["2","2"] assume_tac) >>
+ first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ qexists_tac "iff" >> fs[pa2Pa])
 (form_goal 
-“?IFF.!pred1 pred2.IFF o Pa(pred1,pred2) = TRUE <=> 
+“?IF.!pred1 pred2.IF o Pa(pred1,pred2) = TRUE <=> 
  (pred1 = TRUE <=> pred2 = TRUE)”)
 
 val IFF_def =  IFF_ex |> eqT_intro
@@ -6652,19 +6849,48 @@ val IFF = mk_fun "IFF" []
 
 val NEG_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule neg_ex >> 
+ pop_assum strip_assume_tac >>
+ qexists_tac "neg" >> fs[pa2Pa])
 (form_goal 
-“?NEG.!pred.NEG o pred = TRUE <=> 
- ~(pred = TRUE)”)
+“?NOT.!pred.NOT o pred = TRUE <=> pred = FALSE”)
 
 val NEG_def =  NEG_ex |> eqT_intro
                       |> iffRL |> ex2fsym "NEG" [] |> C mp (trueI [])
 
 val NEG = mk_fun "NEG" []
 
+val tp2Tp = proved_th $
+e0
+(rpt strip_tac >> 
+ assume_tac Ev_def >> 
+ first_x_assum (qspecl_then ["A","B"] assume_tac) >>
+ sym_tac >> drule is_tp >> 
+ assume_tac pi2_def >>
+ first_x_assum (qspecl_then ["A","X"] assume_tac) >>
+ first_x_assum drule >>
+ first_x_assum irule >> 
+ assume_tac Tp_def >>
+ first_x_assum 
+  (qspecl_then ["A","B","X","f","Tp(f)"] assume_tac) >>
+ fs[] >> arw[pa2Pa])
+(form_goal
+“!A B X f:A * X -> B.
+ tp(π1(A,Exp(A,B)),π2(A,Exp(A,B)),Ev(A,B),
+    π1(A,X),π2(A,X),f) = Tp(f)”)
+
 val Ex_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule Exq_ex >> 
+ assume_tac Ev_def >> strip_tac >>
+ first_x_assum (qspecl_then ["X","2"] assume_tac) >>
+ first_x_assum drule >> 
+ first_x_assum strip_assume_tac >>
+ qexists_tac "Exq" >> 
+ assume_tac pi2_def >> rpt strip_tac >> 
+ first_x_assum (qspecl_then ["X","Y"] assume_tac) >>
+ first_x_assum drule >> 
+ fs[pa2Pa] >> fs[tp2Tp])
 (form_goal
 “!X.?Ex. !Y pxy:X * Y -> 2 y:1-> Y. Ex o Tp(pxy) o y = TRUE <=>
  ?x:1->X. pxy o Pa(x,y) = TRUE”)
@@ -6674,7 +6900,16 @@ val Ex_def =  Ex_ex |> spec_all |> eqT_intro
 
 val All_ex = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule Uq_ex >> 
+ assume_tac Ev_def >> strip_tac >>
+ first_x_assum (qspecl_then ["X","2"] assume_tac) >>
+ first_x_assum drule >> 
+ first_x_assum strip_assume_tac >>
+ qexists_tac "Uq" >> 
+ assume_tac pi2_def >> rpt strip_tac >> 
+ first_x_assum (qspecl_then ["X","Y"] assume_tac) >>
+ first_x_assum drule >> 
+ fs[pa2Pa] >> fs[tp2Tp])
 (form_goal
 “!X.?All. !Y pxy:X * Y -> 2 y:1-> Y. All o Tp(pxy) o y = TRUE <=>
  !x:1->X. pxy o Pa(x,y) = TRUE”)
@@ -6684,7 +6919,7 @@ val All_def =  All_ex |> spec_all |> eqT_intro
 
 val Diag_ex = proved_th $
 e0
-cheat
+(strip_tac >> qexists_tac "Pa(id(X),id(X))" >> rw[])
 (form_goal
 “!X.?dX:X->X * X. Pa(id(X),id(X)) = dX”)
 
@@ -6697,9 +6932,9 @@ val Diag_def = Diag_ex |> spec_all |> eqT_intro
 
 val To1_ex = proved_th $
 e0
-cheat
+(strip_tac >> qexists_tac "to1(X,1)" >> rw[])
 (form_goal
-“!X.?to1X:X->1. to1X = to1X”)
+“!X.?to1X:X->1. to1(X,1) = to1X”)
 
 
 
@@ -6713,7 +6948,7 @@ val To1_def = To1_ex |> spec_all |> eqT_intro
 
 val True_ex = proved_th $
 e0
-cheat
+(strip_tac >> qexists_tac "TRUE o To1(X)" >> rw[])
 (form_goal
 “!X. ?tX:X->2.TRUE o To1(X) = tX”)
 
@@ -6722,7 +6957,7 @@ val True_def = True_ex |> spec_all |> eqT_intro
 
 val False_ex = proved_th $
 e0
-cheat
+(strip_tac >> qexists_tac "FALSE o To1(X)" >> rw[])
 (form_goal
 “!X. ?fX:X->2.FALSE o To1(X) = fX”)
 
@@ -6732,21 +6967,96 @@ val False_def = False_ex |> spec_all |> eqT_intro
 
 
 
-
 val Eq_ex = proved_th $
 e0
-cheat
-(form_goal
-“!X. ?eqX: X * X ->2. !A f:A->X g:A->X. 
-f = g <=> eqX o Pa(f,g) = True(A)”)
+(strip_tac >> qexists_tac "Char(Diag(X))" >> rw[])
+(form_goal “!X.?eqX:X * X -> 2. Char(Diag(X)) = eqX”)
+
 
 val Eq_def = Eq_ex |> spec_all |> eqT_intro
                    |> iffRL |> ex2fsym "Eq" ["X"]
                    |> C mp (trueI []) |> gen_all
 
+val Pa_distr = proved_th $
+e0
+(rpt strip_tac >> 
+ qspecl_then ["A","A"] assume_tac pi2_def >>
+ drule distr_to_pa >> fs[pa2Pa])
+(form_goal
+“!A X a1:X ->A a2:X->A X0 x:X0->X. Pa(a1,a2) o x = 
+Pa(a1 o x,a2 o x) ”)
+
+val pi1_of_Pa = proved_th $
+e0
+(rpt strip_tac >> 
+ qspecl_then ["A","B"] assume_tac pi2_def >>
+ drule p1_of_pa >> fs[pa2Pa])
+(form_goal
+ “!A B X f:X->A g:X->B. π1(A,B) o Pa(f,g) = f”)
+
+
+
+val pi2_of_Pa = proved_th $
+e0
+(rpt strip_tac >> 
+ qspecl_then ["A","B"] assume_tac pi2_def >>
+ drule p2_of_pa >> fs[pa2Pa])
+(form_goal
+ “!A B X f:X->A g:X->B. π2(A,B) o Pa(f,g) = g”)
+
+val pi12_of_Pa = 
+conjI (spec_all pi1_of_Pa) (spec_all pi2_of_Pa) |> gen_all
+
+val True2TRUE = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM True_def,o_assoc] >>
+ once_rw[one_to_one_id] >> rw[idR])
+(form_goal
+“!X x:1->X. True(X) o x = TRUE”)
+
+val conj_property = proved_th $
+e0
+(rpt strip_tac >> dimp_tac (* 2 *) >--
+ (strip_tac >> strip_tac (* 2 *) >>
+  (irule fun_ext >> strip_tac >>
+   qby_tac ‘CONJ o Pa(p1, p2) o a= True(X) o a’
+   >-- arw[GSYM o_assoc] >>
+   qspecl_then ["π1(2,2) o Pa(p1,p2) o a","π2(2,2) o Pa(p1,p2) o a"] assume_tac CONJ_def >>
+   fs[Pa_distr,pi12_of_Pa] >> fs[True2TRUE])) >>
+ strip_tac >> arw[] >> irule fun_ext >> strip_tac  >>
+ rw[o_assoc,Pa_distr,True2TRUE] >> rw[CONJ_def])
+(form_goal
+“!X p1:X ->2 p2:X->2. 
+ CONJ o Pa(p1,p2) = True(X) <=> p1 = True(X) & p2 = True(X)”)
+
+
+
+val Diag_ismono = proved_th $
+e0
+(strip_tac >> qspecl_then ["A","A"] assume_tac pi2_def >>
+ drule diag_is_mono >> fs[GSYM Diag_def,pa2Pa])
+(form_goal
+“!A. ismono(Diag(A))”)
+
+val Eq_property = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM Eq_def] >>
+ assume_tac TRUE_def >> drule char_diag >>
+ qspecl_then ["X","X"] assume_tac pi2_def >>
+ first_x_assum drule >> fs[Char_def,pa2Pa,Diag_def] >>
+ dimp_tac (* 2 *) >> strip_tac (* 2 *) >--
+ (irule fun_ext >> strip_tac >> arw[True2TRUE,o_assoc,Pa_distr]) >>
+ irule fun_ext >> strip_tac >>
+ first_x_assum (irule o iffLR) >>
+ qspecl_then ["X","A","f","g","1","a"] assume_tac $
+ GSYM Pa_distr >> arw[GSYM o_assoc,True2TRUE] )
+(form_goal
+“!X A f:A->X g:A->X. 
+f = g <=> Eq(X) o Pa(f,g) = True(A)”)
+
 val Sing_ex = proved_th $
 e0
-cheat
+(strip_tac >> qexists_tac "Tp(Eq(X))" >> rw[])
 (form_goal
 “!X. ?sX:X-> Exp(X,2). Tp(Eq(X)) = sX”)
 
@@ -6754,18 +7064,110 @@ val Sing_def = Sing_ex |> spec_all |> eqT_intro
                        |> iffRL |> ex2fsym "Sing" ["X"]
                        |> C mp (trueI []) |> gen_all
 
+val pi31_ex = proved_th $
+e0
+(rpt strip_tac >> qexists_tac "π1(A,B * C)" >> rw[])
+(form_goal
+ “!A B C. ?pi31: A * B * C ->A. π1(A,B * C) = pi31”)
+
+val pi31_def = pi31_ex |> spec_all |> eqT_intro
+                       |> iffRL |> ex2fsym "π31" ["A","B","C"]
+                       |> C mp (trueI []) |> gen_all
+
+val pi32_ex = proved_th $
+e0
+(rpt strip_tac >> qexists_tac "π1(B,C) o π2(A,B * C)" >> rw[])
+(form_goal
+ “!A B C. ?pi32: A * B * C ->B.π1(B,C) o π2(A,B * C) = pi32”)
+
+val pi32_def = pi32_ex |> spec_all |> eqT_intro
+                       |> iffRL |> ex2fsym "π32" ["A","B","C"]
+                       |> C mp (trueI []) |> gen_all
+
+val pi33_ex = proved_th $
+e0
+(rpt strip_tac >> qexists_tac "π2(B,C) o π2(A,B * C)" >> rw[])
+(form_goal
+ “!A B C. ?pi33: A * B * C ->C.π2(B,C) o π2(A,B * C) = pi33”)
+
+val pi33_def = pi33_ex |> spec_all |> eqT_intro
+                       |> iffRL |> ex2fsym "π33" ["A","B","C"]
+                       |> C mp (trueI []) |> gen_all
+
+fun qex_tac tq = qexists_tac $ q2str tq
+
 val Insert_ex = proved_th $
 e0
-cheat
+(strip_tac >> qex_tac
+ ‘Tp(DISJ o 
+    Pa(Eq(X) o Pa(π31(X,X,Exp(X,2)),π32(X,X,Exp(X,2))),
+       Ev(X,2) o Pa(π31(X,X,Exp(X,2)),π33(X,X,Exp(X,2)))))’
+ >> rw[])
 (form_goal
- “!x0:1->X s0:1->Exp(X,2).?s1:1->Exp(X,2).
-  !x:1->X. Ev(X,2) o Pa(x,s1) = TRUE <=> 
-  (x = x0 | Ev(X,2) o Pa(x,s0) = TRUE)”)
+ “!X.?Ins: X * Exp(X,2) -> Exp(X,2). 
+ Tp(DISJ o 
+    Pa(Eq(X) o Pa(π31(X,X,Exp(X,2)),π32(X,X,Exp(X,2))),
+       Ev(X,2) o Pa(π31(X,X,Exp(X,2)),π33(X,X,Exp(X,2))))) = Ins ”)
+
 
 val Insert_def = 
     Insert_ex |> spec_all |> eqT_intro
-              |> iffRL |> ex2fsym "Insert" ["x0","s0"]
+              |> iffRL |> ex2fsym "Insert" ["X"]
               |> C mp (trueI []) |> gen_all
+
+val Ins_ex = proved_th $
+e0
+(rpt strip_tac >> qex_tac ‘Insert(X) o Pa(x,s0)’ >> rw[])
+(form_goal
+“!A X x:A->X s0:A->Exp(X,2).?f. Insert(X) o Pa(x,s0) = f”)
+
+val Ev_of_Tp = proved_th $
+e0
+(rpt strip_tac >>
+ assume_tac (aspec [rastt "f:A * X ->B",rastt "Tp(f:A * X ->B)"] Tp_def) >> fs[])
+(form_goal
+ “!A B X f:A * X ->B. 
+  Ev(A,B) o Pa(π1(A,X), Tp(f) o π2(A,X)) = f”)
+
+val to_Pr_components = proved_th $
+e0
+(rpt strip_tac >> assume_tac $ spec_all pi2_def >>
+ drule to_p_components >> fs[pa2Pa])
+(form_goal
+ “!A B X f: X -> A * B. Pa(π1(A,B) o f, π2(A,B) o f) = f”)
+
+val to_Pr_eq = proved_th $
+e0
+()
+(form_goal
+ “A B X f:X-> A * B g:X -> A * B.
+  π1(A,B) o f = π1(A,B) o g & π2(A,B) o f = π2(A,B) o g ==>
+ f = g”)
+
+val Ev_of_Tp_el = proved_th $
+e0
+(rpt strip_tac >>
+ assume_tac Ev_of_Tp >> 
+ qby_tac ‘Ev(A, B) o Pa(a, Tp(f) o x) = 
+ Ev(A, B) o Pa(π1(A, X), Tp(f) o π2(A, X)) o Pa(a,x)’
+ assume_tac (aspec [rastt "f:A * X ->B",rastt "Tp(f:A * X ->B)"] Tp_def) >> fs[])
+(form_goal
+ “!A B X f:A * X ->B P a:P->A x: P ->X. 
+  Ev(A,B) o Pa(a, Tp(f) o x) = f o Pa(a,x)”)
+
+
+val Ins_def = 
+    Ins_ex |> spec_all |> eqT_intro
+           |> iffRL |> ex2fsym "Ins" ["x","s0"]
+           |> C mp (trueI []) |> gen_all
+
+val Ins_property = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM Ins_def,GSYM Insert_def,Ev_of_Tp])
+(form_goal
+ “!X x0:1->X s0:1->Exp(X,2).
+  !x:1->X. Ev(X,2) o Pa(x,Ins(x0,s0)) = TRUE <=> 
+  (x = x0 | Ev(X,2) o Pa(x,s0) = TRUE)”)
 
 
 (*use abbreved long map instead?
@@ -7301,13 +7703,48 @@ val intZ_def = ex2fsym "intZ" [] (iffRL $ eqT_intro $ spec_all intZ_ex)
 val toZ_def = ex2fsym "toZ" [] (iffRL $ eqT_intro $ spec_all intZ_def)
                         |> C mp (trueI []) |> gen_all
 
-fun Po A B  = mk_fun "*" [A,B]
+fun Po A B = mk_fun "*" [A,B]
 
 val _ = new_pred "isGrp" 
         [("G",ob_sort),("e",ar_sort one (mk_ob "G")),
          ("m",ar_sort (Po (mk_ob "G") (mk_ob "G")) 
                       (mk_ob "G")),
          ("i",ar_sort (mk_ob "G") (mk_ob "G"))]
+
+(*
+
+Exp(G,e,m,i,n,a) = a
+
+2^G * G * (G^ (G * G)) * (G^ G)
+
+type of groups
+
+Exp(g:1->group type,n,a:group member) = a
+
+Exp(G,e,m,i,z,a) = a
+
+Exp(G,e,m,i,SUC n,a) = m o PROD(a,Exp(G,e,m,i,n,a) )
+
+*)
+
+val orefl_th = 
+    let val f = “A == A”
+    in mk_thm (fvf f) [] f
+    end
+
+val Grps_ex = proved_th $
+e0
+(strip_tac >> qexists_tac "Exp(G,2) * G * Exp(G * G,G) * Exp(G,G)" >> once_rw[orefl_th])
+(form_goal
+“!G. ?Grps. Exp(G,2) * G * Exp(G * G,G) * Exp(G,G) == Grps”)
+
+val Grp_def = 
+    ex2fsym "Grp" ["G"] (iffRL $ eqT_intro $ spec_all Grps_ex)
+            |> C mp (trueI []) |> gen_all
+
+
+(*TODO: bug Exp(G,2) * G * Exp(G * G,G) * Exp(G,G) = Grps is 
+parsable*)
 
 
 

@@ -4,6 +4,7 @@ open term form pterm_dtype
 
 exception ERROR of string
 
+(*
 fun fxty i = 
     case i of 
         ":" =>(* 460 *) 900
@@ -18,6 +19,25 @@ fun fxty i =
       | "+" => 500
       | "^" => 700
       | "o" => 800
+      | _ => ~1
+*)
+
+
+fun fxty i = 
+    case i of 
+       "<=>" => 100
+      | "==>" => 200
+      | "|" => 300
+      | "&" => 400
+      | "=" => 450
+      | "==" => 450
+      | "o" => 455
+      | ":" => 460 (*900*)
+      | "->" => 470 (*900*)
+      | "+" => 500
+      | "*" => 600
+      | "^" => 700
+      | "~" => 900
       | _ => ~1
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
@@ -39,7 +59,8 @@ val psyms0:psymd =
                             ("i",mk_ar_sort one (mk_ob "G")),
                             ("inv",mk_ar_sort (mk_ob "G") (mk_ob "G"))]),
                 ("=",[("a",mk_ar_sort (mk_ob "A") (mk_ob "B")),
-                      ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))])]
+                      ("b",mk_ar_sort (mk_ob "A") (mk_ob "B"))]),
+                ("==",[("A",ob_sort),("B",ob_sort)])]
 
 
 type fsymd = (string, sort * ((string * sort) list)) Binarymap.dict
@@ -172,7 +193,8 @@ datatype ForP = fsym | psym
 
 val fpdict0:(string,ForP) Binarymap.dict =
     foldr (fn ((n,forp),d) => Binarymap.insert(d,n,forp)) (Binarymap.mkDict String.compare) 
-          [("=",psym),(*"\cong",psym*) ("T",psym),("F",psym),
+          [("=",psym),(*"\cong",psym*)
+           ("==",psym), ("T",psym),("F",psym),
            ("P",psym),("Q",psym),("R",psym),("S",psym),
            ("ismono",psym),("isgroup",psym),("ismem",psym),("areiso",psym),
            ("o",fsym),("id",fsym),
