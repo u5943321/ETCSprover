@@ -174,7 +174,7 @@ and eq_sort (s1,s2) =
 fun substt (V as (m,s:sort),t2) t = 
     case view_term t of
         vVar(n,s') => 
-        if m = n andalso eq_sort(s,s') then t2 
+        if m = n andalso (* eq_sort(s,s')*) s = s' then t2 
         else mk_var n (substs (V,t2) s')
       | vFun(f,s',tl) => mk_fun0 f (substs (V,t2) s') (List.map (substt (V,t2)) tl)
       | _ => t
@@ -202,12 +202,14 @@ fun list_compare c (l1,l2) =
       | (_,[]) => GREATER
 
 fun sort_compare (s1,s2) = 
+    if PolyML.pointerEq(s1,s2) then EQUAL else
     case (s1,s2) of 
         (ob,ob) => EQUAL
       | (ob,_) => LESS
       | (_,ob) => GREATER
       | (ar dc1,ar dc2) => pair_compare term_compare term_compare (dc1,dc2)
 and term_compare (t1,t2) = 
+    if PolyML.pointerEq(t1,t2) then EQUAL else
     case (t1,t2) of 
         (Var ns1,Var ns2) => pair_compare String.compare sort_compare (ns1,ns2)
      | (Var _ , _) => LESS
@@ -253,11 +255,11 @@ fun match_term nss pat ct (env:vd) =
              handle e => raise wrap_ter "match_term." [s1,s2] [pat,ct] e)
       | (vVar(n1,s1),_) => 
         if HOLset.member(nss,(n1,s1)) then
-            if eq_term(pat,ct) then env 
+            if (*eq_term(pat,ct)*) pat = ct then env 
             else raise TER ("match_term.current term is local constant: ",[],[pat,ct])
         else 
             (case (lookup_t env (n1,s1)) of
-                 SOME t => if eq_term(t,ct) then env else
+                 SOME t => if (* eq_term(t,ct) *) t = ct then env else
                            raise TER ("match_term.double bind: ",[],[pat,t,ct])
                | _ => 
                  v2t (n1,s1) ct (match_sort nss s1 (sort_of ct) env)

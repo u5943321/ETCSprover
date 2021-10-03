@@ -250,7 +250,7 @@ fun conj_tac ((G,fl,f):goal):goal list * validation =
 fun exists_tac t (G,fl,f) = 
     case view_form f of 
         vQ("?",n,s,b) =>
-        if eq_sort(sort_of t,s) then 
+        if (*eq_sort(sort_of t,s)*) sort_of t = s then 
             let val nv = (var(n,s))
             in
             ([(G,fl,substf ((n,s),t) b)], 
@@ -387,7 +387,7 @@ fun gen_rw_tac fc thl =
 *)
 
 fun is_refl_eq f = 
-    if is_eq f then if eq_term(dest_eq f) then true else false
+    if is_eq f then let val (l,r) = dest_eq f in if (*eq_term(dest_eq f)*) l = r  then true else false end
     else false
 
 
@@ -446,11 +446,11 @@ okay to let rw_conv loop, but do check here, and discard the thm after inst rais
 
 
 
-fun occurs_tt t1 t2 = 
-    eq_term(t1,t2) orelse
+fun occurs_tt t1 t2 = PolyML.pointerEq(t1,t2) orelse
+    (*eq_term(t1,t2)*) t1 = t2 orelse
     case (view_term t1,view_term t2) of 
         (vVar (n1,s1),vVar (n2,s2)) => 
-        if n1 = n2 andalso eq_sort(s1,s2) then 
+        if n1 = n2 andalso (*eq_sort(s1,s2)*) s1 = s2 then 
             true 
         else if occurs_ts t1 s2 then true 
         else false
@@ -475,7 +475,7 @@ fun occurs_f f1 f2 =
 *)
 
 (*below is new*)
-fun occurs_f f1 f2 = 
+fun occurs_f f1 f2 = PolyML.pointerEq(f1,f2) orelse
     case (view_form f1,view_form f2) of
         (vPred _,vPred _) => eq_form(f1,f2)
       | (vQ(q1,n1,s1,b1) ,vQ(q2,n2,s2,b2)) => 
@@ -517,8 +517,16 @@ fun rewr_no_loop_fconv th f =
 
 fun rw_tac thl:tactic = 
     let 
-        val conv = first_conv (mapfilter rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
-        val fconv = first_fconv (mapfilter rewr_no_loop_fconv (flatten (mapfilter rw_fcanon thl)))
+        val conv = first_conv (mapfilter (*rewr_no_loop_conv*) rewr_no_refl_conv (flatten (mapfilter rw_tcanon thl)))
+        val fconv = first_fconv (mapfilter (*rewr_no_loop_fconv*) rewr_no_refl_fconv (flatten (mapfilter rw_fcanon thl)))
+    in fconv_tac (basic_fconv conv fconv) 
+    end
+
+
+fun no_loop_rw thl:tactic = 
+    let 
+        val conv = first_conv (mapfilter (*rewr_no_loop_conv*) rewr_no_loop_conv (flatten (mapfilter rw_tcanon thl)))
+        val fconv = first_fconv (mapfilter (*rewr_no_loop_fconv*) rewr_no_loop_fconv (flatten (mapfilter rw_fcanon thl)))
     in fconv_tac (basic_fconv conv fconv) 
     end
 
@@ -550,6 +558,8 @@ fun mp_tac th0 (G,asl,w) =
 fun assum_list aslfun (g as (_,asl, _)) = aslfun (List.map assume asl) g
 
 fun arw_tac thl = assum_list (fn l => rw_tac (l @ thl))
+
+fun no_loop_arw thl = assum_list (fn l => no_loop_rw (l @ thl))
 
 fun once_arw_tac thl = assum_list (fn l => once_rw_tac (l @ thl))
 
@@ -605,7 +615,7 @@ fun bad_prf th (ct,asl,w) =
         in 
             case
                 List.find 
-                    (fn ns0 => List.all (fn ns => not (fst ns = fst ns0 andalso eq_sort(snd ns,snd ns0))) clct) clth
+                    (fn ns0 => List.all (fn ns => not (fst ns = fst ns0 andalso (*eq_sort(snd ns,snd ns0) *) snd ns = snd ns0)) clct) clth
              of
                 SOME ns => SOME (Cont ns)
               | NONE => 
@@ -889,16 +899,6 @@ fun remove_asm_tac f: tactic =
 val once_rwl_tac = map_every (fn th => once_rw_tac[th])
 val once_arwl_tac = map_every (fn th => once_arw_tac[th])
 
-(*---------------------------------------------------------------------------*
- *       A,t1 |- t2                A,t |- F                                  *
- *     --------------              --------                                  *
- *     A |- t1 ==> t2               A |- ~t                                  *
- *---------------------------------------------------------------------------*)
-
-fun neg_disch t th =
-   if eq_form(concl th,FALSE) then negI t th 
-   else disch t th
-
 
 
 fun disch_then (ttac: thm_tactic): tactic = 
@@ -1034,6 +1034,7 @@ fun subst_tac eqth (g as (ct,asl,w):goal) =
 
 
 val rw = rw_tac
+val arw = arw_tac
 val once_rw = once_rw_tac
 val once_arw = once_arw_tac
 

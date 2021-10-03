@@ -91,6 +91,9 @@ val rev_full_simp_tac: thm list -> tactic
 val cheat: tactic
 
 val rw: thm list -> tactic 
+val no_loop_rw: thm list -> tactic 
+val no_loop_arw: thm list -> tactic 
+val arw: thm list -> tactic 
 val once_rw: thm list -> tactic 
 val once_arw: thm list -> tactic
 val fs: thm list -> tactic 
@@ -98,5 +101,8 @@ val fs: thm list -> tactic
 val rpt: tactic -> tactic
 
 val existsl_tac: term list -> tactic
+
+val disch_then: thm_tactic -> tactic
+val disch_tac: tactic
 end
 

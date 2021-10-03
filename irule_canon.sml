@@ -90,7 +90,7 @@ open SymGraph
 fun depends_t (n,s) t = 
     case view_term t of 
         vVar(n1,s1) => 
-        n = n1 andalso eq_sort(s,s1)
+        n = n1 andalso (*eq_sort(s,s1)*) s = s1
         orelse depends_s (n,s) s1
       | vFun(f,s1,l) => depends_s (n,s) s1 
                        orelse List.exists (depends_t (n,s)) l 
@@ -116,7 +116,7 @@ fun edges_from_fvs0 nss =
 
 
 fun edges_from_fvs nss = 
-    List.filter (fn ((n1,s1),(n2,s2)) => n1 <> n2 orelse not $ eq_sort(s1,s2)) (edges_from_fvs0 nss)
+    List.filter (fn ((n1,s1),(n2,s2)) => n1 <> n2 orelse not $ (*eq_sort(s1,s2)*) s1 = s2) (edges_from_fvs0 nss)
 
 
 fun order_of_fvs f = 

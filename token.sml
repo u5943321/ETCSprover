@@ -17,7 +17,8 @@ end
 
 fun is_letter_or_digit c =
     is_char(ord #"A",c,ord #"Z") orelse is_char(ord #"a",c,ord #"z") orelse is_char(ord #"0",c,ord #"9") orelse
-    is_char(913,c,937) orelse is_char(945,c,969) orelse c = ord #"'" orelse c = ord #"_";
+    is_char(913,c,937) orelse is_char(945,c,969) orelse is_char(8320,c,8329) orelse is_char(8304,c,8013) orelse 
+    c = ord #"'" orelse c = ord #"_";
 
 
 fun token_of a = if mem a ["ar","ob","o","!","?","==>","<=>",":","->","(*","*)","=="] then (Key a) else (Id a); 

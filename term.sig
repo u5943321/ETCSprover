@@ -15,6 +15,7 @@ datatype term_view =
 val view_sort: sort -> sort_view
 val view_term: term -> (*term*) term_view
 
+
 val eq_term: term * term -> bool
 val eq_sort: sort * sort -> bool
 

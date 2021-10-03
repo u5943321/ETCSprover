@@ -241,14 +241,14 @@ fun dest_forall f =
       | _ => raise ERR ("not a universal",[],[],[f])
 *)
 
-fun eq_form fp = 
+fun eq_form fp = PolyML.pointerEq (fst fp,snd fp) orelse
     case fp of 
         (Pred(P1,tl1),Pred(P2,tl2)) => 
-        P1 = P2 andalso List.all eq_term (zip tl1 tl2)
+        P1 = P2 andalso List.all (*eq_term*) (fn (t1,t2) => t1 = t2) (zip tl1 tl2)
       | (Conn(co1,fl1),Conn(co2,fl2)) => co1 = co2 andalso 
                                          ListPair.all eq_form (fl1,fl2)
       | (Quant(q1,n1,s1,b1),Quant(q2,n2,s2,b2)) => 
-        q1 = q2 andalso eq_sort(s1,s2) andalso eq_form (b1,b2)
+        q1 = q2 andalso (*eq_sort(s1,s2)*) s1 = s2 andalso eq_form (b1,b2)
       | (fVar fm1,fVar fm2)  => fm1 = fm2
       | _ => false
 
@@ -503,14 +503,14 @@ fun fsymsf f =
 
 
 
-fun is_ss_ob (n:string,s) = if eq_sort(s,mk_ob_sort) then true else false
+fun is_ss_ob (n:string,s) = if (*eq_sort(s,mk_ob_sort)*) s = mk_ob_sort then true else false
 (*TODO: why need this function above?*)
 
 
 (*dpcy for dependency*)
 
 fun ok_dpdc (env:menv) ((n:string,s),t) = 
-    if eq_sort(sort_of t,inst_sort' env s) then true else false
+    if (*eq_sort(sort_of t,inst_sort' env s)*) sort_of t = inst_sort' env s then true else false
     
 
 fun is_wfmenv menv = 

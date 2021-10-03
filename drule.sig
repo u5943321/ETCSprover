@@ -109,4 +109,6 @@ val pe_ob_clauses: thm
 val pe_ar_clauses: thm
 val PULL_EXISTS: thm
 
+val neg_disch: form -> thm -> thm
+
 end

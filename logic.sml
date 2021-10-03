@@ -260,7 +260,7 @@ A,Γ u (Var(t)) |- ϕ(t)
 fun allE t (thm(G,A,C)) = 
     let 
         val ((n,s),b) = dest_forall C
-        val _ = eq_sort(sort_of t,s) orelse 
+        val _ = (*eq_sort(sort_of t,s)*) sort_of t = s orelse 
                 raise ERR ("allE.sorts inconsistent",
                            [s,sort_of t],[mk_var n s,t],[])
     in
@@ -281,7 +281,7 @@ when we want ?a:ob. TRUE from empty cont and assum list.
 fun existsI (a,s) t f (thm(G,A,C)) = 
     let 
         val _ = HOLset.isSubset(fvt t,G)
-        val _ = eq_sort(sort_of t,s) orelse 
+        val _ = (*eq_sort(sort_of t,s)*) sort_of t = s orelse 
                 raise simple_fail"term and variable to be abstract of different sorts"
         val _ = eq_form (C, substf ((a,s),t) f) orelse
                 raise ERR ("existsI.formula has the wrong form, should be something else: ",
@@ -306,7 +306,7 @@ fun existsE (a,s0) (thm(G1,A1,C1)) (thm(G2,A2,C2)) =
     let 
         val ((n,s),b) = dest_exists C1
         val _ = fmem (substf ((n,s),(mk_var a s0)) b) A2
-        val _ = eq_sort(s,s0) orelse 
+        val _ = (*eq_sort(s,s0)*) s = s0 orelse 
                 raise ERR ("the given variable has unexpected sort, should have another sort",[s,s0],[],[])
         val _ = (HOLset.member
                      (HOLset.union
@@ -337,7 +337,7 @@ fun trans th1 th2 =
                 raise ERR ("trans.second thm not an equality: ",[],[],[concl th2])
         val (t1,t2) = dest_eq (concl th1)
         val (t3,t4) = dest_eq (concl th2)
-        val _ = eq_term(t2,t3) orelse
+        val _ = (*eq_term(t2,t3)*) t2 = t3 orelse
                 raise ERR ("trans.equalities do not match",[],[],[concl th1,concl th2])
     in 
         thm(contl_U[cont th1,cont th2],
