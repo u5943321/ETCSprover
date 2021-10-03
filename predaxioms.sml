@@ -7916,11 +7916,7 @@ val Card_def =
     FINITE_hasCard |> spec_all |> ex2fsym "Card" ["X"] 
                    |> gen_all
 
-val Card_property = proved_th $
-e0
-cheat
-(form_goal
- “!X. ”)
+
 (*AQ list:
 
 1.SLOW thms. Thm5_mono Thm6_g_ev_lemma pb_reorder
@@ -8008,20 +8004,6 @@ case n of 0 => BIT ...
 
 
 *)
-
-val BIGINTER0 = rastt $ q2str
-‘IMP o Pa
- (Ev(Exp(X,2),2) o 
-  Pa(Pr2(X,Exp(X,2),Exp(Exp(X,2),2)),
-     Pr3(X,Exp(X,2),Exp(Exp(X,2),2))),
-  Ev(X,2) o 
-  Pa(Pr1(X,Exp(X,2),Exp(Exp(X,2),2)),
-     Pr2(X,Exp(X,2),Exp(Exp(X,2),2)))) o Bridge3(X) o 
-  reorder:Exp(X, 2) * X * Exp(Exp(X, 2), 2) -> 
-  X * Exp(X, 2) * Exp(Exp(X, 2), 2)’
-
-val BIGINTER = Tp 
-(mk_o (rastt "All(Exp(X,2))") (Tp BIGINTER0))
 
 (*wChar 
 val ofChar_ex = proved_th $
