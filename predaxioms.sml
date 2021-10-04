@@ -7991,6 +7991,9 @@ Or substitution of object equality?
 
 7.
 “a = _” is parsable, but is it a bad thing to let it parsable everywhere? want the _ reserved for matching forever, do not want the user to use it as a variable name.
+
+
+8. strip_split, why HOL does not do this way?
 *)
 
 val hasCard_ex = proved_th $
@@ -8648,8 +8651,13 @@ fun fl_diff fl1 fl2 =
       | ([],_) => []
 
 
+(*
+val f0 = “!a. (ismono(a) & ismono(b)) & ismono(c) & (?a.ismono(x)) ==> ismono(h)”
 
+val th = mk_thm (fvf f0) [] f0
 
+rewr_rule [pe_ob_clauses,pe_ar_clauses,CONJ_ASSOC,CONJ_IMP_IMP] th
+*)
 
 (*fun strip_all_and_imp th = 
     if is_forall (concl th) then 
