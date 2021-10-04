@@ -7677,6 +7677,22 @@ mk_o (rastt "Ex(Exp(X,2))") (Tp Ex_x_from4_pred)
 
 val required_map2 = Tp Ex_s0_Ex_x_from4_pred
 
+
+val map2_ex = proved_th $
+e0
+cheat
+(form_goal
+$ mk_exists "m2" (sort_of required_map2)
+(mk_eq required_map2 (rastt "m2:Exp(Exp(X, 2), 2) -> Exp(Exp(X, 2), 2)")) 
+)
+
+
+val map2_def = 
+    map2_ex |> eqT_intro
+            |> iffRL |> ex2fsym "map2" ["X"]
+            |> C mp (trueI []) |> gen_all
+
+
 val Empty_ex = proved_th $
 e0
 (strip_tac >> qex_tac ‘Tp(False(X) o π1(X,1))’ >> rw[])
@@ -7700,12 +7716,29 @@ Tp (rastt $ q2str
 ‘Eq(Exp(X,2)) o Pa(id(Exp(X,2)),Empty(X) o To1(Exp(X,2))) o 
  π1(Exp(X,2),1)’)
 
+val map1_ex = proved_th $
+e0
+cheat
+(form_goal
+$ mk_exists "m1" (sort_of required_map1)
+(mk_eq required_map1 (rastt "m1:1 -> Exp(Exp(X, 2), 2)")) 
+)
+
+
+val map1_def = 
+    map1_ex |> eqT_intro
+            |> iffRL |> ex2fsym "map1" ["X"]
+            |> C mp (trueI []) |> gen_all
+
 fun Nind x0 t = mk_fun "Nind" [x0,t]
 
+(*
 val card0 = Nind required_map1 required_map2
+*)
+
+val card0 = Nind (rastt "map1(X)") (rastt "map2(X)")
 
 fun Ev e f = mk_fun "Ev" [e,f]
-
 
 val hasCard =
 mk_o (rastt "Ev(Exp(X,2),2)") 
@@ -7754,9 +7787,11 @@ rastt $ q2str
            π32(X,Exp(X,2),Exp(Exp(X,2),2))),
 π33(X,Exp(X,2),Exp(Exp(X,2),2))))’
 
-val longpred = 
+val longpred0 = 
 mk_o (rastt "All(Exp(X,2))") $ Tp (mk_o IMP (Pa longpred_ant longpred_conc))
 
+val longpred = 
+mk_o CONJ (Pa contain_empty longpred0)
 
 
 val Tp1_ex = proved_th $
@@ -7814,7 +7849,7 @@ e0
 (form_goal
  “!X ss:1->Exp(Exp(X,2),2) x:1->X.
   Ev(X,2) o Pa(x,BIGINTER(X) o ss) = TRUE <=> 
-  ?s0:1-> Exp(X,2). Ev(Exp(X,2),2) o Pa(s0,ss) = TRUE &
+  !s0:1-> Exp(X,2). Ev(Exp(X,2),2) o Pa(s0,ss) = TRUE ==>
    Ev(X,2) o Pa(x,s0) = TRUE”)
 
 val finites = 
@@ -7842,6 +7877,121 @@ isFinite_ex |> spec_all |> eqT_intro
             |> C mp (trueI []) |> gen_all
 
 fun Po A B = mk_fun "*" [A,B]
+
+val Tp0_ex = proved_th $
+e0
+(rpt strip_tac >> qex_tac ‘Ev(X,Y) o Pa(id(X),f o To1(X))’ >>
+ rw[])
+(form_goal
+ “!X Y f:1->Exp(X,Y).?tp0:X->Y. Ev(X,Y) o Pa(id(X),f o To1(X)) = tp0”)
+
+val Tp0_def = 
+    Tp0_ex |> spec_all |> eqT_intro
+           |> iffRL |> ex2fsym "Tp0" ["f"] 
+           |> C mp (trueI []) |> gen_all
+
+val isFinite_property = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM isFinite_def] >>
+rw[o_assoc,Pa_distr,idL,pi1_of_Pa] >>
+rw[BIGINTER_property] >> 
+rw[pi2_of_Pa] >> rw[GSYM Tp1_def] >>
+rw[Ev_of_Tp_el] >> rw[o_assoc,CONJ_def,Pa_distr] >>
+rw[pi1_of_Pa,idL] >> rw[All_def] >>
+rw[o_assoc,Pa_distr] >> rw[IMP_def] >>
+rw[All_def] >> rw[o_assoc,Pa_distr] >>
+rw[Pa3_def] >> rw[pi32_of_Pa3,pi33_of_Pa3] >>
+rw[GSYM Ins_def] >> rw[Pa_distr,o_assoc] >>
+rw[pi31_of_Pa3,pi32_of_Pa3] >>
+rw[GSYM Mem_def] >> once_rw[one_to_one_id] >> rw[idR]
+)
+(form_goal
+“!X a:1->Exp(X,2). isFinite(X) o a = TRUE <=>
+!P: 1-> Exp(Exp(X,2),2). 
+ Ev(Exp(X,2),2) o Pa(Empty(X),P) = TRUE &
+ (!s0:1-> Exp(X,2). Ev(Exp(X,2),2) o Pa(s0,P) = TRUE ==>
+   !e:1->X.Ev(Exp(X,2),2) o Pa(Ins(e,s0),P) = TRUE) ==>
+ Ev(Exp(X,2),2) o Pa(a,P) = TRUE
+ ”)
+
+
+
+
+(*
+(!(s0 : 1 -> Exp(Exp(X, 2), 2)).
+                 Mem(Exp(X, 2)) o
+                   Pa(Empty(X) o To1(Exp(Exp(X, 2), 2)) o s0#, s0#) = TRUE &
+                 (!(x : 1 -> Exp(X, 2)).
+                     Ev(Exp(X, 2), 2) o Pa(x#, s0#) = TRUE ==>
+                     !(x' : 1 -> X).
+                       Ev(Exp(X, 2), 2) o Pa(Insert(X) o Pa(x'#, x#), s0#) =
+                         TRUE) ==> Ev(Exp(X, 2), 2) o Pa(a, s0#) = TRUE) <=>
+             !(P : Exp(X, 2) -> 2).
+               Ev(Exp(X, 2), 2) o Pa(Empty(X), Tp(P# o π1(Exp(X, 2), 1))) =
+                 TRUE &
+               (!(s0 : 1 -> Exp(X, 2)).
+                   Ev(Exp(X, 2), 2) o Pa(s0#, Tp(P# o π1(Exp(X, 2), 1))) =
+                     TRUE ==>
+                   !(e : 1 -> X).
+                     Ev(Exp(X, 2), 2) o
+                       Pa(Insert(X) o Pa(e#, s0#), Tp(P# o π1(Exp(X, 2), 1))) =
+                       TRUE) ==>
+               Ev(Exp(X, 2), 2) o Pa(a, Tp(P# o π1(Exp(X, 2), 1))) = TRUE
+*)
+
+(*
+val isFinite_property1 =proved_th $
+e0
+(rw[isFinite_property] >> cheat)
+(form_goal “!a:1->Exp(X,2). isFinite(X) o a = TRUE <=> !P:Exp(X,2) ->2.
+ Ev(Exp(X,2),2) o Pa(Empty(X),Tp1(P)) = TRUE &
+ (!s0:1-> Exp(X,2). Ev(Exp(X,2),2) o Pa(s0,Tp1(P)) = TRUE ==>
+   !e:1->X.Ev(Exp(X,2),2) o Pa(Ins(e,s0),Tp1(P)) = TRUE) ==>
+ Ev(Exp(X,2),2) o Pa(a,Tp1(P)) = TRUE
+ ”)
+
+*)
+
+val isFinite_property1 =proved_th $
+e0
+(rw[isFinite_property] >> cheat)
+(form_goal 
+ “!X a:1->Exp(X,2). isFinite(X) o a = TRUE <=> !P:Exp(X,2) ->2.
+ P o Empty(X) = TRUE &
+ (!s0:1-> Exp(X,2). 
+  P o s0 = TRUE ==> !e:1->X.P o Ins(e,s0) = TRUE) ==>
+ P o a = TRUE
+ ”)
+
+(*
+ ∀s. FINITE s ⇔ ∀P. P ∅ ∧ (∀s. P s ⇒ ∀e. P (e INSERT s)) ⇒ P s
+
+pred_setTheory.FINITE_DEF (DEFINITION)
+--------------------------------------
+⊢ ∀s. FINITE s ⇔ ∀P. P ∅ ∧ (∀s. P s ⇒ ∀e. P (e INSERT s)) ⇒ P s 
+
+*)
+
+(*
+AQ ... 
+1.enable "find" stuff
+2.superscript does not work
+3.tokenizer.
+4.abbrev as parsing and pp, hence no need of object equality.
+
+Or substitution of object equality?
+
+ Exp(X,2) as Pow(X), that is, when the parser see Pow(X), it should parse it into Exp(X,2). 
+
+5.rw into local constant
+
+6.Do you agree that we need list object for the bit1 bit2 stuff.
+
+?N->L(N^N).  
+
+7.
+“a = _” is parsable, but is it a bad thing to let it parsable everywhere? want the _ reserved for matching forever, do not want the user to use it as a variable name.
+*)
 
 val hasCard_ex = proved_th $
 e0
@@ -7878,7 +8028,7 @@ e0
 (form_goal
  “!X a. isFinite(X) o Insert(X) = isFinite(X) o π2(X,Exp(X,2))”)
 
-
+(*
 val isFinite_property = proved_th $
 e0
 (cheat)
@@ -7896,7 +8046,193 @@ e0
  “!X. isFinite(X) o Empty(X) = TRUE &
   !A s0:A-> Exp(X,2). isFinite(X) o s0 = True(A) ==>
   !x:A->X.isFinite(X) o Ins(x,s0) = True(A)”)
+*)
 
+val Swap_ex = proved_th $
+e0
+(rpt strip_tac >> qex_tac ‘Pa(π2(A,B),π1(A,B))’ >> rw[])
+(form_goal
+ “!A B. ?swap:A * B ->B * A. Pa(π2(A,B),π1(A,B)) = swap”)
+
+val Swap_def = 
+    Swap_ex |> spec_all |> eqT_intro
+               |> iffRL |> ex2fsym "Swap" ["A","B"] 
+               |> C mp (trueI []) |> gen_all
+
+
+val Swap_property = proved_th $
+e0
+(cheat)
+(form_goal
+ “!A B. π1(B,A) o Swap(A,B) = π2(A,B) & π2(B,A) o Swap(A,B) = π1(A,B)”)
+
+
+val Swap_Swap_id = proved_th $
+e0
+(cheat)
+(form_goal
+ “!A B. Swap(B,A) o Swap(A,B) = id(A * B)”)
+
+val N_equality = proved_th $
+e0
+(rpt strip_tac >> 
+ qspecl_then ["X","x0:1->X","t","Nind(x0,t)"] assume_tac
+ constN_def >> fs[])
+(form_goal
+“!X x0:1->X t. Nind(x0,t) o ZERO = x0 &
+  Nind(x0,t) o SUC = t o Nind(x0,t)”)
+
+val Ev_of_Tp_el' = proved_th $
+e0
+(rpt strip_tac >> 
+ qby_tac ‘Tp(f) = Tp(f) o id(P)’ >-- rw[idR] >>
+ once_arw[] >> rw[Ev_of_Tp_el])
+(form_goal
+“!A B P f:A * P -> B  a:P -> A.
+Ev(A, B) o Pa(a, Tp(f)) = f o Pa(a, id(P))”)
+
+
+
+val pi41_of_Pa4 = proved_th $
+e0
+cheat
+(form_goal
+“!A B C D X f:X->A g:X->B h:X->C k:X->D.
+ π41(A,B,C,D) o Pa4(f,g,h,k) = f”)
+
+val pi42_of_Pa4 = proved_th $
+e0
+cheat
+(form_goal
+“!A B C D X f:X->A g:X->B h:X->C k:X->D.
+ π42(A,B,C,D) o Pa4(f,g,h,k) = g”)
+
+
+val pi43_of_Pa4 = proved_th $
+e0
+cheat
+(form_goal
+“!A B C D X f:X->A g:X->B h:X->C k:X->D.
+ π43(A,B,C,D) o Pa4(f,g,h,k) = h”)
+
+
+val pi44_of_Pa4 = proved_th $
+e0
+cheat
+(form_goal
+“!A B C D X f:X->A g:X->B h:X->C k:X->D.
+ π44(A,B,C,D) o Pa4(f,g,h,k) = k”)
+
+val TRUE2FALSE = proved_th $
+e0
+cheat
+(form_goal
+“!f. ~(f = TRUE) <=> f = FALSE”)
+
+val hasCard_property = proved_th $
+e0
+(strip_tac >> rw[GSYM hasCard_def] >> strip_tac >--
+  (rw[o_assoc,Pa_distr,pi12_of_Pa] >>
+  rw[N_equality] >> rw[GSYM map1_def] >>
+  rw[Ev_of_Tp_el'] >> rw[o_assoc,Pa_distr,pi12_of_Pa,idL] >>
+  once_rw[one_to_one_id] >> rw[idR] >> 
+  once_rw[GSYM True1TRUE] >> rw[GSYM Eq_property]) >>
+ strip_tac >> strip_tac >>
+ rw[o_assoc,Pa_distr,pi12_of_Pa] >>
+ once_rw[GSYM o_assoc] >> rw[N_equality] >>
+ once_rw[GSYM map2_def] >>
+ rw[o_assoc,Pa_distr] >> rw[Ev_of_Tp_el] >>
+ rw[o_assoc] >> rw[Ex_def] >> rw[o_assoc] >> rw[Ex_def] >>
+ (*if use rw, then too slow*)
+ once_rw[o_assoc] >> once_rw[Pa_distr] >>
+ once_rw[CONJ_def] >> once_rw[o_assoc] >>
+ once_rw[Pa_distr] >> once_rw[CONJ_def] >>
+ once_rw[map2_def] >>
+ rw[o_assoc,NEG_def] >>
+ once_rw[Pa_distr] >> once_rw[Pa4_def] >> 
+ once_rw[pi42_of_Pa4] >> once_rw[pi41_of_Pa4] >>
+ once_rw[pi43_of_Pa4] >> once_rw[pi44_of_Pa4] >>
+ rw[GSYM Ins_def] >> rw[o_assoc] >> once_rw[Pa_distr] >>
+ once_rw[pi42_of_Pa4] >> once_rw[pi41_of_Pa4] >>
+ once_rw[GSYM True1TRUE] >>
+ once_rw[GSYM Eq_property] >> once_rw[True1TRUE] >>
+ once_rw[GSYM Mem_def] >> rpt strip_tac >>
+ qexistsl_tac ["s0","x"] >> 
+ once_arw[] >> fs[TRUE2FALSE]
+ )
+(form_goal
+“!X. hasCard(X) o Pa(Empty(X),ZERO) = TRUE &
+ !s0 n. hasCard(X) o Pa(s0,n) = TRUE ==>
+ !x:1->X. ~ (Mem(X) o Pa(x,s0) = TRUE) ==>
+ hasCard(X) o Pa(Ins(x,s0),SUC o n) = TRUE”)
+
+val Swap_Pa = proved_th $
+e0
+(cheat)
+(form_goal
+“!A B X f:X->A g:X->B. Swap(A,B) o Pa(f,g) = Pa(g,f)”)
+
+val NOT_IN_Empty = proved_th $
+e0
+cheat
+(form_goal
+“!X x:1->X. ~(Mem(X) o Pa(x,Empty(X)) = TRUE)”)
+
+
+val MEMBER_NOT_Empty= proved_th $
+e0
+cheat
+(form_goal
+“!X s0:1->Exp(X,2). (?x.(Mem(X) o Pa(x,s0) = TRUE)) <=>
+ ~(s0 = Empty(X))”)
+
+val ABSORPTION_RWT = proved_th $
+e0
+cheat
+(form_goal
+“!X x:1->X s0:1->Exp(X,2). (Mem(X) o Pa(x,s0) = TRUE) <=>
+ Ins(x,s0) = s0”)
+
+
+(* TODO: fs bug,
+produce this:
+ X ,   
+   (a : 1 -> Exp(X, 2)), (e : 1 -> X), (s0 : 1 -> Exp(X, 2)), (x : 1 -> N)
+   1.!X.
+               hasCard(X#) o Pa(Empty(X#), ZERO) = TRUE &
+               !(s0 : 1 -> Exp(X#, 2))  (n : 1 -> N).
+                 hasCard(X#) o Pa(s0#, n#) = TRUE ==>
+                 !(x : 1 -> X#).
+                   ~Ins(x#, s0#) = s0# ==>
+                   hasCard(X#) o Pa(Ins(x#, s0#), SUC o n#) = TRUE
+   2.hasCard(X) o Pa(s0, x) = TRUE
+   3.~s0 = Empty(X)
+   4.Ins(e, s0) = s0
+   ----------------------------------------------------------------------
+   ?(x : 1 -> N). hasCard(X) o Pa(Ins(e, s0), x#) = TRUE
+
+*)
+
+val isFinite_hasCard0 = proved_th $
+e0
+(rpt strip_tac >> fs[isFinite_property1] >>
+ first_x_assum irule >> rw[o_assoc,Ex_def] >>
+ rw[Swap_Pa] >> assume_tac hasCard_property >>
+ rpt strip_tac (* 2 *) >--
+ (cases_on “s0 = Empty(X)” (* 2 *) >--
+  (qex_tac ‘SUC o ZERO’ >> 
+   first_x_assum (qspecl_then ["X"] strip_assume_tac) >>
+   first_x_assum irule >> arw[NOT_IN_Empty]) >>
+  cases_on “Mem(X) o Pa(e,s0) = TRUE” (* 2 *) >--
+  (fs[ABSORPTION_RWT] (*fs bug here, so does arw[]*) >> qex_tac ‘x’ >> arw[]) >>
+  first_x_assum (qspecl_then ["X"] strip_assume_tac) >>
+  first_x_assum rev_drule >> first_x_assum drule >>
+  qex_tac ‘SUC o x’ >> arw[]) >>
+ first_x_assum (qspecl_then ["X"] strip_assume_tac) >>
+ qex_tac ‘ZERO’ >> arw[])
+(form_goal
+ “!X a:1->Exp(X,2).isFinite(X) o a = TRUE ==>
+   (Ex(N) o Tp(hasCard(X) o Swap(N,Exp(X,2)))) o a = TRUE”)
 
 val isFinite_hasCard = proved_th $
 e0
