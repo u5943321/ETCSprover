@@ -45,9 +45,9 @@ fun read_axiom thstr =
         mk_thm essps [] f
     end
 
-val idL = read_axiom "!B A f:B -> A. id (A) o f = f"
+val idL = read_axiom "!B A f:B -> A. id (A) o f = f";
 
-val idR = read_axiom "!A B f: A -> B. f o id(A) = f"
+val idR = read_axiom "!A B f: A -> B. f o id(A) = f";
 
 val o_assoc = read_axiom "!A.!B.!f: A -> B.!C.!g:B -> C.!D.!h: C -> D.(h o g) o f = h o g o f";
 
@@ -56,13 +56,13 @@ val to1_def = read_axiom "!one.is1(one) ==> !X.!t1x:X->one.t1x =to1(X,one)";
 
 val const1_def = read_axiom "is1(1)";
 
-val ax1_1 = const1_def |> existsI ("one",mk_ob_sort) one (rapf "is1(one)")
+val ax1_1 = const1_def |> existsI ("one",mk_ob_sort) one (rapf "is1(one)");
  
-val from0_def = read_axiom "!zero.is0(zero) ==> !X.!f0x:zero->X.f0x=from0(zero,X)"
+val from0_def = read_axiom "!zero.is0(zero) ==> !X.!f0x:zero->X.f0x=from0(zero,X)";
 
 val const0_def = read_axiom "is0(0)";
 
-val ax1_2 = const0_def |> existsI ("zero",mk_ob_sort) zero (rapf "is0(zero)")
+val ax1_2 = const0_def |> existsI ("zero",mk_ob_sort) zero (rapf "is0(zero)");
 
 
 val pr_def = read_axiom "!A.!B.!AB.!p1:AB->A.!p2:AB->B.ispr(p1,p2)<=>!X.!f:X->A.!g:X->B.?fg:X->AB.!fg':X->AB.p1 o fg' = f & p2 o fg' = g <=> fg' = fg";
@@ -71,15 +71,15 @@ val pa_def = read_axiom "!A.!B.!AB.!p1:AB->A.!p2:AB->B.ispr(p1,p2)==>!X.!f:X->A.
 
 val pr_ex = read_axiom "!A.!B.?AB.?p1:AB->A.?p2:AB->B.ispr(p1,p2)";
 
-val ax1_3 = pr_ex 
+val ax1_3 = pr_ex; 
 
-val copa_def = read_axiom "!A.!B.!AB.!i1:A->AB.!i2:B->AB.iscopr(i1,i2)==>!X.!f:A->X.!g:B->X.!fg:AB->X.fg o i1 = f & fg o i2 = g <=> fg = copa(i1,i2,f,g)"
+val copa_def = read_axiom "!A.!B.!AB.!i1:A->AB.!i2:B->AB.iscopr(i1,i2)==>!X.!f:A->X.!g:B->X.!fg:AB->X.fg o i1 = f & fg o i2 = g <=> fg = copa(i1,i2,f,g)"; 
 
 val copr_ex = read_axiom "!A.!B.?AB.?i1:A->AB.?i2:B->AB.iscopr(i1,i2)";
 
-val ax1_4 = copr_ex
+val ax1_4 = copr_ex;
 
-val eqind_def = read_axiom "!A.!B.!f:A->B.!g:A->B.!E.!e:E->A.iseq(e,f,g)==> f o e = g o e & !X.!x:X->A.f o x = g o x ==> (!x0:X->E.e o x0 = x <=> x0 = eqind(e,f,g,x))"
+val eqind_def = read_axiom "!A.!B.!f:A->B.!g:A->B.!E.!e:E->A.iseq(e,f,g)==> f o e = g o e & !X.!x:X->A.f o x = g o x ==> (!x0:X->E.e o x0 = x <=> x0 = eqind(e,f,g,x))";
 
 val eq_ex = read_axiom "!A.!B.!f:A->B.!g:A->B.?E.?e:E->A.iseq(e,f,g)";
 
@@ -266,13 +266,13 @@ e0
       pop_assum (K all_tac) >> pop_assum (K all_tac) >> arw[]) >> strip_tac
  >> match_mp_tac to_p_component >> arw_tac[])
 (form_goal 
-“!A B AB p1:AB->A p2:AB->B.ispr(p1,p2) ==> !X f:X ->AB g. p1 o f = p1 o g & p2 o f = p2 o g ==> f = g”)
+“!A B AB p1:AB->A p2:AB->B.ispr(p1,p2) ==> !X f:X ->AB g. p1 o f = p1 o g & p2 o f = p2 o g ==> f = g”);
 
 val from_copr_components = proved_th $
 e0
 (repeat strip_tac >> match_mp_tac (copa_def |> iffLR |> ir_canon) >>
 arw_tac[])
-(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1, i2) ==>!X f:AB->X. f = copa(i1, i2, f o i1, f o i2)")
+(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1, i2) ==>!X f:AB->X. f = copa(i1, i2, f o i1, f o i2)");
 
 
 
@@ -280,16 +280,16 @@ arw_tac[])
 
 val i12_of_copa = copa_def |> iffRL |> spec_all |> undisch
                           |> specl (List.map rastt ["X","f:A->X","g:B->X","copa(i1:A->AB,i2:B->AB,f:A->X,g)"]) |> C mp $ refl (rastt "copa(i1:A->AB,i2:B->AB,f:A->X,g)") 
-                          |> gen_all |> disch_all |> gen_all
+                          |> gen_all |> disch_all |> gen_all;
                          
 
 val i1_of_copa = copa_def |> iffRL |> spec_all |> undisch
                           |> specl (List.map rastt ["X","f:A->X","g:B->X","copa(i1:A->AB,i2:B->AB,f:A->X,g)"]) |> C mp $ refl (rastt "copa(i1:A->AB,i2:B->AB,f:A->X,g)") 
-                          |> conjE1 |> gen_all |> disch_all |> gen_all
+                          |> conjE1 |> gen_all |> disch_all |> gen_all;
 
 val i2_of_copa = copa_def |> iffRL |> spec_all |> undisch
                           |> specl (List.map rastt ["X","f:A->X","g:B->X","copa(i1:A->AB,i2:B->AB,f:A->X,g)"]) |> C mp $ refl (rastt "copa(i1:A->AB,i2:B->AB,f:A->X,g)") 
-                          |> conjE2 |> gen_all |> disch_all |> gen_all
+                          |> conjE2 |> gen_all |> disch_all |> gen_all;
 
 
 
@@ -307,7 +307,7 @@ e0
  >-- (arw_tac[]) >>
  qpick_x_assum ‘~(x1 = x2)’ (K all_tac) >> once_arw_tac[] >> rw_tac[] >>
  rw_tac[])
-(rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~(i1 = i2)")
+(rapg "!oneone i1:1 -> oneone i2:1 -> oneone. iscopr(i1,i2) ==> ~(i1 = i2)");
 
 (*∀A B x. ¬(x∶one → (A + B) ∧ (∃x0 x0'. x0∶one → A ∧ x0'∶one → B ∧
                              i1 A B ∘ x0 = x ∧
@@ -316,10 +316,10 @@ e0
 
 
 
-val eq_to1 = mp (allE one to1_def) const1_def 
+val eq_to1 = mp (allE one to1_def) const1_def;
 
 val to1_unique = specl [rastt "X",rastt "f:X->1"] eq_to1 |> GSYM 
-                       |> trans (specl [rastt "X",rastt "g:X->1"] eq_to1) |> gen_all
+                       |> trans (specl [rastt "X",rastt "g:X->1"] eq_to1) |> gen_all;
 
 val prop_5_lemma = proved_th $
 e0
@@ -338,7 +338,7 @@ suffices_tac (rapf "copa(i1:A->AB, i2:B->AB, ((one1:1->oneone) o to1(A, 1)), ((o
 >-- (rw_tac[GSYM o_assoc] >> arw_tac[]) >>
 arw_tac[]
 )
-(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x0:1->A x0':1->B.~(i1 o x0 = i2 o x0')")
+(rapg "!A B AB i1:A->AB i2:B->AB. iscopr(i1,i2) ==> !x0:1->A x0':1->B.~(i1 o x0 = i2 o x0')");
 
 val from_cop_eq = proved_th $
 e0
@@ -347,7 +347,7 @@ e0
  >-- (strip_tac >> once_arw_tac[] >> 
      pop_assum (K all_tac) >> pop_assum (K all_tac) >> arw_tac[]) >> strip_tac
  >> match_mp_tac from_copr_components >> arw_tac[])
-(form_goal “!A B AB i1:A->AB i2:B->AB.iscopr(i1,i2) ==> !X f:AB ->X g. f o i1 = g o i1 & f o i2 = g o i2 ==> f = g”)
+(form_goal “!A B AB i1:A->AB i2:B->AB.iscopr(i1,i2) ==> !X f:AB ->X g. f o i1 = g o i1 & f o i2 = g o i2 ==> f = g”);
 
 (*!X t. t∶ one → X ==> i1 X X o t <> i2 X X o t*)
 
@@ -355,7 +355,7 @@ e0
 val i1_i2_disjoint = proved_th $
 e0
 (repeat strip_tac >> match_mp_tac prop_5_lemma >> arw_tac[])
-(rapg "!X XX i1:X->XX i2:X->XX. iscopr(i1,i2) ==> !t:1->X. ~(i1 o t = i2 o t)")
+(rapg "!X XX i1:X->XX i2:X->XX. iscopr(i1,i2) ==> !t:1->X. ~(i1 o t = i2 o t)");
 
 val pr_with_one = proved_th $
 e0
@@ -363,7 +363,7 @@ e0
 repeat strip_tac >> dimp_tac (* 2 *)
 >-- (strip_tac >> full_simp_tac[idL]) >>
 strip_tac >> arw_tac[idL] >> rw_tac[specl (List.map rastt ["X","g:X->1"]) to1_unique])
-(rapg "!A. ispr(id(A),to1(A,1))")
+(rapg "!A. ispr(id(A),to1(A,1))");
 
 (*
 ∀A B C D P Q f g i j. f∶ A → C ∧ g∶ B → D ∧ i∶ C → P ∧ j∶ D → Q ⇒
@@ -6735,15 +6735,16 @@ e0
 “!A B.?ev: A * Exp(A,B) -> B.
  isexp(π1(A,Exp(A,B)),π2(A,Exp(A,B)),ev)”)
 
+(*
 val isexp_th = proved_th $
 e0
-cheat
 (form_goal
 “!A B A2B efs p1:efs->A p2:efs-> A2B ev:efs -> B.
  isexp(p1,p2,ev) <=> 
  ispr(p1,p2) & 
  !X AX p1':AX->A p2':AX->X.ispr(p1',p2') ==>
  !f:AX->B.?h0:X-> A2B. !h. ev o pa(p1,p2,p1',h o p2') = f <=> h = h0”)
+*)
 
 val Ev_def =  ex2fsym "Ev" ["A","B"] (iffRL $ eqT_intro $ spec_all Ev_ex)
                       |> C mp (trueI []) |> gen_all
@@ -7226,6 +7227,17 @@ e0
  “!A B X f:A * X ->B P a:P->A x: P ->X. 
   Ev(A,B) o Pa(a, Tp(f) o x) = f o Pa(a,x)”)
 
+
+val Ev_of_Tp_el' = proved_th $
+e0
+(rpt strip_tac >> 
+ qby_tac ‘Tp(f) = Tp(f) o id(P)’ >-- rw[idR] >>
+ once_arw[] >> rw[Ev_of_Tp_el])
+(form_goal
+“!A B P f:A * P -> B  a:P -> A.
+Ev(A, B) o Pa(a, Tp(f)) = f o Pa(a, id(P))”);
+
+
 val pi31_of_Pa =
     proved_th $
               e0
@@ -7680,7 +7692,7 @@ val required_map2 = Tp Ex_s0_Ex_x_from4_pred
 
 val map2_ex = proved_th $
 e0
-cheat
+(exists_tac required_map2 >> rw[])
 (form_goal
 $ mk_exists "m2" (sort_of required_map2)
 (mk_eq required_map2 (rastt "m2:Exp(Exp(X, 2), 2) -> Exp(Exp(X, 2), 2)")) 
@@ -7705,9 +7717,18 @@ val Empty_def =
              |> iffRL |> ex2fsym "Empty" ["X"]
              |> C mp (trueI []) |> gen_all
 
+
+val False2FALSE = proved_th $
+e0
+(rw[GSYM False_def,o_assoc] >> once_rw[one_to_one_id] >>
+ rw[idR])
+(form_goal
+ “!X x:1->X. False(X) o x = FALSE”)
+
 val Empty_property = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Empty_def,Ev_of_Tp_el'] >>
+ rw[o_assoc,pi1_of_Pa,idR,False2FALSE])
 (form_goal
 “!X x:1->X. Ev(X,2) o Pa(x,Empty(X)) = FALSE”)
 
@@ -7718,7 +7739,7 @@ Tp (rastt $ q2str
 
 val map1_ex = proved_th $
 e0
-cheat
+(exists_tac required_map1 >> rw[])
 (form_goal
 $ mk_exists "m1" (sort_of required_map1)
 (mk_eq required_map1 (rastt "m1:1 -> Exp(Exp(X, 2), 2)")) 
@@ -7845,7 +7866,10 @@ BIGINTER_ex |> spec_all |> eqT_intro
 
 val BIGINTER_property = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> rw[GSYM BIGINTER_def] >>
+ rw[Ev_of_Tp_el] >> rw[o_assoc,All_def] >> 
+ rw[Pa_distr,IMP_def] >>
+ rw[o_assoc,Pa_distr,pi33_of_Pa,pi31_of_Pa,pi32_of_Pa])
 (form_goal
  “!X ss:1->Exp(Exp(X,2),2) x:1->X.
   Ev(X,2) o Pa(x,BIGINTER(X) o ss) = TRUE <=> 
@@ -7952,9 +7976,67 @@ e0
 
 *)
 
+val is_Tp = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM Tp_def] >> arw[])
+(form_goal
+ “!A B X f: A * X ->B h: X -> Exp(A,B). Ev(A,B) o Pa(π1(A,X) ,h o π2(A,X)) = f ==> h = Tp(f)”)
+
+val To1_property = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM To1_def] >>
+ assume_tac const1_def >> drule to1_def >> once_arw[])
+(form_goal
+ “!X f:X->1. f = To1(X)”)
+
+val Tp1_Tp0_inv = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM Tp1_def,GSYM Tp0_def] >>
+ sym_tac >> irule is_Tp >> rw[o_assoc,Pa_distr,idL] >>
+ once_rw[To1_property] >> rw[]
+ )
+(form_goal
+ “!X Y f:1-> Exp(X,Y). Tp1(Tp0(f)) = f”)
+
+
+val Tp0_Tp1_inv = proved_th $
+e0
+(rpt strip_tac >> rw[GSYM Tp1_def,GSYM Tp0_def] >>
+ rw[Ev_of_Tp_el,o_assoc,pi1_of_Pa,idR](* >>
+ sym_tac >> irule is_Tp >> rw[o_assoc,Pa_distr,idL] >>
+ once_rw[To1_property] >> rw[]*)
+ )
+(form_goal
+ “!X Y f:X->Y. Tp0(Tp1(f)) = f”)
+
+val Ev_of_el = proved_th $
+e0
+(rpt strip_tac >>
+ qby_tac 
+ ‘f = Tp1(Tp0(f))’ >-- rw[Tp1_Tp0_inv] >> once_arw[] >>
+ rw[GSYM Tp1_def,Ev_of_Tp_el'] >> rw[Tp1_def,Tp1_Tp0_inv] >>
+ rw[o_assoc,pi1_of_Pa,idR])
+(form_goal
+ “!A B f:1->Exp(A,B) a:1->A.
+  Ev(A,B) o Pa(a,f) = Tp0(f) o a”)
+
+
+val Ev_of_Tp1_el = proved_th $
+e0
+(rw[Ev_of_el,Tp0_Tp1_inv])
+(form_goal
+ “!A B f:A -> B a:1->A.
+  Ev(A,B) o Pa(a,Tp1(f)) = f o a”)
+
 val isFinite_property1 =proved_th $
 e0
-(rw[isFinite_property] >> cheat)
+(rw[isFinite_property] >> rpt strip_tac >> dimp_tac >> rpt strip_tac (* 2 *) >--
+ (first_x_assum (qspecl_then ["Tp1(P)"] assume_tac) >>
+  fs[GSYM Tp1_def,Ev_of_Tp_el',o_assoc,pi1_of_Pa] >>
+  first_x_assum irule >> arw[]) >>
+ rw[Ev_of_el] >> first_x_assum irule >>
+ fs[Ev_of_el]
+ )
 (form_goal 
  “!X a:1->Exp(X,2). isFinite(X) o a = TRUE <=> !P:Exp(X,2) ->2.
  P o Empty(X) = TRUE &
@@ -7972,12 +8054,22 @@ pred_setTheory.FINITE_DEF (DEFINITION)
 
 *)
 
+
+
+
+
 (*
 AQ ... 
-1.enable "find" stuff
-2.superscript does not work
+1.enable "find" stuff 
+Binarymap (string , thm) dict
+
+2.superscript does not work Π¹
 3.tokenizer.
 4.abbrev as parsing and pp, hence no need of object equality.
+
+0xB9
+
+rastt "Π⁴" 0x
 
 Or substitution of object equality?
 
@@ -7985,7 +8077,7 @@ Or substitution of object equality?
 
 5.rw into local constant
 
-6.Do you agree that we need list object for the bit1 bit2 stuff.
+6.Do you agree that we need list object for the bit1 bit2 stuff.  can I find a proof of that?
 
 ?N->L(N^N).  
 
@@ -8020,16 +8112,49 @@ val FINITE_def = new_ax
 
 val isFinite_Empty = proved_th $
 e0
-(cheat)
+(strip_tac >> rw[isFinite_property1] >> rpt strip_tac)
 (form_goal
  “!X. isFinite(X) o Empty(X) = TRUE”)
 
 
 val isFinite_Insert = proved_th $
 e0
-(cheat)
+(rw[isFinite_property1] >> rpt strip_tac >>
+ qsuff_tac 
+ ‘All(X) o Tp(P o Insert(X)) o a = TRUE’ >--
+ (rw[All_def,o_assoc,Ins_def] >> strip_tac >> arw[]) >>
+ rw[GSYM o_assoc] >> first_x_assum irule >>
+ strip_tac >-- 
+ (rw[All_def,o_assoc,Ins_def] >> strip_tac >> strip_tac >>
+  strip_tac >> first_x_assum irule >> arw[]) >>
+ rw[All_def,o_assoc,Ins_def] >> first_x_assum irule >> arw[]
+ )
+(form_goal
+ “!X a:1-> Exp(X,2). isFinite(X) o a = TRUE ==>
+  !x:1->X. isFinite(X) o Ins(x,a) = TRUE”)
+
+
+
+(*
+val isFinite_Insert0 = proved_th $
+e0
+(rpt strip_tac >> rw[isFinite_property1] >>
+ rw[Ins_def] >> dimp_tac >> rpt strip_tac (* 2 *) >--
+ ()
+ )
+(form_goal
+ “!X x:1->X a:1->Exp(X,2). isFinite(X) o Insert(X) o Pa(x,a) = TRUE <=> isFinite(X) o a = TRUE”)
+
+val isFinite_Insert = proved_th $
+e0
+(rpt strip_tac >> irule fun_ext >> 
+ rw[o_assoc]
+ once_rw[GSYM to_Pr_components] >> rw[pi2_of_Pa] >>
+ )
 (form_goal
  “!X a. isFinite(X) o Insert(X) = isFinite(X) o π2(X,Exp(X,2))”)
+*)
+
 
 (*
 val isFinite_property = proved_th $
@@ -8065,14 +8190,15 @@ val Swap_def =
 
 val Swap_property = proved_th $
 e0
-(cheat)
+(rw[GSYM Swap_def,pi12_of_Pa])
 (form_goal
  “!A B. π1(B,A) o Swap(A,B) = π2(A,B) & π2(B,A) o Swap(A,B) = π1(A,B)”)
 
 
 val Swap_Swap_id = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> irule to_Pr_eq >> rw[GSYM Swap_def,idR] >>
+ rw[Pa_distr,pi12_of_Pa])
 (form_goal
  “!A B. Swap(B,A) o Swap(A,B) = id(A * B)”)
 
@@ -8085,52 +8211,58 @@ e0
 “!X x0:1->X t. Nind(x0,t) o ZERO = x0 &
   Nind(x0,t) o SUC = t o Nind(x0,t)”)
 
-val Ev_of_Tp_el' = proved_th $
-e0
-(rpt strip_tac >> 
- qby_tac ‘Tp(f) = Tp(f) o id(P)’ >-- rw[idR] >>
- once_arw[] >> rw[Ev_of_Tp_el])
-(form_goal
-“!A B P f:A * P -> B  a:P -> A.
-Ev(A, B) o Pa(a, Tp(f)) = f o Pa(a, id(P))”)
-
 
 
 val pi41_of_Pa4 = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Pa4_def,GSYM pi41_def,pi12_of_Pa])
 (form_goal
 “!A B C D X f:X->A g:X->B h:X->C k:X->D.
- π41(A,B,C,D) o Pa4(f,g,h,k) = f”)
+ π41(A,B,C,D) o Pa4(f,g,h,k) = f”);
 
 val pi42_of_Pa4 = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Pa4_def,GSYM pi42_def,pi12_of_Pa,o_assoc])
 (form_goal
 “!A B C D X f:X->A g:X->B h:X->C k:X->D.
- π42(A,B,C,D) o Pa4(f,g,h,k) = g”)
+ π42(A,B,C,D) o Pa4(f,g,h,k) = g”);
 
 
 val pi43_of_Pa4 = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Pa4_def,GSYM pi43_def,pi12_of_Pa,o_assoc])
 (form_goal
 “!A B C D X f:X->A g:X->B h:X->C k:X->D.
- π43(A,B,C,D) o Pa4(f,g,h,k) = h”)
+ π43(A,B,C,D) o Pa4(f,g,h,k) = h”);
 
 
 val pi44_of_Pa4 = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Pa4_def,GSYM pi44_def,pi12_of_Pa,o_assoc])
 (form_goal
 “!A B C D X f:X->A g:X->B h:X->C k:X->D.
- π44(A,B,C,D) o Pa4(f,g,h,k) = k”)
+ π44(A,B,C,D) o Pa4(f,g,h,k) = k”);
 
 val TRUE2FALSE = proved_th $
 e0
-cheat
+(assume_tac TRUE_def >> drule i1_xor_i2 >> arw[])
 (form_goal
-“!f. ~(f = TRUE) <=> f = FALSE”)
+“!f. ~(f = TRUE) <=> f = FALSE”);
+
+
+(*Po4(A,B,C,D)  A * B * C * D
+
+Exp(X,2) |-> Pow(X)
+
+G * ... Grouptype(G)
+
+
+(*  *) () [] {} <>
+ <f,g>
+
+<> 
+
+*)
 
 val hasCard_property = proved_th $
 e0
@@ -8167,31 +8299,96 @@ e0
 “!X. hasCard(X) o Pa(Empty(X),ZERO) = TRUE &
  !s0 n. hasCard(X) o Pa(s0,n) = TRUE ==>
  !x:1->X. ~ (Mem(X) o Pa(x,s0) = TRUE) ==>
- hasCard(X) o Pa(Ins(x,s0),SUC o n) = TRUE”)
+ hasCard(X) o Pa(Ins(x,s0),SUC o n) = TRUE”);
 
 val Swap_Pa = proved_th $
 e0
-(cheat)
+(rw[GSYM Swap_def,Pa_distr] >> rpt strip_tac >>
+ irule to_Pr_eq >> rw[pi12_of_Pa])
 (form_goal
 “!A B X f:X->A g:X->B. Swap(A,B) o Pa(f,g) = Pa(g,f)”)
 
 val NOT_IN_Empty = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Mem_def,GSYM Empty_def,Ev_of_Tp_el',o_assoc] >> once_rw[one_to_one_id] >> rw[idR,False2FALSE]>>
+ rw[TRUE2FALSE])
 (form_goal
 “!X x:1->X. ~(Mem(X) o Pa(x,Empty(X)) = TRUE)”)
 
+(*
+val set_el_ext = proved_th $
+e0
+()
+(form_goal)
+*)
+
+val Tp0_INJ = proved_th $
+e0
+(rpt strip_tac >> dimp_tac >> strip_tac >-- 
+ (once_rw[GSYM Tp1_Tp0_inv] >> arw[]) >> arw[])
+(form_goal
+ “!A B f:1->Exp(A,B) g:1->Exp(A,B).
+  Tp0(f) = Tp0(g) <=> f = g”)
 
 val MEMBER_NOT_Empty= proved_th $
 e0
-cheat
+(rpt strip_tac >> dimp_tac >> strip_tac (* 2 *) >-- 
+ (contra_tac >> fs[NOT_IN_Empty]) >>
+ qby_tac ‘~(Tp0(s0) = Tp0(Empty(X)))’ >-- 
+ arw[Tp0_INJ] >> 
+ drule $ contrapos $ spec_all fun_ext >> 
+ fs[GSYM Empty_def,Tp1_def,Tp0_Tp1_inv,False2FALSE] >>
+ fs[gen_all $ forall_exists ("a",ar_sort (mk_ob "A") (mk_ob "B"))] >> qex_tac ‘a’ >> rw[GSYM Mem_def] >>
+ fs[GSYM Tp0_def,o_assoc,idL,Pa_distr] >> 
+ pop_assum mp_tac >> once_rw[one_to_one_id] >> rw[idR,GSYM TRUE2FALSE])
 (form_goal
 “!X s0:1->Exp(X,2). (?x.(Mem(X) o Pa(x,s0) = TRUE)) <=>
  ~(s0 = Empty(X))”)
 
+val FALSE_ne_TRUE = proved_th $
+e0
+(irule i1_ne_i2 >> rw[TRUE_def])
+(form_goal
+“~(FALSE = TRUE)”)
+
+val TRUE_ne_FALSE = GSYM FALSE_ne_TRUE
+
+val pred_ext = proved_th $
+e0
+(rpt strip_tac >> dimp_tac >> strip_tac (* 2 *) >-- 
+ (cases_on “p1:1->2 = TRUE” >-- fs[] >>
+ fs[TRUE2FALSE] >> fs[GSYM TRUE_ne_FALSE] >>
+ fs[TRUE2FALSE]) >>
+ arw[])
+(form_goal
+“!p1 p2. (p1 = TRUE <=> p2 = TRUE) <=> p1 = p2”)
+
+val fun_ext_iff = proved_th $
+e0
+(rpt strip_tac >> dimp_tac >> strip_tac (* 2 *) >-- 
+ (drule fun_ext >> arw[]) >>
+ rpt strip_tac >> arw[])
+(form_goal
+“!A B f:A->B g. (!a:1->A. f o a = g o a) <=> f = g”)
+
 val ABSORPTION_RWT = proved_th $
 e0
-cheat
+(rpt strip_tac >> rw[GSYM Mem_def] >>
+ once_rw[GSYM Tp0_INJ] >> dimp_tac >> strip_tac (* 2 *) >-- 
+ (irule fun_ext >> strip_tac >> 
+ rw[GSYM Tp0_def,o_assoc,Pa_distr,idL] >> 
+ once_rw[one_to_one_id] >> rw[idR] >>
+ once_rw[GSYM pred_ext] >> rw[Ins_property] >>
+ dimp_tac >> strip_tac (* 2 *) 
+ >-- fs[] >> arw[]) >>
+ pop_assum mp_tac >>  
+ rw[GSYM Tp0_def,o_assoc,Pa_distr,idL] >> 
+ once_rw[GSYM fun_ext_iff] >> once_rw[one_to_one_id] >>
+ rw[idR] >> once_rw[GSYM pred_ext] >> rw[] >>
+ rw[Pa_distr,o_assoc] >> once_rw[one_to_one_id] >>
+ rw[idL,idR] >> rw[Ins_property] >> rpt strip_tac >>
+ first_x_assum (qspecl_then ["x"] assume_tac) >>
+ fs[])
 (form_goal
 “!X x:1->X s0:1->Exp(X,2). (Mem(X) o Pa(x,s0) = TRUE) <=>
  Ins(x,s0) = s0”)
@@ -8239,18 +8436,21 @@ e0
 
 val isFinite_hasCard = proved_th $
 e0
-cheat
+(rpt strip_tac >> drule isFinite_hasCard0 >>
+ fs[o_assoc,Ex_def,Swap_Pa] >> qex_tac ‘x’ >> arw[]) 
 (form_goal
  “!X a:X->2.isFinite(X) o Tp1(a) = TRUE ==>
   ?n. hasCard(X) o Pa(Tp1(a),n) = TRUE”)
 
 
+
 val FINITE_hasCard = proved_th $
 e0
-(cheat)
+(rpt strip_tac >> irule isFinite_hasCard >>
+ fs[GSYM FINITE_def])
 (form_goal
  “!X. FINITE(X) ==> ?n:1->N. hasCard(X) o Pa(Tp1(True(X)),n) = TRUE”)
-
+ 
 val Card_def = 
     FINITE_hasCard |> spec_all |> ex2fsym "Card" ["X"] 
                    |> gen_all

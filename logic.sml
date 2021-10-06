@@ -215,19 +215,19 @@ fun dimpE (thm(G,A,C)) =
 
 fun depends_on (n,s) t = HOLset.member(fvt t,(n,s))
 
-fun allI (a,s) (thm(G,A,C)) = 
+fun allI (ns as (a,s)) (thm(G,A,C)) = (*fun allI ns th*)
     let 
-        val G0 = HOLset.delete(G,(a,s)) 
+        val G0 = HOLset.delete(G,ns) 
                  handle _ => G
-        val D0 = HOLset.listItems $ HOLset.difference(fvs s,G0)
+        val D0 = HOLset.listItems $ HOLset.difference(fvs s,G0) (*HOLset.numItems gives size of set, can merge in the variable into G0 and remove this check*)
         val _ = List.length D0 = 0 orelse
                 raise ERR ("sort of the variable to be abstract has extra variable(s)",[],List.map var D0,[])
         (*HOLset.isSubset(fvs s,G0) orelse 
           raise simple_fail "sort of the variable to be abstract has extra variable(s)" *)      
-        val _ = not (List.exists(fn (n0,s0) => depends_on (a,s) (var (n0,s0))) (HOLset.listItems G0)) orelse
+        val _ = not (List.exists(fn (n0,s0) => depends_on ns (var (n0,s0))) (HOLset.listItems G0)) orelse (*HOLset.find*)
                 raise simple_fail "variable to be abstract occurs in context" 
-        val _ = not (HOLset.member(fvfl A,(a,s))) orelse
-                raise simple_fail "variable to be abstract occurs in assumption"
+        val _ = not (HOLset.member(fvfl A,ns)) orelse (*try remove this check since it is contained *)
+                raise simple_fail "variable to be abstract occurs in assumption" 
     in thm(G0,A,mk_forall a s C)
     end
 
@@ -259,12 +259,12 @@ A,Γ u (Var(t)) |- ϕ(t)
 
 fun allE t (thm(G,A,C)) = 
     let 
-        val ((n,s),b) = dest_forall C
-        val _ = (*eq_sort(sort_of t,s)*) sort_of t = s orelse 
+        val (ns as (n,s),b) = dest_forall C
+        val _ = sort_of t = s orelse 
                 raise ERR ("allE.sorts inconsistent",
                            [s,sort_of t],[mk_var n s,t],[])
     in
-        thm(contl_U [G,fvt t],A,substf ((n,s),t) b)
+        thm(contl_U [G,fvt t],A,substf (ns,t) b)
     end
 
 (**********************************************************************

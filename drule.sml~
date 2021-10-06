@@ -1,5 +1,0 @@
-structure drule :> drule = 
-struct
-open term form thm
-
-end

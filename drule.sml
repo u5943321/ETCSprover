@@ -421,7 +421,7 @@ fun dimp_iff th1 th2 =
           | _ => raise ERR ("dimp_iff.not a pair of iff: ",[],[],[C1,C2])
     end
 
-
+(*make it primitive exists primitive. *)
 fun forall_iff (n,s) th = 
     let val (G,A,C0) = dest_thm th
     in
@@ -1108,14 +1108,16 @@ val CONJ_ASSOC = conj_assoc (mk_fvar "A") (mk_fvar "B") (mk_fvar "C")
 (*A /\ B ==> C <=> A ==> B ==> C*)
 
 val CONJ_IMP_IMP = conj_imp_equiv (mk_fvar "A") (mk_fvar "B") (mk_fvar "C")
-
+(*
 (*cannot do this all in rewr_rule because want to strip...*)
 fun strip_split th = 
     let val th' = rewr_rule [pe_ob_clauses,pe_ar_clauses,
                              CONJ_ASSOC,CONJ_IMP_IMP] th
     in
        strip_all_and_imp th'
-    else th
+    end
+*)
+
 
 
 end
