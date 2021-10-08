@@ -8455,7 +8455,52 @@ val Card_def =
     FINITE_hasCard |> spec_all |> ex2fsym "Card" ["X"] 
                    |> gen_all
 
+val IP_el = proved_th $
+e0
+(cheat)
+(form_goal
+ “!P:N->2. (!n. P o n = TRUE) <=>
+  P o ZERO = TRUE &
+  (!n. P o n = TRUE ==> P o SUC o n = TRUE)”)
 
+(*TODO: rw: ~(A & B) <=> A ==> ~ B & B ==> ~A*)
+
+val WOP = proved_th $
+e0
+(rpt strip_tac >> 
+ ccontra_tac >>
+ qby_tac 
+ ‘!l:1->N. P o l = TRUE ==>
+  ?n:1->N. P o n = TRUE & ~(Le o Pa(l,n) = TRUE)’ 
+ >-- cheat >>
+ qsuff_tac 
+ ‘!n:1->N. (All(N) o Tp(IMP o Pa(Le,NEG o P o π1(N,N)))) o n = TRUE’ >-- cheat >>
+ rw[IP_el,o_assoc,All_def,Pa_distr,IMP_def,pi1_of_Pa,
+    NEG_def,GSYM TRUE2FALSE] >> rpt strip_tac (* 2 *) >--
+ (qby_tac ‘x = ZERO’ >-- cheat >> arw[] >>
+ ccontra_tac >> first_x_assum drule >>
+ pop_assum strip_assume_tac >>
+ (*~Le o Pa(ZERO, n) = TRUE is false*) >> cheat) >>
+ cases_on “Le:N * N ->2 o Pa(x:1->N,n:1->N) = TRUE” >--
+ (first_x_assum drule >> arw[]) >>
+ qby_tac ‘x = SUC o n’ >-- cheat >>
+ arw[] >> ccontra_tac >>
+ first_x_assum drule >> pop_assum strip_assume_tac >>
+ (*~Le o Pa(SUC o n, n') = TRUE 
+  use ~(n + 1 <= n') <=> n' < n + 1 <=> n' <= n*) >>
+ qby_tac ‘Le o Pa(n',n) = TRUE’ >-- cheat >>
+ first_x_assum drule >> fs[]
+ 
+ )
+(form_goal
+ “!P:N->2. ~(P = False(N)) ==> 
+  ?l:1->N. P o l = TRUE &
+  !n:1->N. P o n = TRUE ==>
+  Le:N * N -> 2 o Pa(l,n) = TRUE”)
+
+
+
+ “(~?n. P n /\ !m. (m<n) ==> ~P m) ==> (!n m. (m<n) ==> ~P m)”)
 (*AQ list:
 
 1.SLOW thms. Thm5_mono Thm6_g_ev_lemma pb_reorder
