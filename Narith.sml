@@ -838,7 +838,7 @@ e0
        Char(LEQ) o Pa(n,m) = TRUE”)
 
 (*less_eq_cases*)
-val LEQ_cases = proved_th $
+val LESS_EQ_cases = proved_th $
 e0
 (rpt strip_tac >> assume_tac LESS_cases >>
  cases_on “Char(LEQ) o Pa(m:1->N, n) = TRUE” (* 2 *)
@@ -872,7 +872,7 @@ val CANCEL_SUB0 = proved_th $
 e0
 (rpt strip_tac >> 
  assume_tac TRUE_def >>
- assume_tac CANCEL_SUB00 >> assume_tac LEQ_cases >>
+ assume_tac CANCEL_SUB00 >> assume_tac LESS_EQ_cases >>
  first_x_assum irule >> fs[GSYM LEQ_SUB] >>
  first_assum (qspecl_then ["n","a"] assume_tac) >>
  first_x_assum (qspecl_then ["m","a"] assume_tac) >>
@@ -994,49 +994,47 @@ e0
  drule pb_fac_iff_1 >> 
  pop_assum (assume_tac o GSYM) >> once_arw[] >> arw[])
 (form_goal
-“(!m:1->N n:1->N. SUB o Pa(m,n) = ZERO <=> Char(LEQ) o Pa(m,n) = TRUE)”)
+“(!m:1->N n:1->N. SUB o Pa(m,n) = ZERO <=> Char(LEQ) o Pa(m,n) = TRUE)”);
 
 (*lt_succ_le*)
 val LESS_SUC_LEQ = proved_th $
 e0
 (rpt strip_tac >> 
- assume_tac TRUE_def >>
- rw[CLESS_iff_LEQ_NEQ] >> assume_tac LEQ_mono >>
- drule char_def >> first_x_assum drule >>
- fs[Char_def] >> assume_tac LEQ_cases_iff >>
- first_x_assum (qspecl_then ["Pa(n0, SUC o n)"] assume_tac)
- >>
+ assume_tac CLESS_iff_LEQ_NEQ >> arw[] >>
+ pop_assum (K all_tac) >> assume_tac LEQ_mono >>
+ drule char_def >> assume_tac TRUE_def >>
+ first_x_assum drule >> fs[Char_def] >>
+ assume_tac LEQ_cases_iff >> 
+ first_x_assum 
+  (qspecl_then ["Pa(n0, SUC o n)"] assume_tac) >>
  by_tac 
  “(?le0 : 1 -> LEQo. Pa(n0:1->N, SUC o n:1->N) = LEQ o le0) <=> 
   (?x0 : 1 -> LEQo. LEQ o x0 = Pa(n0, SUC o n))”
  >-- (dimp_tac >> strip_tac
       >-- (qexists_tac "le0" >> arw[]) >>
       qexists_tac "x0" >> arw[]) >> arw[] >> 
- >> pop_assum (K all_tac) >> pop_assum mp_tac >>
- pop_assum (assume_tac o GSYM) >> once_arw[] >> 
- strip_tac >> once_arw[] >> 
- assume_tac (GSYM SUB_EQ_0) >>
- arw[] >> 
- cases_on “SUB o Pa(n0:1->N,n) = ZERO” >--
- (arw[] >> assume_tac $ GSYM SUB_DIFF_1)
-
- assume_tac (GSYM sub_eq_0) >>
- first_x_assum drule >> arw[] >>
- assume_tac sub_elements >> arw[] >> cases_on “sub o pa(Nn,nN,n0:1->N,n) = ZERO” 
- >-- (arw[] >> assume_tac PRE_def >> arw[] >>
-      assume_tac (GSYM SUB_DIFF_1) >> once_arw[] >>
-      pop_assum (K all_tac) >> ccontra_tac >> fs[] >>
-      fs[Thm2_1]) >>
+ pop_assum (K all_tac) >>
+ pop_assum mp_tac >>
+ pop_assum (assume_tac o GSYM) >> once_arw[] >>
+ strip_tac >> assume_tac (GSYM SUB_EQ_0) >>
+ arw[] >>
+ assume_tac SUB_el >> arw[] >> 
+ cases_on “SUB o Pa(n0:1->N,n) = ZERO” (* 2 *) >--
+ (arw[] >> assume_tac PRE_def >> arw[] >>
+  assume_tac (GSYM SUB_DIFF_1) >> once_arw[] >>
+  pop_assum (K all_tac) >> ccontra_tac >> fs[Thm2_1]) >>
  arw[] >> ccontra_tac >> pop_assum strip_assume_tac >>
- pop_assum mp_tac >> assume_tac (GSYM sub_diff_1) >>
- once_arw[] >> once_arw[] >> rw[] >> pop_assum (K all_tac) >> 
+ pop_assum mp_tac >>
+ assume_tac (GSYM SUB_DIFF_1) >> 
+ once_arw[] >> once_arw[] >> rw[] >>
+ pop_assum (K all_tac) >>
  assume_tac PRE_eq_0 >> fs[])
 (form_goal “!n0:1->N n:1->N. Char(LESS) o Pa(n0, SUC o n) = TRUE  <=> Char(LEQ) o Pa(n0, n) = TRUE”)
 
 
 
-
-val strong_ind_lemma = proved_th $ 
+(*strong_ind_lemma*)
+val strong_IND_lemma = proved_th $ 
 e0
 (rpt strip_tac >> 
  suffices_tac “isiso(q:Q->N)”
@@ -1047,29 +1045,31 @@ e0
            fs[] >> drule o_epi_imp_epi >>
            first_x_assum accept_tac) >>
       irule prop_2_half2 >> arw[] >> rpt strip_tac >>
-      rev_drule char_def >> first_x_assum drule >>
-      arw[] >> last_x_assum (qspecl_then ["x"] assume_tac) >>
+      rev_drule char_def >>
+      assume_tac TRUE_def >> first_x_assum drule >>
+      fs[Char_def] >> 
+      last_x_assum (qspecl_then ["x"] assume_tac) >>
       first_assum (assume_tac o iffLR) >>
       first_x_assum irule >> 
       by_tac “?(nb : 1 -> Q). x = q:Q->N o nb”
       >-- (qexistsl_tac ["xb"] >> arw[]) >>
-      arw[] >> drule le_refl >> arw[]) >>
+      arw[] >> assume_tac LEQ_refl >> arw[]) >>
 irule Thm2_3' >> arw[] >>
 rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
 (suffices_tac “?(x0 : 1 -> Q). ZERO = q o x0”
  >-- (strip_tac >> qexistsl_tac ["x0"] >> arw[]) >>
  arw[] >> rpt strip_tac >> first_x_assum irule >>
- drule le_z_z >> first_x_assum drule >> arw[] >>
+ drule LEQ_ZERO_ZERO >> arw[] >>
  suffices_tac 
- “!n0:1->N. ~(char(i1,i2:1->two,lt) o pa(Nn,nN,n0,ZERO) = i2)”
+ “!n0:1->N. ~(Char(LESS) o Pa(n0,ZERO) = TRUE)”
  >-- (strip_tac >> arw[]) >>
- drule not_lt_z >> first_x_assum accept_tac) >>
+ rw[not_LESS_ZERO]) >>
  rpt strip_tac >> 
  suffices_tac “?(x0 : 1 -> Q). SUC o n = q:Q->N o x0”
  >-- (strip_tac >> qexistsl_tac ["x0'"] >> arw[]) >>
  arw[] >> pop_assum mp_tac >> pop_assum mp_tac >>
  pop_assum (qspecl_then ["n"] assume_tac) >> 
- rpt strip_tac >> drule le_cases >>
+ rpt strip_tac >> assume_tac LEQ_cases >>
  first_x_assum drule >> 
  first_x_assum strip_assume_tac (* 2 *) >-- 
  (by_tac “?nb:1->Q. n = q:Q->N o nb”
@@ -1077,8 +1077,7 @@ rw[ismem_def] >> arw[] >> strip_tac (* 2 *) >--
        first_x_assum accept_tac) >>
   pop_assum mp_tac >> arw[] >> strip_tac >> 
   first_x_assum irule >>
-  drule lt_succ_le >> 
-  pop_assum (assume_tac o GSYM) >> once_arw[] >>
+  assume_tac (GSYM LESS_SUC_LEQ) >> once_arw[] >>
   first_x_assum accept_tac) >> 
 first_x_assum irule >> 
 by_tac “?nb:1->Q. n = q:Q->N o nb”
@@ -1086,18 +1085,17 @@ by_tac “?nb:1->Q. n = q:Q->N o nb”
     first_x_assum accept_tac) >>
 first_assum (assume_tac o iffLR) >>
 first_x_assum drule >> once_arw[] >> rpt strip_tac >>
-first_x_assum irule >> drule lt_succ_le >> fs[])
+first_x_assum irule >> fs[LESS_SUC_LEQ])
 (form_goal 
 “!P p0:P->N. ismono(p0) ==>
- !two i1:1->two i2:1->two. iscopr(i1,i2) ==>
  !Q q:Q->N. 
   (ismono(q) & !n:1->N. (?nb:1->Q. n = q o nb) <=> 
-            (!n0:1->N. char(i1,i2,le) o pa(Nn,nN,n0,n) = i2
-==> char(i1,i2,p0) o n0 = i2))
+            (!n0:1->N. Char(LEQ) o Pa(n0,n) = TRUE
+==> Char(p0) o n0 = TRUE))
  ==>
  (!n:1->N. 
   (!n0:1->N. 
-    char(i1,i2,lt) o pa(Nn,nN,n0,n) = i2 ==> char(i1,i2,p0) o n0 = i2) ==> char(i1,i2,p0) o n = i2) ==> isiso(p0)”)
+    Char(LESS) o Pa(n0,n) = TRUE ==> Char(p0) o n0 = TRUE) ==> Char(p0) o n = TRUE) ==> isiso(p0)”)
 
 
 val Q_ex = proved_th $

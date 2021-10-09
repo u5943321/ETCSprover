@@ -6308,7 +6308,7 @@ e0
       qexists_tac "x0" >> arw[]) >> arw[] >> 
  once_arw[] >> pop_assum (K all_tac) >> pop_assum mp_tac >>
  pop_assum (assume_tac o GSYM) >> once_arw[] >> 
- strip_tac >> once_arw[] >> assume_tac (GSYM sub_eq_0) >>
+ strip_tac  >> assume_tac (GSYM sub_eq_0) >>
  first_x_assum drule >> arw[] >>
  assume_tac sub_elements >> arw[] >> cases_on “sub o pa(Nn,nN,n0:1->N,n) = ZERO” 
  >-- (arw[] >> assume_tac PRE_def >> arw[] >>
