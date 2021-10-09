@@ -680,7 +680,7 @@ e0
  strip_tac (* 2 *)
  >> (first_x_assum (match_mp_tac o iffLR) >> arw_tac[])
  )
-(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q. ispb(f,g,p,q)")
+(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q. ispb(f,g,p,q)");
 
 (*∀X Y Z f g. g∶ Y → Z ∧  f∶ X → Z  ⇒ ∃P p q. p∶ P → X ∧ q∶ P → Y ∧ f o p = g o q ∧
             (∀A u v. u∶ A → X ∧ v∶ A → Y ∧ f o u = g o v ⇒
@@ -694,7 +694,7 @@ e0
  pop_assum strip_assume_tac >> arw_tac[] >> repeat strip_tac >> first_x_assum drule >>
  arw_tac[] >> pop_assum (x_choosel_then ["a"] assume_tac) >> exists_tac (rastt "a:A->P")>>
  arw_tac[])
-(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q:P->Y. f o p = g o q & !A u:A->X v:A->Y. f o u = g o v ==> ?a:A->P. p o a = u & q o a = v")
+(rapg "!X Z f:X->Z Y g:Y->Z.?P p:P->X q:P->Y. f o p = g o q & !A u:A->X v:A->Y. f o u = g o v ==> ?a:A->P. p o a = u & q o a = v");
 
 
 
@@ -8391,7 +8391,7 @@ e0
  fs[])
 (form_goal
 “!X x:1->X s0:1->Exp(X,2). (Mem(X) o Pa(x,s0) = TRUE) <=>
- Ins(x,s0) = s0”)
+ Ins(x,s0) = s0”);
 
 
 (* TODO: fs bug,
@@ -8454,6 +8454,28 @@ e0
 val Card_def = 
     FINITE_hasCard |> spec_all |> ex2fsym "Card" ["X"] 
                    |> gen_all
+
+(*up to here*)
+val LESS_ex = proved_th $
+e0
+()
+(form_goal
+ “?less:N * N ->2.”)
+
+val LA = 
+
+val LO_ex = proved_th $
+e0
+(cheat)
+(form_goal
+ “!A. ?LA oA:1->LA sA:A * LA -> LA. 
+      !B b:1->B t: A * B ->B. 
+      ?f:LA->B. 
+       f o oA = b & 
+       t o Pa(π1(A,LA),f o π2(A,LA)) = f o sA & 
+      (!f':LA->B.
+       f' o oA = b & 
+       t o Pa(π1(A,LA),f' o π2(A,LA)) = f' o sA ==> f' = f)”)
 
 val IP_el = proved_th $
 e0
