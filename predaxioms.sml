@@ -8456,13 +8456,7 @@ val Card_def =
                    |> gen_all
 
 (*up to here*)
-val LESS_ex = proved_th $
-e0
-()
-(form_goal
- “?less:N * N ->2.”)
 
-val LA = 
 
 val LO_ex = proved_th $
 e0
@@ -8479,7 +8473,11 @@ e0
 
 val IP_el = proved_th $
 e0
-(cheat)
+(assume_tac $ GSYM ind_principle >> assume_tac TRUE_def >>
+ first_x_assum drule >> fs[] >> rpt strip_tac >> 
+ fconv_tac 
+ (rand_fconv no_conv (rewr_fconv (GSYM $ spec_all fun_ext_iff))) >>
+ rw[o_assoc] >> once_rw[one_to_one_id] >> rw[idR]) 
 (form_goal
  “!P:N->2. (!n. P o n = TRUE) <=>
   P o ZERO = TRUE &
@@ -8493,32 +8491,45 @@ e0
  ccontra_tac >>
  qby_tac 
  ‘!l:1->N. P o l = TRUE ==>
-  ?n:1->N. P o n = TRUE & ~(Le o Pa(l,n) = TRUE)’ 
- >-- cheat >>
+  ?n:1->N. P o n = TRUE & ~(Char(LEQ) o Pa(l,n) = TRUE)’ 
+ >-- (fs[exists_forall0] >>
+     fs[NEG_CONJ2IMP_NEG])>>
  qsuff_tac 
- ‘!n:1->N. (All(N) o Tp(IMP o Pa(Le,NEG o P o π1(N,N)))) o n = TRUE’ >-- cheat >>
+ ‘!n:1->N. (All(N) o Tp(IMP o Pa(Char(LEQ),NEG o P o π1(N,N)))) o n = TRUE’ >-- 
+ (rw[o_assoc,All_def,Pa_distr,IMP_def,pi1_of_Pa,NEG_def] >>
+ ccontra_tac >>
+ qsuff_tac 
+ ‘P = False(N)’ >-- fs[] >>
+ irule fun_ext >> rw[False2FALSE] >> strip_tac >>
+ first_x_assum irule >> 
+ qex_tac ‘a’ >> rw[LEQ_refl]) >>
  rw[IP_el,o_assoc,All_def,Pa_distr,IMP_def,pi1_of_Pa,
     NEG_def,GSYM TRUE2FALSE] >> rpt strip_tac (* 2 *) >--
- (qby_tac ‘x = ZERO’ >-- cheat >> arw[] >>
+ (qby_tac ‘x = ZERO’ >--
+  (drule LEQ_ZERO_ZERO >> arw[]) >> arw[] >>
  ccontra_tac >> first_x_assum drule >>
- pop_assum strip_assume_tac >>
- (*~Le o Pa(ZERO, n) = TRUE is false*) >> cheat) >>
- cases_on “Le:N * N ->2 o Pa(x:1->N,n:1->N) = TRUE” >--
+ pop_assum strip_assume_tac >> fs[ZERO_LESS_EQ]
+ (*~Le o Pa(ZERO, n) = TRUE is false*)) >> 
+ cases_on “Char(LEQ) o Pa(x:1->N,n:1->N) = TRUE” >--
  (first_x_assum drule >> arw[]) >>
- qby_tac ‘x = SUC o n’ >-- cheat >>
+ qby_tac ‘x = SUC o n’ >-- 
+ (drule LEQ_cases >> fs[LESS_SUC_LEQ]
+  (*TODO: lemma x <= n ^ + /\ x ~<= n <=> x = n+*)) >>
  arw[] >> ccontra_tac >>
  first_x_assum drule >> pop_assum strip_assume_tac >>
  (*~Le o Pa(SUC o n, n') = TRUE 
-  use ~(n + 1 <= n') <=> n' < n + 1 <=> n' <= n*) >>
- qby_tac ‘Le o Pa(n',n) = TRUE’ >-- cheat >>
+  use ~(n + 1 <= n') <=> n' < n + 1 <=> n' <= n*) 
+ qby_tac ‘Char(LEQ) o Pa(n',n) = TRUE’ >-- 
+ (rw[GSYM LESS_SUC_LEQ] >> assume_tac LESS_cases >>
+ first_x_assum (qspecl_then ["n'","SUC o n"] assume_tac) >>
+ fs[]) >>
  first_x_assum drule >> fs[]
- 
  )
 (form_goal
  “!P:N->2. ~(P = False(N)) ==> 
   ?l:1->N. P o l = TRUE &
   !n:1->N. P o n = TRUE ==>
-  Le:N * N -> 2 o Pa(l,n) = TRUE”)
+  Char(LEQ) o Pa(l,n) = TRUE”)
 
 
 
@@ -8692,16 +8703,6 @@ val sspec tl th =
 
 
 
-
-
-val coPosym_def = ex2fsym "+" ["A","B"] (iffRL $ eqT_intro $ spec_all copr_ex)
-                          |> C mp (trueI []) |> gen_all
-
-val tau1_def = ex2fsym "τ1" ["A","B"] (iffRL $ eqT_intro $ spec_all coPosym_def)
-                        |> C mp (trueI []) |> gen_all
-
-val tau2_def = ex2fsym "τ2" ["A","B"] (iffRL $ eqT_intro $ spec_all tau1_def)
-                        |> C mp (trueI []) |> gen_all
 
 (*maybe nice to have a tool that realise which component, and just assign maps to components, how can I do this?*)
 

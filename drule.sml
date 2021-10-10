@@ -1118,6 +1118,20 @@ fun strip_split th =
     end
 *)
 
+(* ~(A /\ B) <=> A ==> ~B*)
 
+fun NEG_CONJ2IMP_NEG0 A B = 
+    let 
+        val AB = mk_conj A B
+        val l = mk_neg AB
+        val nB = mk_neg B
+        val r = mk_imp A nB
+        val l2r = negE (conjI (assume A) (assume B)) (assume l) |> negI B |> disch A |> disch l
+        val r2l = negE (conjE2 (assume AB)) (mp (assume r) (conjE1 (assume AB))) 
+                       |> negI AB |> disch r
+    in dimpI l2r r2l
+    end
+
+val NEG_CONJ2IMP_NEG = NEG_CONJ2IMP_NEG0 (mk_fvar "A") (mk_fvar "B")
 
 end

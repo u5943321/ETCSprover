@@ -1143,3 +1143,76 @@ e0
   (!n0:1->N. 
     Char(LESS) o Pa(n0,n) = TRUE ==> Char(p0) o n0 = TRUE) ==> Char(p0) o n = TRUE) ==> isiso(p0)”)
 
+
+
+
+
+val coPosym_def = ex2fsym "+" ["A","B"] (iffRL $ eqT_intro $ spec_all copr_ex)
+                          |> C mp (trueI []) |> gen_all
+
+val tau1_def = ex2fsym "τ1" ["A","B"] (iffRL $ eqT_intro $ spec_all coPosym_def)
+                        |> C mp (trueI []) |> gen_all
+
+val tau2_def = ex2fsym "τ2" ["A","B"] (iffRL $ eqT_intro $ spec_all tau1_def)
+                        |> C mp (trueI []) |> gen_all
+
+
+val E1q_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“!two i1:1->two i2:1->two. iscopr(i1,i2) ==>
+ !X eps ps p1:eps->X p2:eps ->ps ev:eps->two.isexp(p1,p2,ev) ==>
+ ?Exq:ps -> two. 
+ !Y XY Xy:XY->X xY:XY->Y. ispr(Xy,xY) ==>
+ !pxy:XY->two y:1->Y. 
+ (Exq o tp(p1,p2,ev,Xy,xY,pxy) o y = i2  <=> 
+  ?x:1->X. pxy o pa(Xy,xY,x,y) = i2 & 
+  !x0:1->X. pxy o pa(Xy,xY,x0,y) = i2 ==> x0 = x)”)
+
+
+val E1_ex = proved_th $
+e0
+(cheat)
+(form_goal
+“!X.?E1. !Y pxy:X * Y -> 2 y:1-> Y. E1 o Tp(pxy) o y = TRUE <=>
+ ?x:1->X. pxy o Pa(x,y) = TRUE & 
+ !x0:1->X. pxy o Pa(x0,y) = TRUE ==> x0 = x”)
+
+val E1_def =  E1_ex |> spec_all |> eqT_intro
+                      |> iffRL |> ex2fsym "E1" ["X"] |> C mp (trueI []) |> gen_all
+
+val LO_ex = proved_th $
+e0
+(strip_tac >>
+ abbrev_tac
+ “”
+ (*abbrev_tac
+ “IFF o 
+  Pa(Eq(A + 1) o 
+     Pa(Ev(N,A + 1) o Pa(π31(N,N,Exp(N,A + 1)),
+                         π33(N,N,Exp(N,A + 1))),
+        τ2(A,1) o To1(N * N * Exp(N,A + 1))),
+     Char(LESS) o Pa(π32(N,N,Exp(N,A + 1)),
+                     π31(N,N,Exp(N,A + 1)))) = pred0” >>
+ abbrev_tac
+ “Ex(N) o Tp(All(N) o Tp(pred0:N * N * Exp(N,A + 1) -> 2)) = pred” >>
+ qspecl_then ["Exp(N,A + 1)","2","pred","1","TRUE"] (x_choosel_then ["LA","inc","LA1"] assume_tac) pb_ex >>
+ qex_tac ‘LA’ >> drule pb_fac_iff_1 >>
+ qby_tac
+ ‘pred o Tp1(τ2(A,1) o To1(N)) = TRUE’ >-- cheat >>
+ qby_tac 
+ ‘?oA:1->LA. inc o  oA = Tp1(τ2(A,1) o To1(N))’ >-- cheat >>
+ pop_assum strip_assume_tac >>
+ qex_tac ‘oA’ >> *)
+ 
+ )
+(form_goal
+ “!A. ?LA oA:1->LA sA:A * LA -> LA. 
+      !B b:1->B t: A * B ->B. 
+      ?f:LA->B. 
+       f o oA = b & 
+       t o Pa(π1(A,LA),f o π2(A,LA)) = f o sA & 
+      (!f':LA->B.
+       f' o oA = b & 
+       t o Pa(π1(A,LA),f' o π2(A,LA)) = f' o sA ==> f' = f)”)
