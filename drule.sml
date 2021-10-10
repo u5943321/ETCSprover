@@ -422,6 +422,26 @@ fun dimp_iff th1 th2 =
     end
 
 (*make it primitive exists primitive. *)
+
+(*
+fun forall_iff (n,s) th = 
+    let val (G,A,C0) = dest_thm th
+        val (P,Q) = dest_dimp C0
+        val G' = HOLset.delete(G,(n,s))
+        val GA = fvfl A
+        val _  = (not $ HOLset.member(GA,(n,s))) orelse 
+                 raise ERR ("variable to be abstract occurs in assumption",[],[],[])
+    in mk_thm G' A (mk_dimp (mk_forall n s P) (mk_forall n s Q))
+    end
+
+
+val f0 = “ismono(a) <=> isepi(b)”
+
+val th = mk_thm (fvf f0) [] f0
+
+val n = "a"; val s =  ar_sort (mk_ob "A") (mk_ob "B")
+*)
+
 fun forall_iff (n,s) th = 
     let val (G,A,C0) = dest_thm th
     in

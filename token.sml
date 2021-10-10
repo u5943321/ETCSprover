@@ -17,7 +17,8 @@ end
 
 fun is_letter_or_digit c =
     is_char(ord #"A",c,ord #"Z") orelse is_char(ord #"a",c,ord #"z") orelse is_char(ord #"0",c,ord #"9") orelse
-    is_char(913,c,937) orelse is_char(945,c,969) orelse is_char(8320,c,8329) orelse is_char(8304,c,8013) orelse 
+    is_char(913,c,937) orelse is_char(945,c,969) orelse is_char(8320,c,8329) orelse 
+    c = 0x00B9 orelse c = 0x00B2 orelse c = 0x00B3 orelse is_char(0x2074,c,0x2079) orelse 
     c = ord #"'" orelse c = ord #"_";
 
 
